@@ -1,0 +1,44 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --color-brand-purple: #4c1d95; /* deep purple */
+  --color-brand-indigo: #4338ca;
+  --color-brand-blue: #2563eb;
+  --color-brand-electric: #0ea5e9;
+  --color-brand-teal: #0d9488;
+  --color-brand-cyan: #06b6d4;
+  --color-brand-gold: #fbbf24;
+  --color-brand-cream: #fdfbf7;
+  
+  --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
+  --font-display: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
+}
+
+@layer utilities {
+  .text-gradient-brand {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-purple via-brand-indigo to-brand-electric;
+  }
+  .bg-gradient-brand {
+    @apply bg-gradient-to-r from-brand-purple via-brand-indigo to-brand-electric;
+  }
+  .bg-gradient-metallic {
+    @apply bg-gradient-to-r from-indigo-900 via-purple-800 to-indigo-900;
+  }
+  
+  .glassmorphism {
+    @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-xl;
+  }
+  .glassmorphism-dark {
+    @apply bg-gray-900/80 backdrop-blur-lg border border-white/10 shadow-2xl;
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  @apply bg-brand-cream text-gray-900 antialiased;
+}
+
