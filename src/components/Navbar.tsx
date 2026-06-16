@@ -2,11 +2,13 @@ import { useState, useEffect } from 'react';
 import { Camera, Menu, X } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 import { useSiteContent } from '../hooks/useSiteContent';
+import { useNavigate, Link } from 'react-router-dom';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
   const { logoBase64 } = useSiteContent();
+  const navigate = useNavigate();
 
   useEffect(() => {
     const handleScroll = () => {
@@ -61,13 +63,13 @@ export default function Navbar() {
         {/* Auth Buttons */}
         <div className="hidden md:flex items-center gap-4">
           <button 
-            onClick={() => window.location.href='/login'}
+            onClick={() => navigate('/login')}
             className="text-sm font-medium text-gray-700 hover:text-brand-purple transition-colors"
           >
             Login
           </button>
           <button 
-            onClick={() => window.location.href='/signup'}
+            onClick={() => navigate('/signup')}
             className="text-sm font-medium text-white bg-gray-900 rounded-full px-5 py-2 hover:bg-brand-purple transition-all shadow-md"
           >
             Sign Up
@@ -105,13 +107,19 @@ export default function Navbar() {
               ))}
               <hr className="border-gray-100 my-2" />
               <button 
-                onClick={() => window.location.href='/login'}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  navigate('/login');
+                }}
                 className="text-base font-medium text-left text-gray-800 hover:text-brand-purple"
               >
                 Login
               </button>
               <button 
-                onClick={() => window.location.href='/signup'}
+                onClick={() => {
+                  setIsMobileMenuOpen(false);
+                  navigate('/signup');
+                }}
                 className="text-base font-medium text-center text-white bg-gradient-brand rounded-full px-5 py-2 hover:opacity-90 transition-all shadow-md"
               >
                 Sign Up
