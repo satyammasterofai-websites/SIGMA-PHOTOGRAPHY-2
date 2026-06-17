@@ -1,5 +1,5 @@
 import { motion } from 'motion/react';
-import { Star, MessageCircle, MapPin, Phone, Mail, Instagram, ArrowRight } from 'lucide-react';
+import { Star, MessageCircle, MapPin, Phone, Mail, Instagram, ArrowRight, User } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
 
 const defaultTestimonials = [
@@ -7,19 +7,16 @@ const defaultTestimonials = [
     name: 'Emily & James',
     review: 'The quality of the wedding invitation video was absolutely breathtaking. It looked like a Hollywood trailer. SIGMAPHOTOGRAPHY delivered beyond our expectations!',
     rating: 5,
-    image: 'https://images.unsplash.com/photo-1541250848049-b4f714ade240?auto=format&fit=crop&q=80&w=200'
   },
   {
     name: 'Priya Sharma',
     review: 'I customized my engagement invite using their dashboard. It was so easy, and the WhatsApp quick order made the final delivery seamless.',
     rating: 5,
-    image: 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'
   },
   {
     name: 'Rahul Verma',
     review: 'Outstanding service and premium designs. The metallic accents and camera lens inspired themes perfectly matched our modern wedding aesthetics.',
     rating: 5,
-    image: 'https://images.unsplash.com/photo-1506794778202-cad84cf45f1d?auto=format&fit=crop&q=80&w=200'
   }
 ];
 
@@ -36,8 +33,10 @@ export default function ContactAndTestimonials() {
     name: t.name,
     review: t.content || '',
     rating: 5,
-    image: t.image || 'https://images.unsplash.com/photo-1534528741775-53994a69daeb?auto=format&fit=crop&q=80&w=200'
   })) : defaultTestimonials;
+
+  // Duplicate testimonials for the infinite marquee effect
+  const marqueeItems = [...displayTestimonials, ...displayTestimonials, ...displayTestimonials];
 
   const displayFaqs = cmsFaqs.length > 0 ? cmsFaqs : defaultFaqs;
 
@@ -56,32 +55,41 @@ export default function ContactAndTestimonials() {
               Hear what couples are saying about their cinematic invitation experience.
             </p>
           </div>
+        </div>
 
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
-            {displayTestimonials.map((t, i) => (
-              <motion.div 
+        {/* Marquee Container */}
+        <div className="relative w-full overflow-hidden flex z-10 pb-4">
+          <motion.div 
+            className="flex gap-8 px-4"
+            animate={{ x: [0, -1035] }} // Depends on card width & gap: 3 cards x (w-300 + gap 32)
+            transition={{
+              repeat: Infinity,
+              ease: "linear",
+              duration: 20
+            }}
+          >
+            {marqueeItems.map((t, i) => (
+              <div 
                 key={i}
-                initial={{ opacity: 0, scale: 0.95 }}
-                whileInView={{ opacity: 1, scale: 1 }}
-                viewport={{ once: true }}
-                transition={{ duration: 0.5, delay: i * 0.1 }}
-                className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100 flex flex-col hover:shadow-brand-purple/10 hover:border-brand-purple/20 transition-all duration-300"
+                className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100 flex flex-col hover:shadow-brand-purple/10 hover:border-brand-purple/20 transition-all duration-300 min-w-[320px] md:min-w-[400px]"
               >
                 <div className="flex items-center gap-2 mb-6">
                   {[...Array(t.rating || 5)].map((_, idx) => (
                     <Star key={idx} className="w-5 h-5 fill-brand-gold text-brand-gold" />
                   ))}
                 </div>
-                <p className="text-gray-700 italic flex-1 mb-8 leading-relaxed">
+                <p className="text-gray-700 italic flex-1 mb-8 leading-relaxed line-clamp-4">
                   "{t.review}"
                 </p>
-                <div className="flex items-center gap-4">
-                  <img src={t.image} alt={t.name} className="w-12 h-12 rounded-full object-cover shadow-md" />
+                <div className="flex items-center gap-4 mt-auto">
+                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200">
+                    <User className="w-6 h-6" />
+                  </div>
                   <span className="font-bold text-gray-900">{t.name}</span>
                 </div>
-              </motion.div>
+              </div>
             ))}
-          </div>
+          </motion.div>
         </div>
       </section>
 

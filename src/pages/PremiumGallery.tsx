@@ -4,19 +4,31 @@ import { db } from '../lib/firebase';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
 import { Search, Play, Star, TrendingUp } from 'lucide-react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import VideoModal from '../components/VideoModal';
+import { useSiteContent } from '../hooks/useSiteContent';
+
+const defaultCategories = ['Wedding', 'Engagement', 'Birthday', 'Anniversary', 'Baby Shower', 'Housewarming', 'Corporate', 'Religious'];
 
 export default function PremiumGallery() {
+  const { categories: cmsCategories } = useSiteContent();
   const [templates, setTemplates] = useState<any[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [activeCategory, setActiveCategory] = useState('All');
+  const location = useLocation();
+  const queryParams = new URLSearchParams(location.search);
+  const initialCategory = queryParams.get('category') || 'All';
+  const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const navigate = useNavigate();
 
-  const categories = ['All', 'Wedding', 'Engagement', 'Birthday', 'Anniversary', 'Baby Shower', 'Housewarming', 'Corporate', 'Religious'];
+  const dynamicCategories = cmsCategories.length > 0 ? cmsCategories.map(c => c.name) : defaultCategories;
+  const categories = ['All', ...dynamicCategories];
+
+  useEffect(() => {
+    setActiveCategory(initialCategory);
+  }, [initialCategory]);
 
   useEffect(() => {
     const fetchTemplates = async () => {
@@ -97,8 +109,8 @@ export default function PremiumGallery() {
                {filteredTemplates.map(template => (
                  <div key={template.id} className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all border border-gray-100 group flex flex-col">
                     <div className="relative aspect-video overflow-hidden bg-gray-100">
-                      {template.thumbnailBase64 ? (
-                        <img src={template.thumbnailBase64} alt={template.title} className="w-full h-full object-cover" />
+                      {(template.thumbnailBase64 || template.image) ? (
+                        <img src={template.thumbnailBase64 || template.image} alt={template.title} className="w-full h-full object-cover" />
                       ) : (
                         <div className="w-full h-full flex items-center justify-center text-gray-400">No Preview</div>
                       )}
@@ -150,7 +162,7 @@ export default function PremiumGallery() {
                         </div>
                         
                         <button 
-                          onClick={() => navigate(`/checkout/${template.id}`)}
+                          onClick={() => navigate(`/checkout/${template.id}`, { state: { template } })}
                           className="px-6 py-2 bg-gray-900 hover:bg-brand-purple text-white font-medium rounded-xl transition-colors shadow-md shadow-gray-900/10 hover:shadow-brand-purple/20"
                         >
                           Customize & Order

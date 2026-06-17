@@ -13,8 +13,8 @@ const defaultCategories = [
 ];
 
 export default function TemplateCategories() {
-  const { templates } = useSiteContent();
-  const displayTemplates = templates.length > 0 ? templates : defaultCategories;
+  const { categories } = useSiteContent();
+  const displayCategories = categories.length > 0 ? categories : defaultCategories;
 
   return (
     <section id="templates" className="py-24 bg-white w-full">
@@ -36,7 +36,7 @@ export default function TemplateCategories() {
         </div>
 
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {displayTemplates.map((cat, index) => (
+          {displayCategories.map((cat, index) => (
             <motion.div
               key={cat.id || cat.name}
               initial={{ opacity: 0, y: 20 }}
@@ -48,7 +48,7 @@ export default function TemplateCategories() {
                {/* Background Image Image */}
               <div className="absolute inset-0 bg-gray-900">
                 <img 
-                  src={cat.image} 
+                  src={cat.image || 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800'} 
                   alt={cat.name} 
                   className="w-full h-full object-cover opacity-60 group-hover:scale-110 group-hover:opacity-40 transition-all duration-700" 
                 />
@@ -56,31 +56,22 @@ export default function TemplateCategories() {
               </div>
 
               {/* Content */}
-              <div className="relative z-10 h-[400px] p-8 flex flex-col justify-between hover:cursor-default">
+              <div className="relative z-10 h-[400px] p-8 flex flex-col justify-end hover:cursor-default">
                 
-                {/* Top bar */}
-                <div className="flex justify-between items-start">
-                   <div className="bg-white/20 backdrop-blur-md border border-white/30 text-white px-3 py-1 rounded-full text-xs font-medium tracking-wide">
-                      Starting at ₹{cat.price}
-                   </div>
-                   <Link to="/gallery" className="w-10 h-10 rounded-full bg-white/10 backdrop-blur-md flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity translate-y-2 group-hover:translate-y-0 duration-300 border border-white/30 hover:bg-white/30">
-                      <PlayCircle className="w-5 h-5 text-white" />
-                   </Link>
-                </div>
-
                 {/* Bottom info */}
                 <div className="translate-y-4 group-hover:translate-y-0 transition-transform duration-300">
                   <h3 className="text-3xl font-display font-bold text-white mb-2">{cat.name}</h3>
-                  <p className="text-gray-300 text-sm mb-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100">
-                    Elegant {(cat.name || 'document').toLowerCase()} invitations featuring cinematic transitions and premium typography.
+                  <p className="text-gray-300 text-sm mb-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 line-clamp-2">
+                    {cat.description || `Explore our premium ${cat.name.toLowerCase()} invitation templates.`}
                   </p>
                   
-                  <Link to="/gallery" className="w-full py-3 bg-white text-gray-900 font-bold rounded-xl hover:bg-gradient-brand hover:text-white hover:shadow-lg hover:shadow-brand-purple/50 transition-all transform opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 duration-300 delay-150 inline-block text-center cursor-pointer">
-                    Customize Now
-                  </Link>
+                  <div className="w-full py-3 bg-white text-gray-900 font-bold rounded-xl hover:bg-gradient-brand hover:text-white hover:shadow-lg hover:shadow-brand-purple/50 transition-all transform opacity-0 group-hover:opacity-100 scale-95 group-hover:scale-100 duration-300 delay-150 inline-block text-center cursor-pointer">
+                    View Templates
+                  </div>
                 </div>
 
               </div>
+              <Link to={`/gallery?category=${encodeURIComponent(cat.name)}`} className="absolute inset-0 z-20 cursor-pointer"></Link>
             </motion.div>
           ))}
         </div>

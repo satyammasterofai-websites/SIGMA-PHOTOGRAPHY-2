@@ -1,20 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Plus, Trash2, Save, MessageSquare, CreditCard, Tag } from 'lucide-react';
+import { Plus, Trash2, Save, MessageSquare, Tag } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ManageSettings() {
-  const [activeTab, setActiveTab] = useState<'whatsapp' | 'payment' | 'coupons'>('whatsapp');
+  const [activeTab, setActiveTab] = useState<'whatsapp' | 'coupons'>('whatsapp');
   
   // WhatsApp State
-  const [waNumber, setWaNumber] = useState('');
-  const [waMessageFormat, setWaMessageFormat] = useState('Payment Successful\nTemplate: {template}\nOrder ID: {orderId}\nName: {name}\n\nDetails: {details}');
+  const [waNumber, setWaNumber] = useState('9162478070');
+  const [waMessageFormat, setWaMessageFormat] = useState('*Booking Request*\n\nTemplate: {template}\nTemplate ID: {templateId}\nOrder ID: {orderId}\n\n*Customer Details*\nName: {name}\nPhone: {phone}\n\n{details}');
   const [waOrderingEnabled, setWaOrderingEnabled] = useState(true);
-
-  // Payment State
-  const [paymentEnabled, setPaymentEnabled] = useState(false);
-  const [paymentSuccessMessage, setPaymentSuccessMessage] = useState('Payment gateway under process');
 
   // Coupons State
   const [coupons, setCoupons] = useState<any[]>([]);
@@ -25,13 +21,9 @@ export default function ManageSettings() {
       if (docSnap.exists()) {
         const data = docSnap.data();
         if (data.whatsapp) {
-          setWaNumber(data.whatsapp.number || '');
-          setWaMessageFormat(data.whatsapp.messageFormat || '');
+          setWaNumber(data.whatsapp.number || '9162478070');
+          setWaMessageFormat(data.whatsapp.messageFormat || '*Booking Request*\n\nTemplate: {template}\nTemplate ID: {templateId}\nOrder ID: {orderId}\n\n*Customer Details*\nName: {name}\nPhone: {phone}\n\n{details}');
           setWaOrderingEnabled(data.whatsapp.enabled !== false);
-        }
-        if (data.payment) {
-           setPaymentEnabled(data.payment.enabled || false);
-           setPaymentSuccessMessage(data.payment.successMessage || '');
         }
         if (data.coupons) {
            setCoupons(data.coupons || []);
@@ -49,12 +41,8 @@ export default function ManageSettings() {
           messageFormat: waMessageFormat,
           enabled: waOrderingEnabled
         },
-        payment: {
-          enabled: paymentEnabled,
-          successMessage: paymentSuccessMessage
-        },
         coupons
-      });
+      }, { merge: true });
       toast.success('Settings saved successfully');
     } catch (e) {
       toast.error('Failed to save settings');
@@ -88,9 +76,6 @@ export default function ManageSettings() {
         <button onClick={() => setActiveTab('whatsapp')} className={`px-4 py-3 font-medium text-sm flex items-center gap-2 border-b-2 transition-all ${activeTab === 'whatsapp' ? 'border-brand-electric text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
           <MessageSquare className="w-4 h-4" /> WhatsApp
         </button>
-        <button onClick={() => setActiveTab('payment')} className={`px-4 py-3 font-medium text-sm flex items-center gap-2 border-b-2 transition-all ${activeTab === 'payment' ? 'border-brand-electric text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
-          <CreditCard className="w-4 h-4" /> Payment Options
-        </button>
         <button onClick={() => setActiveTab('coupons')} className={`px-4 py-3 font-medium text-sm flex items-center gap-2 border-b-2 transition-all ${activeTab === 'coupons' ? 'border-brand-electric text-white' : 'border-transparent text-gray-500 hover:text-gray-300'}`}>
           <Tag className="w-4 h-4" /> Discount Coupons
         </button>
@@ -109,29 +94,12 @@ export default function ManageSettings() {
              </div>
              <div>
                <label className="block text-sm font-medium text-gray-300 mb-2">WhatsApp Business Number (with country code)</label>
-               <input type="text" value={waNumber} onChange={e => setWaNumber(e.target.value)} placeholder="+919876543210" className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3" />
+               <input type="text" value={waNumber} onChange={e => setWaNumber(e.target.value)} placeholder="9162478070" className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3" />
              </div>
              <div>
-               <label className="block text-sm font-medium text-gray-300 mb-2">Message Format (Variables: {"{template}, {orderId}, {name}, {details}"})</label>
-               <textarea rows={6} value={waMessageFormat} onChange={e => setWaMessageFormat(e.target.value)} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 resize-none font-mono text-sm" />
+               <label className="block text-sm font-medium text-gray-300 mb-2">Message Format (Variables: {"{template}, {templateId}, {orderId}, {name}, {phone}, {details}"})</label>
+               <textarea rows={8} value={waMessageFormat} onChange={e => setWaMessageFormat(e.target.value)} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 resize-none font-mono text-sm" />
              </div>
-          </div>
-        )}
-
-        {activeTab === 'payment' && (
-          <div className="space-y-6 max-w-2xl">
-             <div>
-               <label className="flex items-center gap-3 cursor-pointer">
-                 <input type="checkbox" checked={paymentEnabled} onChange={e => setPaymentEnabled(e.target.checked)} className="rounded border-gray-700 bg-gray-800 w-5 h-5 text-brand-purple" />
-                 <div><p className="font-medium text-white">Enable Online Payment Gateway</p><p className="text-sm text-gray-400">Under construction; will show the success message popup and fallback to WhatsApp</p></div>
-               </label>
-             </div>
-             {paymentEnabled && (
-               <div>
-                 <label className="block text-sm font-medium text-gray-300 mb-2">Payment Gateway Notice Message</label>
-                 <textarea rows={4} value={paymentSuccessMessage} onChange={e => setPaymentSuccessMessage(e.target.value)} placeholder="Payment gateway under process..." className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 resize-none" />
-               </div>
-             )}
           </div>
         )}
 

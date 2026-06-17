@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { useParams, useNavigate } from 'react-router-dom';
+import { useParams, useNavigate, useLocation } from 'react-router-dom';
 import { doc, getDoc, addDoc, collection } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
@@ -12,9 +12,12 @@ import VideoModal from '../components/VideoModal';
 export default function Checkout() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const [template, setTemplate] = useState<any>(null);
+  const location = useLocation();
+  const stateTemplate = location.state?.template;
+  
+  const [template, setTemplate] = useState<any>(stateTemplate || null);
   const [settings, setSettings] = useState<any>(null);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!stateTemplate);
   const [showVideo, setShowVideo] = useState(false);
   
   // Custom Fields State
@@ -36,35 +39,39 @@ export default function Checkout() {
   const [customerPhone, setCustomerPhone] = useState('');
 
   // Payment Options Popups
-  const [showPaymentOptions, setShowPaymentOptions] = useState(false);
   const [paymentSuccessPopup, setPaymentSuccessPopup] = useState<{show: boolean, msg: string}>({show: false, msg: ''});
 
   useEffect(() => {
     const fetchData = async () => {
       try {
          if (!id) return;
-         const [tmplSnap, settingsSnap] = await Promise.all([
-           getDoc(doc(db, 'templates', id)),
-           getDoc(doc(db, 'settings', 'config'))
-         ]);
          
-         if (tmplSnap.exists()) {
-           setTemplate({ id: tmplSnap.id, ...tmplSnap.data() });
-         } else {
-           toast.error("Template not found");
+         // Try fetching if we don't have the template yet or we just want fresh settings
+         try {
+           const settingsSnap = await getDoc(doc(db, 'settings', 'config'));
+           if (settingsSnap.exists()) {
+             setSettings(settingsSnap.data());
+           }
+         } catch (err) {
+           console.error("Error fetching settings:", err);
          }
-         
-         if (settingsSnap.exists()) {
-           setSettings(settingsSnap.data());
+
+         if (!template) {
+           const tmplSnap = await getDoc(doc(db, 'templates', id));
+           if (tmplSnap.exists()) {
+             setTemplate({ id: tmplSnap.id, ...tmplSnap.data() });
+           } else {
+             toast.error("Template not found");
+           }
          }
       } catch (err) {
-         console.error(err);
+         console.error("Template fetch error:", err);
       } finally {
          setLoading(false);
       }
     };
     fetchData();
-  }, [id]);
+  }, [id, template]);
 
   const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files.length > 0) {
@@ -119,25 +126,28 @@ export default function Checkout() {
 
   // Pricing Calculations
   const basePrice = Number(template?.price) || 0;
-  const initialPrice = Number(template?.discountPrice) || basePrice;
+  const initialPrice = template?.discountPrice ? Number(template.discountPrice) : basePrice;
   const discountAmount = appliedCoupon ? (initialPrice * (Number(appliedCoupon.percentage) / 100)) : 0;
   const finalPrice = Math.round(initialPrice - discountAmount);
+
+  // WhatsApp Redirect URL
+  const [waUrlToOpen, setWaUrlToOpen] = useState('');
 
   const createOrderRecord = async (paymentStatus: string, viaMethod: string) => {
      try {
        const orderRef = await addDoc(collection(db, 'orders'), {
           createdAt: new Date().toISOString(),
-          templateId: template?.id,
-          templateName: template?.title,
+          templateId: template?.id || '',
+          templateName: template?.title || template?.name || 'Template',
           userId: user ? user.uid : null,
-          customerName,
-          customerPhone,
-          price: finalPrice,
-          paymentStatus,
+          customerName: customerName || '',
+          customerPhone: customerPhone || '',
+          price: finalPrice || 0,
+          paymentStatus: paymentStatus || 'Pending',
           status: 'Pending',
-          customData: formData,
-          filesCount: files.length,
-          viaMethod
+          customData: formData || {},
+          filesCount: files.length || 0,
+          viaMethod: viaMethod || 'Direct'
        });
 
        if (files.length > 0) {
@@ -158,12 +168,60 @@ export default function Checkout() {
      }
   };
 
+  const getWaUrl = (orderId: string) => {
+     const number = settings?.whatsapp?.number || '9162478070';
+     const displayOrderId = orderId === 'ORDER_ERR' ? `REQ-${Math.floor(Math.random() * 100000)}` : orderId;
+     
+     let customFieldsText = '';
+     if (template?.customFields && template.customFields.length > 0) {
+         customFieldsText += `*Customization Details*`;
+         for(const f of template.customFields) {
+            customFieldsText += `\n- ${f.name}: ${formData[f.id] || 'Not provided'}`;
+         }
+         customFieldsText += '\n\n';
+     }
+     
+     let pricingText = `*Pricing Summary*\nBase Price: ₹${basePrice}`;
+     if (basePrice > initialPrice) {
+         pricingText += `\nDiscounted Price: ₹${initialPrice}`;
+     }
+     if (couponCode && appliedCoupon) {
+        pricingText += `\nCoupon Applied: ${appliedCoupon.code} (-${appliedCoupon.percentage}%)`;
+     }
+     pricingText += `\n*Final Price: ₹${finalPrice}*`;
+
+     const allDetails = customFieldsText + pricingText;
+     
+     let details = '';
+     if (settings?.whatsapp?.messageFormat && settings.whatsapp.enabled !== false) {
+         details = settings.whatsapp.messageFormat
+            .replace('{template}', template?.title || 'Unknown')
+            .replace('{templateId}', template?.id || 'Unknown')
+            .replace('{orderId}', displayOrderId)
+            .replace('{name}', customerName || 'N/A')
+            .replace('{phone}', customerPhone || 'N/A')
+            .replace('{details}', allDetails);
+     } else {
+         details = `*Booking Request*\n\nTemplate: ${template?.title || 'Unknown'}\nTemplate ID: ${template?.id}\nOrder ID: ${displayOrderId}\n\n*Customer Details*\nName: ${customerName}\nPhone: ${customerPhone}\n\n${allDetails}`;
+     }
+     
+     const encodedMsg = encodeURIComponent(details);
+     return `https://wa.me/${number.replace(/[^0-9]/g, '')}?text=${encodedMsg}`;
+  };
+
+  const proceedToWhatsApp = async (viaMethod: string) => {
+     setPaymentSuccessPopup({ show: true, msg: 'Saving order details...' });
+     const orderId = await createOrderRecord('Pending', viaMethod);
+     const url = getWaUrl(orderId);
+     setWaUrlToOpen(url);
+     setPaymentSuccessPopup({ show: true, msg: 'Order saved! Please click below to send us your details on WhatsApp.' });
+  };
+
   const initiateOrder = () => {
      if (!customerName || !customerPhone) {
         toast.error("Please provide your Name and Phone Number");
         return;
      }
-     // Check if Custom Fields are filled
      const requiredFields = template?.customFields?.filter((f: any) => f.required) || [];
      for (const f of requiredFields) {
        if (!formData[f.id]) {
@@ -172,51 +230,20 @@ export default function Checkout() {
        }
      }
      
-     if (settings?.payment?.enabled) {
-        setShowPaymentOptions(true);
-     } else {
-        proceedToWhatsApp('WhatsApp Direct');
-     }
-  };
-
-  const proceedToWhatsApp = async (viaMethod: string, predefinedOrderId?: string) => {
-     const orderId = predefinedOrderId || await createOrderRecord('Pending', viaMethod);
-     
-     // Format WhatsApp text
-     const number = settings?.whatsapp?.number || '';
-     let format = settings?.whatsapp?.messageFormat || 'Template: {template}\nName: {name}';
-     
-     // Build custom details string
-     let details = '';
-     for(const f of (template?.customFields || [])) {
-        details += `\n- ${f.name}: ${formData[f.id] || 'N/A'}`;
-     }
-     if (couponCode && appliedCoupon) {
-        details += `\n- Coupon: ${appliedCoupon.code} (-${appliedCoupon.percentage}%)`;
-     }
-     details += `\n- Final Price: ₹${finalPrice}`;
-     
-     const message = format
-       .replace('{template}', template?.title || '')
-       .replace('{orderId}', orderId)
-       .replace('{name}', customerName)
-       .replace('{details}', details);
-       
-     const encodedMsg = encodeURIComponent(message);
-     window.location.href = `https://wa.me/${number.replace(/\+/g, '')}?text=${encodedMsg}`;
-  };
-
-  const handleOnlinePaymentClick = () => {
-      setShowPaymentOptions(false);
-      setPaymentSuccessPopup({ show: true, msg: settings?.payment?.successMessage || 'Payment gateway under process' });
-  };
-
-  const handlePaymentPopupForward = async () => {
-      setPaymentSuccessPopup({ show: false, msg: '' });
-      await proceedToWhatsApp('Online Payment Fallback');
+     // Skip payment gateway entirely, just proceed to WhatsApp
+     proceedToWhatsApp('WhatsApp Direct');
   };
 
   if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin"></div></div>;
+
+  if (!template) {
+    return (
+      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+        <h2 className="text-2xl font-bold mb-4">Template Not Found</h2>
+        <button onClick={() => navigate('/gallery')} className="px-6 py-2 bg-brand-purple text-white rounded-xl">Back to Gallery</button>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col">
@@ -347,7 +374,7 @@ export default function Checkout() {
                          <span>Template Base Price</span>
                          <span>₹{basePrice}</span>
                       </div>
-                      {basePrice !== initialPrice && (
+                      {basePrice > initialPrice && (
                         <div className="flex justify-between text-gray-600">
                            <span>Template Discount</span>
                            <span className="text-green-600">- ₹{(basePrice - initialPrice).toFixed(0)}</span>
@@ -380,47 +407,33 @@ export default function Checkout() {
       </main>
       
       {/* Popups */}
-      {showPaymentOptions && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-           <div className="bg-white rounded-3xl p-8 max-w-sm w-full shadow-2xl">
-              <h3 className="text-2xl font-bold text-gray-900 mb-2">Checkout Method</h3>
-              <p className="text-gray-500 mb-8 text-sm">How would you like to proceed with your order?</p>
-              
-              <div className="space-y-4">
-                 <button onClick={handleOnlinePaymentClick} className="w-full flex items-center p-4 border border-gray-200 rounded-2xl hover:border-brand-purple group transition-all text-left">
-                    <div className="w-12 h-12 rounded-full bg-brand-purple/10 flex items-center justify-center text-brand-purple mr-4 group-hover:scale-110 transition-transform"><CreditCard className="w-5 h-5"/></div>
-                    <div>
-                       <p className="font-bold text-gray-900">Pay Online</p>
-                       <p className="text-xs text-gray-500">Secure card, UPI & Netbanking</p>
-                    </div>
-                 </button>
-                 
-                 <button onClick={() => proceedToWhatsApp('WhatsApp Direct')} className="w-full flex items-center p-4 border border-gray-200 rounded-2xl hover:border-green-500 group transition-all text-left">
-                    <div className="w-12 h-12 rounded-full bg-green-50 flex items-center justify-center text-green-500 mr-4 group-hover:scale-110 transition-transform"><MessageSquare className="w-5 h-5"/></div>
-                    <div>
-                       <p className="font-bold text-gray-900">Order via WhatsApp</p>
-                       <p className="text-xs text-gray-500">Send details and pay manually</p>
-                    </div>
-                 </button>
-              </div>
-              
-              <button onClick={() => setShowPaymentOptions(false)} className="mt-8 w-full py-3 text-sm font-bold text-gray-500 hover:text-gray-900">Cancel</button>
-           </div>
-        </div>
-      )}
-
       {paymentSuccessPopup.show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
            <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl animate-fade-in-up">
               <div className="w-20 h-20 rounded-full bg-purple-50 mx-auto flex items-center justify-center text-brand-purple mb-6 animate-pulse">
-                <CreditCard className="w-10 h-10" />
+                {waUrlToOpen ? <MessageSquare className="w-10 h-10" /> : <CreditCard className="w-10 h-10" />}
               </div>
-              <h3 className="text-xl font-bold text-gray-900 mb-2">Payment Initializing</h3>
+              <h3 className="text-xl font-bold text-gray-900 mb-2">{waUrlToOpen ? 'Ready to send' : 'Processing...'}</h3>
               <p className="text-gray-600 mb-8">{paymentSuccessPopup.msg}</p>
               
-              <button onClick={handlePaymentPopupForward} className="w-full py-3 bg-brand-purple text-white font-bold rounded-xl flex items-center justify-center gap-2">
-                 <MessageSquare className="w-5 h-5"/> Redirect to WhatsApp
-              </button>
+              {waUrlToOpen ? (
+                <a 
+                   href={waUrlToOpen} 
+                   target="_blank" 
+                   rel="noopener noreferrer"
+                   onClick={() => {
+                     setPaymentSuccessPopup({show: false, msg: ''});
+                     navigate(user ? '/dashboard' : '/');
+                   }}
+                   className="w-full py-3 bg-brand-purple text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-purple-700 transition"
+                >
+                   <MessageSquare className="w-5 h-5"/> Send to WhatsApp
+                </a>
+              ) : (
+                <div className="w-full py-3 bg-gray-200 text-gray-500 font-bold rounded-xl flex items-center justify-center cursor-not-allowed">
+                  Please wait...
+                </div>
+              )}
            </div>
         </div>
       )}

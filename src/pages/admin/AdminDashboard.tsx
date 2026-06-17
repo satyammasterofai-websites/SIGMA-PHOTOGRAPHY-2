@@ -19,6 +19,8 @@ import ManageNotifications from './ManageNotifications';
 import ManageUsers from './ManageUsers';
 import ManageSettings from './ManageSettings';
 
+import ManageCategories from './ManageCategories';
+
 export default function AdminDashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user } = useAuthStore();
@@ -38,6 +40,7 @@ export default function AdminDashboardLayout() {
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
+    { name: 'Sub Templates', path: '/admin/categories', icon: Images },
     { name: 'Templates', path: '/admin/templates', icon: FileEdit },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
     { name: 'Banners', path: '/admin/banners', icon: Images },
@@ -132,6 +135,7 @@ export default function AdminDashboardLayout() {
            <Routes>
               <Route path="/" element={<AdminHome />} />
               <Route path="/orders" element={<ManageOrders />} />
+              <Route path="/categories" element={<ManageCategories />} />
               <Route path="/templates" element={<TemplateManagement />} />
               <Route path="/settings" element={<ManageSettings />} />
               <Route path="/banners" element={<ManageBanners />} />

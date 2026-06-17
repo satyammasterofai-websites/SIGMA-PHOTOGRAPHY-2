@@ -4,7 +4,7 @@ import { auth, db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import { doc, getDoc, setDoc } from 'firebase/firestore';
 
-export const ADMIN_EMAILS = ['satyammasterofai@gmail.com', 'jhahimanshukumar87@gmail.com'];
+export const ADMIN_EMAILS = ['satyammasterofai@gmail.com', 'jhahimanshukumar87@gmail.com', 'sigmaphotography0001@gmail.com'];
 
 export default function AuthProvider({ children }: { children: React.ReactNode }) {
   const { setUser, setLoading } = useAuthStore();

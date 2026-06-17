@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, updateDoc, doc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { fileToBase64 } from '../../lib/utils';
 import { Plus, Edit, Trash2, ImagePlus } from 'lucide-react';
@@ -27,6 +27,7 @@ export default function TemplateManagement() {
   // Custom Fields
   const [customFields, setCustomFields] = useState<any[]>([]);
   const [newFieldName, setNewFieldName] = useState('');
+  const [categories, setCategories] = useState<any[]>([]);
 
   const fetchTemplates = async () => {
     setLoading(true);
@@ -47,6 +48,16 @@ export default function TemplateManagement() {
 
   useEffect(() => {
     fetchTemplates();
+    const fetchCategories = async () => {
+      try {
+        const docSnap = await getDocs(collection(db, 'content'));
+        const catDoc = await getDoc(doc(db, 'content', 'categories'));
+        if (catDoc.exists() && catDoc.data().items) {
+          setCategories(catDoc.data().items.map((item: any) => item.name));
+        }
+      } catch (err) {}
+    };
+    fetchCategories();
   }, []);
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -137,21 +148,46 @@ export default function TemplateManagement() {
     }
   };
 
-  const handleDelete = async (id: string) => {
-    if (window.confirm("Are you sure you want to delete this template?")) {
-      try {
-        await deleteDoc(doc(db, 'templates', id));
-        toast.success("Template deleted");
-        fetchTemplates();
-      } catch (error) {
-        console.error(error);
-        toast.error("Failed to delete template");
-      }
+  const [deleteTemplateId, setDeleteTemplateId] = useState<string | null>(null);
+
+  const handleDelete = async () => {
+    if (!deleteTemplateId) return;
+    try {
+      await deleteDoc(doc(db, 'templates', deleteTemplateId));
+      toast.success("Template deleted");
+      fetchTemplates();
+      setDeleteTemplateId(null);
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to delete template");
+      setDeleteTemplateId(null);
     }
   };
 
   return (
     <div className="w-full">
+      {deleteTemplateId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
+            <h3 className="text-xl font-bold text-white mb-2">Delete Template</h3>
+            <p className="text-gray-400 mb-6">Are you sure you want to delete this template? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setDeleteTemplateId(null)}
+                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={handleDelete}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <div className="flex justify-between items-center mb-8">
         <div>
            <h1 className="text-2xl md:text-3xl font-display font-bold text-white">Template Management</h1>
@@ -188,8 +224,8 @@ export default function TemplateManagement() {
                   <tr key={template.id} className="hover:bg-gray-800/30 transition-colors">
                     <td className="px-6 py-4">
                        <div className="w-16 h-12 rounded-lg bg-gray-800 overflow-hidden">
-                          {template.thumbnailBase64 ? (
-                            <img src={template.thumbnailBase64} alt={template.title} className="w-full h-full object-cover" />
+                          {(template.thumbnailBase64 || template.image) ? (
+                            <img src={template.thumbnailBase64 || template.image} alt={template.title} className="w-full h-full object-cover" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-600">No Img</div>
                           )}
@@ -215,7 +251,7 @@ export default function TemplateManagement() {
                       <button onClick={() => openForm(template)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors mr-2">
                         <Edit className="w-4 h-4" />
                       </button>
-                      <button onClick={() => handleDelete(template.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                      <button onClick={() => setDeleteTemplateId(template.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
                         <Trash2 className="w-4 h-4" />
                       </button>
                     </td>
@@ -283,11 +319,8 @@ export default function TemplateManagement() {
                       value={category} onChange={(e) => setCategory(e.target.value)}
                       className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500"
                     >
-                      <option>Wedding</option>
-                      <option>Engagement</option>
-                      <option>Birthday</option>
-                      <option>Anniversary</option>
-                      <option>Corporate</option>
+                      {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                      {categories.length === 0 && <option value="Wedding">Wedding</option>}
                     </select>
                   </div>
                   <div>
@@ -317,7 +350,7 @@ export default function TemplateManagement() {
                     </select>
                   </div>
                   <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Video URL (YouTube/Vimeo)</label>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Video URL (YouTube/Vimeo/Instagram)</label>
                     <input 
                       type="url" required value={videoUrl} onChange={(e) => setVideoUrl(e.target.value)}
                       className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500"

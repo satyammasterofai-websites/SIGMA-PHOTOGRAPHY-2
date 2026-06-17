@@ -8,6 +8,7 @@ export function useSiteContent() {
   const [contact, setContact] = useState<any>(null);
   const [about, setAbout] = useState<any>(null);
   const [features, setFeatures] = useState<any[]>([]);
+  const [categories, setCategories] = useState<any[]>([]);
   const [templates, setTemplates] = useState<any[]>([]);
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [faqs, setFaqs] = useState<any[]>([]);
@@ -33,6 +34,10 @@ export function useSiteContent() {
 
     const unsubFeatures = onSnapshot(doc(db, 'content', 'features'), (doc) => {
       if (doc.exists()) setFeatures(doc.data().items || []);
+    }, () => {});
+
+    const unsubCategories = onSnapshot(doc(db, 'content', 'categories'), (doc) => {
+      if (doc.exists()) setCategories(doc.data().items || []);
     }, () => {});
 
     const unsubTemplates = onSnapshot(collection(db, 'templates'), (snapshot) => {
@@ -75,5 +80,5 @@ export function useSiteContent() {
     };
   }, []);
 
-  return { logoBase64, hero, contact, about, features, templates, testimonials, faqs, banners, loading };
+  return { logoBase64, hero, contact, about, features, categories, templates, testimonials, faqs, banners, loading };
 }

@@ -9,6 +9,8 @@ export default function ManageOrders() {
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [downloadUrl, setDownloadUrl] = useState('');
 
+  const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
+
   useEffect(() => {
     // We should show newest first
     const q = query(collection(db, 'orders'), orderBy('createdAt', 'desc'));
@@ -27,13 +29,15 @@ export default function ManageOrders() {
     return () => unsub();
   }, []);
 
-  const deleteOrder = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this order?')) return;
+  const deleteOrder = async () => {
+    if (!deleteOrderId) return;
     try {
-      await deleteDoc(doc(db, 'orders', id));
+      await deleteDoc(doc(db, 'orders', deleteOrderId));
       toast.success('Order deleted');
+      setDeleteOrderId(null);
     } catch (e) {
       toast.error('Failed to delete order');
+      setDeleteOrderId(null);
     }
   };
 
@@ -58,6 +62,28 @@ export default function ManageOrders() {
 
   return (
     <div className="w-full">
+      {deleteOrderId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
+            <h3 className="text-xl font-bold text-white mb-2">Delete Order</h3>
+            <p className="text-gray-400 mb-6">Are you sure you want to delete this order? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setDeleteOrderId(null)}
+                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={deleteOrder}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <h1 className="text-2xl font-bold text-white mb-6">Order Management</h1>
       <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
         {orders.length === 0 ? (
@@ -107,7 +133,7 @@ export default function ManageOrders() {
                         <button onClick={() => setExpandedId(expandedId === order.id ? null : order.id)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg mr-2">
                           <ChevronDown className={`w-4 h-4 transform transition-transform ${expandedId===order.id ? 'rotate-180':''}`}/>
                         </button>
-                        <button onClick={() => deleteOrder(order.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg">
+                        <button onClick={() => setDeleteOrderId(order.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg">
                           <Trash2 className="w-4 h-4" />
                         </button>
                       </td>

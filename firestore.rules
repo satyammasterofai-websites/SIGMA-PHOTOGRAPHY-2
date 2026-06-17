@@ -10,8 +10,8 @@ service cloud.firestore {
     function isAdmin() {
       // Allow if auth is not null and document has admin role OR they are in predefined emails
       return isAuthenticated() && (
-        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
-        request.auth.token.email in ['satyammasterofai@gmail.com', 'jhahimanshukumar87@gmail.com']
+        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin') ||
+        (request.auth.token.email != null && request.auth.token.email.lower() in ['satyammasterofai@gmail.com', 'jhahimanshukumar87@gmail.com', 'sigmaphotography0001@gmail.com'])
       );
     }
     
@@ -53,6 +53,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    match /categories/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /faqs/{document=**} {
       allow read: if true;
       allow write: if isAdmin();

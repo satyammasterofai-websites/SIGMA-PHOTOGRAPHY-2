@@ -7,6 +7,8 @@ import toast from 'react-hot-toast';
 export default function ManageUsers() {
   const [users, setUsers] = useState<any[]>([]);
 
+  const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
       setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
@@ -26,18 +28,42 @@ export default function ManageUsers() {
     }
   };
 
-  const deleteUserRecord = async (id: string) => {
-    if (!confirm('Are you sure you want to delete this user record from DB?')) return;
+  const deleteUserRecord = async () => {
+    if (!deleteUserId) return;
     try {
-      await deleteDoc(doc(db, 'users', id));
+      await deleteDoc(doc(db, 'users', deleteUserId));
       toast.success('User deleted');
+      setDeleteUserId(null);
     } catch (e) {
       toast.error('Failed to delete user');
+      setDeleteUserId(null);
     }
   };
 
   return (
     <div className="w-full">
+      {deleteUserId && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
+            <h3 className="text-xl font-bold text-white mb-2">Delete User</h3>
+            <p className="text-gray-400 mb-6">Are you sure you want to delete this user record from DB? This action cannot be undone.</p>
+            <div className="flex justify-end gap-3">
+              <button 
+                onClick={() => setDeleteUserId(null)}
+                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={deleteUserRecord}
+                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+              >
+                Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
       <h1 className="text-2xl font-bold text-white mb-6">User Management</h1>
       <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
         <div className="overflow-x-auto">
@@ -65,7 +91,7 @@ export default function ManageUsers() {
                        <button onClick={() => changeRole(u.id, u.role)} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-white rounded text-xs">
                          Toggle Role
                        </button>
-                       <button onClick={() => deleteUserRecord(u.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg">
+                       <button onClick={() => setDeleteUserId(u.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg">
                          <Trash2 className="w-4 h-4" />
                        </button>
                     </div>
