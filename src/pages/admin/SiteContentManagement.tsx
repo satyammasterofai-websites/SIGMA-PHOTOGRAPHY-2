@@ -51,13 +51,13 @@ export default function SiteContentManagement() {
         if (logoDoc.exists()) setLogoBase64(logoDoc.data().image || '');
 
         const heroDoc = await getDoc(doc(db, 'content', 'hero'));
-        if (heroDoc.exists()) setHero(heroDoc.data() as any);
+        if (heroDoc.exists()) setHero({ heading: '', subheading: '', buttonText: '', image: '', videoUrl: '', bgImage: '', ...heroDoc.data() });
 
         const contactDoc = await getDoc(doc(db, 'content', 'contact'));
-        if (contactDoc.exists()) setContact(contactDoc.data() as any);
+        if (contactDoc.exists()) setContact({ phone: '', whatsapp: '', email: '', office: '', instagram: '', mapUrl: '', otherLinks: '', ...contactDoc.data() });
 
         const aboutDoc = await getDoc(doc(db, 'content', 'about'));
-        if (aboutDoc.exists()) setAbout(aboutDoc.data() as any);
+        if (aboutDoc.exists()) setAbout({ title: '', description: '', image: '', ...aboutDoc.data() });
 
         const featuresDoc = await getDoc(doc(db, 'content', 'features'));
         if (featuresDoc.exists()) setFeatures(featuresDoc.data().items || []);

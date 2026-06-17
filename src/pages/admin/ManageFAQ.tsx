@@ -79,8 +79,8 @@ export default function ManageFAQ() {
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <div className="bg-gray-900 p-6 rounded-2xl w-full max-w-md border border-gray-800">
              <h2 className="text-xl font-bold text-white mb-4">{formData.id ? 'Edit' : 'Add'} FAQ</h2>
-             <input type="text" placeholder="Question" value={formData.question} onChange={e => setFormData({...formData, question: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2 mb-4" />
-             <textarea placeholder="Answer" value={formData.answer} onChange={e => setFormData({...formData, answer: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2 mb-4 resize-none" rows={4} />
+             <input type="text" placeholder="Question" value={formData.question || ''} onChange={e => setFormData({...formData, question: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2 mb-4" />
+             <textarea placeholder="Answer" value={formData.answer || ''} onChange={e => setFormData({...formData, answer: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2 mb-4 resize-none" rows={4} />
              <div className="flex justify-end gap-2">
                <button onClick={() => setShowModal(false)} className="px-4 py-2 text-gray-400">Cancel</button>
                <button onClick={saveFaq} className="px-4 py-2 bg-indigo-500 text-white rounded-xl">Save</button>

@@ -75,11 +75,11 @@ export default function TemplateManagement() {
   const openForm = (template: any = null) => {
     if (template) {
       setEditingId(template.id);
-      setTitle(template.title);
-      setCategory(template.category);
-      setPrice(template.price);
+      setTitle(template.title || '');
+      setCategory(template.category || 'Wedding');
+      setPrice(template.price || '');
       setDiscountPrice(template.discountPrice || '');
-      setDescription(template.description);
+      setDescription(template.description || '');
       setThumbnailBase64(template.thumbnailBase64 || '');
       setVideoUrl(template.videoUrl || '');
       setStatus(template.status || 'Active');

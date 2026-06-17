@@ -11,6 +11,9 @@ export default function ManageSettings() {
   const [waNumber, setWaNumber] = useState('9162478070');
   const [waMessageFormat, setWaMessageFormat] = useState('*Booking Request*\n\nTemplate: {template}\nTemplate ID: {templateId}\nOrder ID: {orderId}\n\n*Customer Details*\nName: {name}\nPhone: {phone}\n\n{details}');
   const [waOrderingEnabled, setWaOrderingEnabled] = useState(true);
+  
+  // Checkout State
+  const [checkoutFormNote, setCheckoutFormNote] = useState('📝 Important Instructions / महत्वपूर्ण निर्देश\nEnglish:\nFill Carefully: Please enter the details of your events exactly as you want them to appear on your invitation card.\nNot Applicable: If a specific ceremony is not happening, or if you wish to keep that information private, simply enter "0" or "N/A" in that field.\nAdditional Requests: If you have any extra details or special instructions to add, please use the "Other" section.\nहिंदी:\nध्यानपूर्वक भरें: आपके यहाँ जो-जो फंक्शन होने वाले हैं, उनकी सही जानकारी इस फॉर्म में भरें ताकि कार्ड में वही दिखाई दे।\nजानकारी न होने पर: यदि कोई फंक्शन आपके यहाँ नहीं है या आप उसकी जानकारी शेयर नहीं करना चाहते, तो उस बॉक्स में "0" या "N/A" लिख दें।\nअन्य जानकारी: यदि आप कोई अतिरिक्त जानकारी या स्पेशल नोट जोड़ना चाहते हैं, तो उसे "Other" वाले सेक्शन में लिख सकते हैं।\nThank you! If you face any issues while filling out the form, feel free to contact us. / धन्यवाद! यदि आपको फॉर्म भरने में कोई समस्या आए, तो हमसे संपर्क करें।');
 
   // Coupons State
   const [coupons, setCoupons] = useState<any[]>([]);
@@ -24,6 +27,9 @@ export default function ManageSettings() {
           setWaNumber(data.whatsapp.number || '9162478070');
           setWaMessageFormat(data.whatsapp.messageFormat || '*Booking Request*\n\nTemplate: {template}\nTemplate ID: {templateId}\nOrder ID: {orderId}\n\n*Customer Details*\nName: {name}\nPhone: {phone}\n\n{details}');
           setWaOrderingEnabled(data.whatsapp.enabled !== false);
+        }
+        if (data.checkoutFormNote) {
+           setCheckoutFormNote(data.checkoutFormNote);
         }
         if (data.coupons) {
            setCoupons(data.coupons || []);
@@ -41,6 +47,7 @@ export default function ManageSettings() {
           messageFormat: waMessageFormat,
           enabled: waOrderingEnabled
         },
+        checkoutFormNote,
         coupons
       }, { merge: true });
       toast.success('Settings saved successfully');
@@ -100,6 +107,10 @@ export default function ManageSettings() {
                <label className="block text-sm font-medium text-gray-300 mb-2">Message Format (Variables: {"{template}, {templateId}, {orderId}, {name}, {phone}, {details}"})</label>
                <textarea rows={8} value={waMessageFormat} onChange={e => setWaMessageFormat(e.target.value)} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 resize-none font-mono text-sm" />
              </div>
+             <div>
+               <label className="block text-sm font-medium text-gray-300 mb-2">Checkout Form Note</label>
+               <textarea rows={8} value={checkoutFormNote} onChange={e => setCheckoutFormNote(e.target.value)} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 resize-none font-sans text-sm" />
+             </div>
           </div>
         )}
 
@@ -108,15 +119,15 @@ export default function ManageSettings() {
              <div className="flex flex-col md:flex-row gap-4 items-end bg-gray-800/50 p-6 rounded-xl border border-gray-800">
                <div className="flex-1 w-full">
                  <label className="block text-xs font-medium text-gray-400 mb-2">Coupon Code</label>
-                 <input type="text" value={newCoupon.code} onChange={e => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})} placeholder="SUMMER50" className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" />
+                 <input type="text" value={newCoupon.code || ''} onChange={e => setNewCoupon({...newCoupon, code: e.target.value.toUpperCase()})} placeholder="SUMMER50" className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" />
                </div>
                <div className="w-full md:w-32">
                  <label className="block text-xs font-medium text-gray-400 mb-2">Discount (%)</label>
-                 <input type="number" value={newCoupon.percentage} onChange={e => setNewCoupon({...newCoupon, percentage: e.target.value})} placeholder="20" className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" />
+                 <input type="number" value={newCoupon.percentage || ''} onChange={e => setNewCoupon({...newCoupon, percentage: e.target.value})} placeholder="20" className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" />
                </div>
                <div className="flex-1 w-full">
                  <label className="block text-xs font-medium text-gray-400 mb-2">Expiry Date (Optional)</label>
-                 <input type="date" value={newCoupon.expiryDate} onChange={e => setNewCoupon({...newCoupon, expiryDate: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" />
+                 <input type="date" value={newCoupon.expiryDate || ''} onChange={e => setNewCoupon({...newCoupon, expiryDate: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" />
                </div>
                <button onClick={addCoupon} className="w-full md:w-auto bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-xl text-sm font-medium h-[42px]">Add Coupon</button>
              </div>

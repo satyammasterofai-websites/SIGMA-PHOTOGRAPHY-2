@@ -1,24 +1,7 @@
-import { motion } from 'motion/react';
-import { Star, MessageCircle, MapPin, Phone, Mail, Instagram, ArrowRight, User } from 'lucide-react';
+import { useState, useEffect } from 'react';
+import { motion, AnimatePresence } from 'motion/react';
+import { MessageCircle, MapPin, Phone, Mail, Instagram, ArrowRight, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
-
-const defaultTestimonials = [
-  {
-    name: 'Emily & James',
-    review: 'The quality of the wedding invitation video was absolutely breathtaking. It looked like a Hollywood trailer. SIGMAPHOTOGRAPHY delivered beyond our expectations!',
-    rating: 5,
-  },
-  {
-    name: 'Priya Sharma',
-    review: 'I customized my engagement invite using their dashboard. It was so easy, and the WhatsApp quick order made the final delivery seamless.',
-    rating: 5,
-  },
-  {
-    name: 'Rahul Verma',
-    review: 'Outstanding service and premium designs. The metallic accents and camera lens inspired themes perfectly matched our modern wedding aesthetics.',
-    rating: 5,
-  }
-];
 
 const defaultFaqs = [
   { question: "How long does it take to receive the final video?", answer: "Most of our standard templates are delivered within 24 hours. Highly customized 4K videos might take up to 48 hours depending on the complexity of the revisions." },
@@ -28,70 +11,133 @@ const defaultFaqs = [
 
 export default function ContactAndTestimonials() {
   const { testimonials: cmsTestimonials, faqs: cmsFaqs, contact } = useSiteContent();
+  const [selectedImage, setSelectedImage] = useState<string | null>(null);
+  const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
 
-  const displayTestimonials = cmsTestimonials.length > 0 ? cmsTestimonials.map(t => ({
-    name: t.name,
-    review: t.content || '',
-    rating: 5,
-  })) : defaultTestimonials;
-
-  // Duplicate testimonials for the infinite marquee effect
-  const marqueeItems = [...displayTestimonials, ...displayTestimonials, ...displayTestimonials];
+  // Filter visible testimonials and sort by order
+  const displayTestimonials = cmsTestimonials
+    .filter(t => t.isVisible !== false)
+    .sort((a, b) => (a.order || 0) - (b.order || 0));
 
   const displayFaqs = cmsFaqs.length > 0 ? cmsFaqs : defaultFaqs;
 
+  useEffect(() => {
+    if (!displayTestimonials || displayTestimonials.length <= 1) return;
+    const interval = setInterval(() => {
+      setCurrentTestimonialIndex((prev) => (prev + 1) % displayTestimonials.length);
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [displayTestimonials.length]);
+
+  const nextTestimonial = () => setCurrentTestimonialIndex((prev) => (prev + 1) % displayTestimonials.length);
+  const prevTestimonial = () => setCurrentTestimonialIndex((prev) => (prev === 0 ? displayTestimonials.length - 1 : prev - 1));
+
   return (
     <div className="w-full">
-      {/* Testimonials */}
-      <section className="py-24 bg-gray-50 border-t border-gray-100 relative overflow-hidden">
+      {/* Testimonials Screenshot Gallery */}
+      <section className="py-24 bg-gray-50 border-y border-brand-purple/10 relative overflow-hidden">
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-brand-purple/5 rounded-full blur-[120px] pointer-events-none" />
         
-        <div className="max-w-7xl mx-auto px-6 relative z-10">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 w-full">
           <div className="text-center max-w-3xl mx-auto mb-16">
             <h2 className="text-4xl md:text-5xl font-display font-bold text-gray-900 mb-6">
               Client <span className="text-gradient-brand">Triumphs</span>
             </h2>
             <p className="text-gray-600 text-lg">
-              Hear what couples are saying about their cinematic invitation experience.
+              Real screenshots from our happy customers. Click to enlarge.
             </p>
           </div>
-        </div>
 
-        {/* Marquee Container */}
-        <div className="relative w-full overflow-hidden flex z-10 pb-4">
-          <motion.div 
-            className="flex gap-8 px-4"
-            animate={{ x: [0, -1035] }} // Depends on card width & gap: 3 cards x (w-300 + gap 32)
-            transition={{
-              repeat: Infinity,
-              ease: "linear",
-              duration: 20
-            }}
-          >
-            {marqueeItems.map((t, i) => (
+          {displayTestimonials.length > 0 ? (
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5 bg-white group">
               <div 
-                key={i}
-                className="bg-white rounded-3xl p-8 shadow-xl border border-gray-100 flex flex-col hover:shadow-brand-purple/10 hover:border-brand-purple/20 transition-all duration-300 min-w-[320px] md:min-w-[400px]"
+                className="w-full relative flex items-center justify-center min-h-[200px] md:min-h-[400px] cursor-pointer"
+                onClick={() => setSelectedImage(displayTestimonials[currentTestimonialIndex]?.imageUrl || displayTestimonials[currentTestimonialIndex]?.image)}
               >
-                <div className="flex items-center gap-2 mb-6">
-                  {[...Array(t.rating || 5)].map((_, idx) => (
-                    <Star key={idx} className="w-5 h-5 fill-brand-gold text-brand-gold" />
-                  ))}
-                </div>
-                <p className="text-gray-700 italic flex-1 mb-8 leading-relaxed line-clamp-4">
-                  "{t.review}"
-                </p>
-                <div className="flex items-center gap-4 mt-auto">
-                  <div className="w-12 h-12 rounded-full bg-gray-100 flex items-center justify-center text-gray-400 border border-gray-200">
-                    <User className="w-6 h-6" />
-                  </div>
-                  <span className="font-bold text-gray-900">{t.name}</span>
-                </div>
+                 <AnimatePresence mode="wait">
+                    <motion.img
+                      key={currentTestimonialIndex}
+                      initial={{ opacity: 0, scale: 1.02, filter: "blur(4px)" }}
+                      animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
+                      exit={{ opacity: 0, scale: 0.98, filter: "blur(4px)" }}
+                      transition={{ duration: 0.6, ease: "easeOut" }}
+                      src={displayTestimonials[currentTestimonialIndex]?.imageUrl || displayTestimonials[currentTestimonialIndex]?.image}
+                      alt="Client Testimonial Screenshot"
+                      className="w-full h-auto object-contain max-h-[80vh]"
+                    />
+                 </AnimatePresence>
               </div>
-            ))}
-          </motion.div>
+
+              {displayTestimonials.length > 1 && (
+                <>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); prevTestimonial(); }}
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur text-brand-purple p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform hover:bg-white hover:scale-110 z-20"
+                  >
+                    <ChevronLeft className="w-6 h-6" />
+                  </button>
+                  <button 
+                    onClick={(e) => { e.stopPropagation(); nextTestimonial(); }}
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur text-brand-purple p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform hover:bg-white hover:scale-110 z-20"
+                  >
+                    <ChevronRight className="w-6 h-6" />
+                  </button>
+                  
+                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
+                    {displayTestimonials.map((_, idx) => (
+                      <button
+                        key={idx}
+                        onClick={(e) => { e.stopPropagation(); setCurrentTestimonialIndex(idx); }}
+                        className={`w-2.5 h-2.5 rounded-full transition-all ${idx === currentTestimonialIndex ? 'bg-brand-purple w-8' : 'bg-gray-300 hover:bg-gray-400'}`}
+                      />
+                    ))}
+                  </div>
+                </>
+              )}
+              
+              <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-3xl pointer-events-none"></div>
+            </div>
+          ) : (
+             <div className="text-center py-12 text-gray-500 bg-white rounded-3xl border border-gray-100 shadow-sm">
+                More client triumphs coming soon!
+             </div>
+          )}
         </div>
       </section>
+
+      {/* Lightbox Modal */}
+      <AnimatePresence>
+        {selectedImage && (
+          <motion.div 
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 drop-shadow-2xl backdrop-blur-sm"
+            onClick={() => setSelectedImage(null)}
+          >
+            <button 
+              className="absolute top-6 right-6 text-white/70 hover:text-white p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"
+              onClick={() => setSelectedImage(null)}
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              transition={{ type: "spring", damping: 25, stiffness: 300 }}
+              className="relative w-full max-w-4xl max-h-[90vh] flex items-center justify-center"
+              onClick={(e) => e.stopPropagation()} // Prevent clicks inside from closing
+            >
+               <img 
+                 src={selectedImage} 
+                 alt="Enlarged Testimonial" 
+                 className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
+               />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
 
       {/* FAQ */}
       <section className="py-24 bg-white relative">
