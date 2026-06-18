@@ -23,7 +23,7 @@ export default function HomeBanners() {
   return (
     <section className="py-8 w-full overflow-hidden border-y border-brand-purple/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
-        <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5 bg-white group">
+        <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5 bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] group">
           <div className="w-full relative flex items-center justify-center min-h-[200px] md:min-h-[400px]">
              <AnimatePresence mode="wait">
                 <motion.img

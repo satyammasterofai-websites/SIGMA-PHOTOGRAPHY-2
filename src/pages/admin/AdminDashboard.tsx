@@ -48,7 +48,7 @@ export default function AdminDashboardLayout() {
     { name: 'Banners', path: '/admin/banners', icon: Images },
     { name: 'Testimonials', path: '/admin/testimonials', icon: MessageSquare },
     { name: 'FAQ', path: '/admin/faq', icon: HelpCircle },
-    { name: 'Notifications', path: '/admin/notifications', icon: Bell },
+    { name: 'Announcements', path: '/admin/notifications', icon: Bell },
     { name: 'Users', path: '/admin/users', icon: Users },
     { name: 'Site Content', path: '/admin/content', icon: Settings },
   ];
@@ -171,6 +171,16 @@ function AdminHome() {
     revenue: 0
   });
 
+  const [recentUsers, setRecentUsers] = useState<any[]>([]);
+  const [recentOrders, setRecentOrders] = useState<any[]>([]);
+
+  const formatDate = (val: any) => {
+     if (!val) return new Date().toLocaleDateString();
+     if (val.toMillis) return new Date(val.toMillis()).toLocaleDateString();
+     if (val.seconds) return new Date(val.seconds * 1000).toLocaleDateString();
+     return new Date(val).toLocaleDateString();
+  };
+
   useEffect(() => {
     const fetchStats = async () => {
       try {
@@ -180,7 +190,9 @@ function AdminHome() {
            getDocs(collection(db, 'templates'))
         ]);
         
-        const ordersData = ordersSnap.docs.map(d=>d.data());
+        const ordersData: any[] = ordersSnap.docs.map(d=>({ ...d.data(), id: d.id }));
+        const usersData: any[] = usersSnap.docs.map(d=>({ ...d.data(), id: d.id }));
+
         let revenue = 0;
         let pending = 0;
         let completed = 0;
@@ -190,6 +202,25 @@ function AdminHome() {
            if (o.status === 'Completed' || o.status === 'Delivered') completed++;
         });
 
+        const getMs = (val: any) => {
+           if (!val) return 0;
+           if (val.toMillis) return val.toMillis();
+           if (val.seconds) return val.seconds * 1000;
+           return new Date(val).getTime() || 0;
+        };
+
+        const sortedOrders = [...ordersData].sort((a,b) => {
+           const d1 = getMs(a.createdAt);
+           const d2 = getMs(b.createdAt);
+           return d2 - d1;
+        }).slice(0, 5);
+
+        const sortedUsers = [...usersData].sort((a,b) => {
+           const d1 = getMs(a.createdAt || a.joinedAt || a.lastLogin);
+           const d2 = getMs(b.createdAt || b.joinedAt || b.lastLogin);
+           return d2 - d1;
+        }).slice(0, 5);
+
         setStats({
            users: usersSnap.size,
            orders: ordersSnap.size,
@@ -198,6 +229,9 @@ function AdminHome() {
            templates: tmplSnap.size,
            revenue
         });
+
+        setRecentOrders(sortedOrders);
+        setRecentUsers(sortedUsers);
 
       } catch(e) {
         console.error(e);
@@ -241,15 +275,58 @@ function AdminHome() {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
          <div className="bg-white/80 backdrop-blur-sm border border-brand-purple/10 rounded-2xl p-6 shadow-sm min-h-[300px]">
              <h3 className="text-lg font-bold text-brand-navy mb-4">Recent Registrations</h3>
-             <div className="flex items-center justify-center h-[200px] text-brand-slate text-sm">
-                No recent registrations
-             </div>
+             {recentUsers.length > 0 ? (
+               <div className="space-y-4">
+                 {recentUsers.map(u => (
+                   <div key={u.id} className="flex justify-between items-center bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full bg-brand-purple/10 flex items-center justify-center text-brand-purple overflow-hidden">
+                         {u.photoURL ? <img src={u.photoURL} alt="avatar" /> : <Users className="w-5 h-5" />}
+                       </div>
+                       <div>
+                         <p className="text-sm font-bold text-gray-900">{u.displayName || 'Unknown User'}</p>
+                         <p className="text-xs text-gray-500">{u.email || 'No email provided'}</p>
+                       </div>
+                     </div>
+                     <p className="text-xs text-gray-400 whitespace-nowrap">
+                       {formatDate(u.createdAt || u.joinedAt || u.lastLogin)}
+                     </p>
+                   </div>
+                 ))}
+               </div>
+             ) : (
+                <div className="flex items-center justify-center h-[200px] text-brand-slate text-sm">
+                   No recent registrations
+                </div>
+             )}
          </div>
          <div className="bg-white/80 backdrop-blur-sm border border-brand-purple/10 rounded-2xl p-6 shadow-sm min-h-[300px]">
              <h3 className="text-lg font-bold text-brand-navy mb-4">Recent Orders</h3>
-             <div className="flex items-center justify-center h-[200px] text-brand-slate text-sm border-2 border-dashed border-brand-purple/20 rounded-xl">
-                No recent orders found
-             </div>
+             {recentOrders.length > 0 ? (
+               <div className="space-y-4">
+                 {recentOrders.map(o => (
+                   <div key={o.id} className="flex justify-between items-center bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+                     <div className="flex items-center gap-3">
+                       <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
+                         <ShoppingBag className="w-5 h-5" />
+                       </div>
+                       <div>
+                         <p className="text-sm font-bold text-gray-900 truncate max-w-[150px] md:max-w-[200px]">{o.templateName || o.templateTitle || 'Order'}</p>
+                         <p className="text-xs text-gray-500">{o.customerName || (o.customData && o.customData.customerName) || 'Customer'}</p>
+                       </div>
+                     </div>
+                     <div className="text-right">
+                       <span className="text-[10px] uppercase tracking-wider font-bold text-brand-purple bg-brand-purple/10 px-2 py-1 rounded-full">{o.status || 'Pending'}</span>
+                       <p className="text-xs text-gray-400 mt-2">{formatDate(o.createdAt)}</p>
+                     </div>
+                   </div>
+                 ))}
+               </div>
+             ) : (
+                <div className="flex items-center justify-center h-[200px] text-brand-slate text-sm border-2 border-dashed border-brand-purple/20 rounded-xl">
+                   No recent orders found
+                </div>
+             )}
          </div>
       </div>
     </div>

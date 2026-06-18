@@ -4,6 +4,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { useSiteContent } from '../hooks/useSiteContent';
 import { useNavigate, Link } from 'react-router-dom';
 import { useAuthStore } from '../store/useAuthStore';
+import AnnouncementBar from './AnnouncementBar';
 
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
@@ -28,11 +29,13 @@ export default function Navbar() {
   ];
 
   return (
-    <nav
-      className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-        isScrolled ? 'glassmorphism py-3' : 'bg-transparent py-5'
-      }`}
-    >
+    <header className="fixed top-0 left-0 right-0 z-50">
+      <AnnouncementBar />
+      <nav
+        className={`w-full transition-all duration-300 relative ${
+          isScrolled ? 'glassmorphism py-3 shadow-sm bg-white/80' : 'bg-transparent py-5'
+        }`}
+      >
       <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
         {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
@@ -161,5 +164,6 @@ export default function Navbar() {
         )}
       </AnimatePresence>
     </nav>
+    </header>
   );
 }

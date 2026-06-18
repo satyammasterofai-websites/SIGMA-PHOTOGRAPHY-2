@@ -49,7 +49,7 @@ export default function ContactAndTestimonials() {
           </div>
 
           {displayTestimonials.length > 0 ? (
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5 bg-white group">
+            <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5 bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] group">
               <div 
                 className="w-full relative flex items-center justify-center min-h-[200px] md:min-h-[400px] cursor-pointer"
                 onClick={() => setSelectedImage(displayTestimonials[currentTestimonialIndex]?.imageUrl || displayTestimonials[currentTestimonialIndex]?.image)}
@@ -140,7 +140,7 @@ export default function ContactAndTestimonials() {
       </AnimatePresence>
 
       {/* FAQ */}
-      <section className="py-24 relative">
+      <section className="py-24 relative bg-red-50/50">
         <div className="max-w-4xl mx-auto px-6">
           <div className="text-center mb-16">
              <h2 className="text-3xl md:text-4xl font-display font-bold text-gray-900 mb-4">Frequently Asked Questions</h2>

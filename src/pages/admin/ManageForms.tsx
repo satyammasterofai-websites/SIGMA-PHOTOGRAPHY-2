@@ -12,6 +12,8 @@ export default function ManageForms() {
     const unsub = onSnapshot(collection(db, 'settings', 'data', 'custom_forms'), (snapshot) => {
       setForms(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
       setLoading(false);
+    }, (error) => {
+      console.error("Error fetching custom forms:", error);
     });
     return () => unsub();
   }, []);
