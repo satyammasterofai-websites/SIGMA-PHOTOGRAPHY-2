@@ -51,7 +51,8 @@ export default function PremiumGallery() {
   useEffect(() => {
     let result = templates;
     if (activeCategory !== 'All') {
-      result = result.filter(t => t.category === activeCategory);
+      const normalizedActive = activeCategory.trim().toLowerCase();
+      result = result.filter(t => t.category && t.category.trim().toLowerCase() === normalizedActive);
     }
     if (searchQuery) {
       result = result.filter(t => 
@@ -87,15 +88,18 @@ export default function PremiumGallery() {
               />
             </div>
             <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 scrollbar-hide">
-              {categories.map(cat => (
-                <button
-                  key={cat}
-                  onClick={() => setActiveCategory(cat)}
-                  className={`px-6 py-4 rounded-xl font-medium whitespace-nowrap transition-all ${activeCategory === cat ? 'bg-brand-purple text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
-                >
-                  {cat}
-                </button>
-              ))}
+              {categories.map(cat => {
+                const isActive = activeCategory.trim().toLowerCase() === cat.trim().toLowerCase();
+                return (
+                  <button
+                    key={cat}
+                    onClick={() => setActiveCategory(cat)}
+                    className={`px-6 py-4 rounded-xl font-medium whitespace-nowrap transition-all ${isActive ? 'bg-brand-purple text-white shadow-md' : 'bg-white text-gray-600 border border-gray-200 hover:bg-gray-50'}`}
+                  >
+                    {cat}
+                  </button>
+                );
+              })}
             </div>
           </div>
 

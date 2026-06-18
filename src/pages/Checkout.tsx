@@ -241,37 +241,37 @@ export default function Checkout() {
      
      let customFieldsText = '';
      if (formConfig) {
-        customFieldsText += `*Details*\n`;
-        Object.entries(formData.bride).forEach(([k,v]) => customFieldsText += `${k}: ${v}\n`);
-        Object.entries(formData.groom).forEach(([k,v]) => customFieldsText += `${k}: ${v}\n`);
+        customFieldsText += `*DETAILS*\n`;
+        Object.entries(formData.bride).forEach(([k,v]) => customFieldsText += `*${k.toUpperCase()}*: ${v}\n`);
+        Object.entries(formData.groom).forEach(([k,v]) => customFieldsText += `*${k.toUpperCase()}*: ${v}\n`);
         
         if (formData.events.length > 0) {
-          customFieldsText += `\n*Events*\n`;
+          customFieldsText += `\n*EVENTS*\n`;
           formData.events.forEach((ev: any, idx: number) => {
-            customFieldsText += `${idx+1}. ${ev.type} - ${ev.date} ${ev.time} @ ${ev.venue}\n`;
+            customFieldsText += `*EVENT ${idx+1}*: ${ev.type} - ${ev.date} ${ev.time} @ ${ev.venue}\n`;
           });
         }
         
-        customFieldsText += `\n*Additional Details*\n`;
-        Object.entries(formData.additional).forEach(([k,v]) => customFieldsText += `${k}: ${v}\n`);
+        customFieldsText += `\n*ADDITIONAL DETAILS*\n`;
+        Object.entries(formData.additional).forEach(([k,v]) => customFieldsText += `*${k.toUpperCase()}*: ${v}\n`);
      } else {
         if (template?.customFields && template.customFields.length > 0) {
-            customFieldsText += `*Customization Details*`;
+            customFieldsText += `*CUSTOMIZATION DETAILS*`;
             for(const f of template.customFields) {
-               customFieldsText += `\n- ${f.name}: ${legacyFormData[f.id] || 'Not provided'}`;
+               customFieldsText += `\n*${f.name.toUpperCase()}*: ${legacyFormData[f.id] || 'Not provided'}`;
             }
             customFieldsText += '\n\n';
         }
      }
      
-     let pricingText = `\n*Pricing Summary*\nBase Price: ₹${basePrice}`;
+     let pricingText = `\n*PRICING SUMMARY*\n*BASE PRICE*: ₹${basePrice}`;
      if (basePrice > initialPrice) {
-         pricingText += `\nDiscounted Price: ₹${initialPrice}`;
+         pricingText += `\n*DISCOUNTED PRICE*: ₹${initialPrice}`;
      }
      if (couponCode && appliedCoupon) {
-        pricingText += `\nCoupon Applied: ${appliedCoupon.code} (-${appliedCoupon.percentage}%)`;
+        pricingText += `\n*COUPON APPLIED*: ${appliedCoupon.code} (-${appliedCoupon.percentage}%)`;
      }
-     pricingText += `\n*Final Price: ₹${finalPrice}*`;
+     pricingText += `\n*FINAL PRICE*: ₹${finalPrice}`;
 
      const allDetails = customFieldsText + pricingText;
      
@@ -285,7 +285,7 @@ export default function Checkout() {
             .replace('{phone}', customerPhone || 'N/A')
             .replace('{details}', allDetails);
      } else {
-         details = `*Booking Request*\n\nTemplate: ${template?.title || 'Unknown'}\nTemplate ID: ${template?.id}\nOrder ID: ${displayOrderId}\n\n*Customer Details*\nName: ${customerName}\nPhone: ${customerPhone}\n\n${allDetails}`;
+         details = `*BOOKING REQUEST*\n\n*TEMPLATE*: ${template?.title || 'Unknown'}\n*TEMPLATE ID*: ${template?.id}\n*ORDER ID*: ${displayOrderId}\n\n*CUSTOMER DETAILS*\n*NAME*: ${customerName}\n*PHONE*: ${customerPhone}\n\n${allDetails}`;
      }
      
      const encodedMsg = encodeURIComponent(details);
