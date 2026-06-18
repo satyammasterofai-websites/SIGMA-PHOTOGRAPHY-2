@@ -9,18 +9,32 @@ export default function AnnouncementBar() {
   const [currentIndex, setCurrentIndex] = useState(0);
 
   useEffect(() => {
-    // Only fetch enabled announcements
-    const q = query(collection(db, 'announcements'), where('enabled', '==', true));
-    const unsub = onSnapshot(q, (snapshot) => {
+    // Fetch all announcements and filter locally to avoid any Firestore index or boolean/string type mismatch errors
+    const unsub = onSnapshot(collection(db, 'announcements'), (snapshot) => {
       const now = new Date();
-      const validAnnouncements = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })).filter((a: any) => {
-        if (a.startDate && new Date(a.startDate) > now) return false;
-        if (a.expiryDate && new Date(a.expiryDate) < now) return false;
+      
+      const allDocs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+      console.log("AnnouncementBar: Fetched all docs:", allDocs);
+
+      const validAnnouncements = allDocs.filter((a: any) => {
+        // Must be enabled
+        if (a.enabled === false || a.enabled === 'false') return false;
+        
+        if (a.startDate) {
+          const s = new Date(a.startDate);
+          if (!isNaN(s.getTime()) && s > now) return false;
+        }
+        if (a.expiryDate) {
+          const e = new Date(a.expiryDate);
+          if (!isNaN(e.getTime()) && e < now) return false;
+        }
         return true;
       });
+      
+      console.log("AnnouncementBar: Valid docs after filter:", validAnnouncements);
       setAnnouncements(validAnnouncements);
     }, (error) => {
-      // Intentionally omitting console.warn to avoid console clutter. User needs to update Firestore rules.
+      console.error("AnnouncementBar snapshot error:", error);
     });
 
     return () => unsub();

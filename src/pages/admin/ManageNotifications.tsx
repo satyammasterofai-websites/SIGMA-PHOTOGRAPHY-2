@@ -1,10 +1,13 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Trash2, Plus, Send, Edit, Play, Pause } from 'lucide-react';
 import toast from 'react-hot-toast';
 
+import { useAuthStore } from '../../store/useAuthStore';
+
 export default function ManageNotifications() {
+  const { user } = useAuthStore();
   const [notifications, setNotifications] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
   const [editingId, setEditingId] = useState<string | null>(null);
@@ -23,9 +26,12 @@ export default function ManageNotifications() {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'announcements'), (snapshot) => {
-      setNotifications(snapshot.docs.map(d => ({ id: d.id, ...d.data() })));
+      const docs = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      console.log("ManageNotifications: Fetched docs:", docs);
+      setNotifications(docs);
     }, (error) => {
-      // Suppress error to avoid clutter. User needs to update firestore rules.
+      console.error("ManageNotifications snapshot error:", error);
+      toast.error(`Permission denied reading Announcements: ${error.message}`);
     });
     return () => unsub();
   }, []);
@@ -48,8 +54,9 @@ export default function ManageNotifications() {
       toast.success(editingId ? "Announcement updated" : "Announcement created");
       setShowModal(false);
       resetForm();
-    } catch (e) {
-      toast.error("Failed to save announcement");
+    } catch (e: any) {
+      console.error("Save error:", e);
+      toast.error(`Failed to save announcement: ${e.message}`);
     }
   };
 
@@ -58,8 +65,9 @@ export default function ManageNotifications() {
     try {
       await deleteDoc(doc(db, 'announcements', id));
       toast.success("Deleted");
-    } catch (e) {
-      toast.error("Failed to delete");
+    } catch (e: any) {
+      console.error("Delete error:", e);
+      toast.error(`Failed to delete: ${e.message}`);
     }
   };
 
@@ -104,14 +112,40 @@ export default function ManageNotifications() {
       <div className="flex justify-between items-center mb-6">
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Announcement Bars</h1>
-          <p className="text-gray-500 text-sm mt-1">Manage scrolling announcement bars at the top of the site</p>
+          <p className="text-gray-500 text-sm mt-1">Manage scrolling announcement bars at the top of the site. Logged in as: {user?.email}</p>
         </div>
-        <button 
-          onClick={() => { resetForm(); setShowModal(true); }}
-          className="bg-brand-purple hover:bg-brand-purple/90 text-white px-4 py-2 rounded-xl flex items-center gap-2"
-        >
-          <Plus className="w-4 h-4" /> Add Announcement
-        </button>
+        <div className="flex gap-2">
+          <button 
+            onClick={async () => {
+              try {
+                await setDoc(doc(db, 'announcements', Date.now().toString()), {
+                  title: 'SUMMER OFFER',
+                  message: 'UPTO 50% OFF ON ALL TEMPLATES',
+                  type: 'marketing',
+                  enabled: true,
+                  startDate: '',
+                  expiryDate: '',
+                  bgColor: '#4F46E5',
+                  textColor: '#FFFFFF',
+                  createdAt: new Date().toISOString()
+                });
+                toast.success("Default announcement created");
+              } catch (e: any) {
+                console.error("Create default announcement error:", e);
+                toast.error(`Failed to create default announcement: ${e.message}`);
+              }
+            }}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl flex items-center gap-2"
+          >
+            Create Default Announcement
+          </button>
+          <button 
+            onClick={() => { resetForm(); setShowModal(true); }}
+            className="bg-brand-purple hover:bg-brand-purple/90 text-white px-4 py-2 rounded-xl flex items-center gap-2"
+          >
+            <Plus className="w-4 h-4" /> Add Announcement
+          </button>
+        </div>
       </div>
 
       <div className="space-y-4">
