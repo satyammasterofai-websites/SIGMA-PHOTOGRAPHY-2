@@ -87,12 +87,12 @@ export default function TemplateCategories() {
               transition={{ duration: 0.3 }}
               className="py-12 flex flex-col md:flex-row items-center gap-12 group"
             >
-              <div className="w-full md:w-1/3 rounded-2xl overflow-hidden glassmorphism-dark border border-brand-purple/10 shadow-lg group-hover:shadow-brand-purple/20 transition-all duration-500 relative">
-                <div className="relative w-full aspect-video bg-white flex items-center justify-center overflow-hidden">
+              <div className="w-full md:w-1/3 rounded-2xl overflow-hidden border border-brand-purple/10 shadow-lg group-hover:shadow-brand-purple/20 transition-all duration-500 relative bg-transparent">
+                <div className="relative w-full aspect-video bg-transparent flex items-center justify-center overflow-hidden">
                   <img 
                     src={cat.image || 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800'} 
                     alt={cat.name} 
-                    className="w-full h-auto object-cover group-hover:scale-105 transition-transform duration-700" 
+                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-700 p-2" 
                   />
                   <div className="absolute inset-0 bg-brand-navy/10 group-hover:bg-transparent transition-colors duration-500"></div>
                 </div>

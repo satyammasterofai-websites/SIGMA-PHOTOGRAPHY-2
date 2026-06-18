@@ -143,7 +143,7 @@ export default function TemplateManagement() {
       
       const data = { 
         title, category: finalCategory, price, discountPrice, description, 
-        thumbnailBase64, videoUrl, status, isFeatured, isTrending, advancePayment, customFields, formId 
+        thumbnailBase64, videoUrl, status, isFeatured, isTrending, advancePayment: advancePayment ? Number(advancePayment) : 0, customFields, formId 
       };
       
       if (editingId) {

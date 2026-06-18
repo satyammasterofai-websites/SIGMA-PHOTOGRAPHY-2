@@ -166,6 +166,9 @@ export default function PremiumGallery() {
                            ) : (
                              <span className="text-xl font-bold text-gray-900">₹{template.price}</span>
                            )}
+                           {template.advancePayment && template.advancePayment !== "0" && template.advancePayment !== 0 && (
+                             <span className="block text-xs font-semibold text-orange-600 mt-1">Advance: ₹{template.advancePayment}</span>
+                           )}
                         </div>
                         
                         <button 
