@@ -314,6 +314,51 @@ export default function Checkout() {
     }, 2000);
   };
 
+  // --- Dynamic Form Steps Logic ---
+  const dynamicSteps = React.useMemo(() => {
+    const s = [];
+
+    if (!formConfig) {
+      // Legacy Form Workflow
+      s.push({
+        id: 'legacy_details',
+        label: t.details[lang]
+      });
+      s.push({ id: 'uploads', label: t.uploads[lang] });
+    } else {
+      // Custom form workflow
+      // Always ask for Customer Contact Info as Step 1
+      s.push({
+        id: 'contact_and_details',
+        label: t.yourDetails[lang]
+      });
+
+      if (formConfig.familySettings?.brideEnabled) {
+         s.push({ id: 'bride', label: t.brideDetails[lang] });
+      }
+      if (formConfig.familySettings?.groomEnabled) {
+         s.push({ id: 'groom', label: t.groomDetails[lang] });
+      }
+      if (formConfig.eventSettings?.enabled) {
+         s.push({ id: 'events', label: t.eventDetails[lang] });
+      }
+      if (formConfig.additionalFields?.length > 0) {
+         s.push({ id: 'additional', label: t.additionalInfo[lang] });
+      }
+      const ups = formConfig.uploadSettings || {};
+      if (ups.photoUploadEnabled || ups.musicUploadEnabled || ups.instructionUploadEnabled) {
+         s.push({ id: 'uploads', label: t.uploads[lang] });
+      }
+    }
+
+    s.push({ id: 'review', label: t.reviewOrder[lang] });
+    s.push({ id: 'payment', label: 'WhatsApp / Payment' });
+    
+    return s;
+  }, [formConfig, lang]);
+
+  const steps = dynamicSteps.map(st => st.label);
+
   if (loading) return <div className="min-h-screen bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] flex items-center justify-center"><div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin"></div></div>;
 
   if (!template) {
@@ -324,16 +369,6 @@ export default function Checkout() {
       </div>
     );
   }
-
-  // --- Dynamic Form Steps Logic ---
-  const steps = [
-    t.brideDetails[lang],
-    t.groomDetails[lang],
-    t.eventDetails[lang],
-    t.uploads[lang],
-    t.reviewOrder[lang],
-    'WhatsApp / Payment'
-  ];
 
   const handleNext = () => {
     if (currentStep === 1 && (!customerName || !customerPhone)) {
@@ -429,17 +464,18 @@ export default function Checkout() {
      );
   };
 
-  // Step 1: Customer Contact + Family (if dynamic)
-  const renderBrideDetails = () => (
+  // Step: Contact Info
+  const renderContactBlock = () => (
     <div className="space-y-8 animate-fade-in-up">
       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
          <div className="flex flex-col items-center text-center mb-8">
             <div className="w-16 h-16 bg-gradient-premium text-white rounded-full flex items-center justify-center mb-4 shadow-xl">
                <User className="w-8 h-8" />
             </div>
-            <h2 className="text-3xl font-display font-medium text-brand-navy">{t.yourDetails[lang]} & Bride Info</h2>
+            <h2 className="text-3xl font-display font-medium text-brand-navy">{t.yourDetails[lang]}</h2>
+            <p className="text-gray-500 mt-2">{t.yourDetailsDesc[lang]}</p>
          </div>
-         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">{t.fullName[lang]} <span className="text-red-500">*</span></label>
               <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="John Doe" />
@@ -449,10 +485,14 @@ export default function Checkout() {
               <input type="text" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="+91 9876543210" />
             </div>
          </div>
+      </div>
+    </div>
+  );
 
-         <div className="w-full h-px bg-brand-purple/10 mb-8" />
-
-         <h3 className="text-2xl font-display text-brand-navy mb-6">👰 Bride's Details</h3>
+  const renderBrideDetails = () => (
+    <div className="space-y-8 animate-fade-in-up">
+      <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
+         <h3 className="text-2xl font-display text-brand-navy mb-6">👰 {t.brideDetails[lang] || "Bride's Details"}</h3>
          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {formConfig?.familySettings?.brideFields?.map((f: any) => renderField(f, 'bride')) || (
               <>
@@ -676,9 +716,6 @@ export default function Checkout() {
            </div>
          </div>
        )}
-
-       {/* Upload Vault */}
-       {renderStepUploads()}
     </div>
   );
 
@@ -787,12 +824,15 @@ export default function Checkout() {
 
            {/* Content */}
            <div className="relative">
-              {currentStep === 1 && renderBrideDetails() /* Bride */}
-              {currentStep === 2 && renderGroomDetails() /* Groom */}
-              {currentStep === 3 && renderStepEvents()}
-              {currentStep === 4 && renderStepUploads()}
-              {currentStep === 5 && renderStepReview()}
-              {currentStep === 6 && (
+              {dynamicSteps[currentStep - 1]?.id === 'contact_and_details' && renderContactBlock()}
+              {dynamicSteps[currentStep - 1]?.id === 'bride' && renderBrideDetails()}
+              {dynamicSteps[currentStep - 1]?.id === 'groom' && renderGroomDetails()}
+              {dynamicSteps[currentStep - 1]?.id === 'events' && renderStepEvents()}
+              {dynamicSteps[currentStep - 1]?.id === 'additional' && renderStepAdditional()}
+              {dynamicSteps[currentStep - 1]?.id === 'legacy_details' && renderLegacyDetails()}
+              {dynamicSteps[currentStep - 1]?.id === 'uploads' && renderStepUploads()}
+              {dynamicSteps[currentStep - 1]?.id === 'review' && renderStepReview()}
+              {dynamicSteps[currentStep - 1]?.id === 'payment' && (
                 <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 mt-12 text-center">
                   <h3 className="text-2xl font-bold mb-8">Complete Your Order</h3>
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
