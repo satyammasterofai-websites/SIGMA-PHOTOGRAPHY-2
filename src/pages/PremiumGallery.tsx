@@ -63,7 +63,7 @@ export default function PremiumGallery() {
   }, [searchQuery, activeCategory, templates]);
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] flex flex-col">
       {activeVideo && <VideoModal url={activeVideo} onClose={() => setActiveVideo(null)} />}
       <Navbar />
       

@@ -28,6 +28,8 @@ export default function TemplateManagement() {
   const [customFields, setCustomFields] = useState<any[]>([]);
   const [newFieldName, setNewFieldName] = useState('');
   const [categories, setCategories] = useState<any[]>([]);
+  const [formId, setFormId] = useState('');
+  const [availableForms, setAvailableForms] = useState<any[]>([]);
 
   const fetchTemplates = async () => {
     setLoading(true);
@@ -50,11 +52,17 @@ export default function TemplateManagement() {
     fetchTemplates();
     const fetchCategories = async () => {
       try {
-        const docSnap = await getDocs(collection(db, 'content'));
         const catDoc = await getDoc(doc(db, 'content', 'categories'));
         if (catDoc.exists() && catDoc.data().items) {
           setCategories(catDoc.data().items.map((item: any) => item.name));
         }
+        
+        const formsSnap = await getDocs(collection(db, 'settings', 'data', 'custom_forms'));
+        const fList: any[] = [];
+        formsSnap.forEach((d) => {
+          fList.push({ id: d.id, ...d.data() });
+        });
+        setAvailableForms(fList);
       } catch (err) {}
     };
     fetchCategories();
@@ -86,6 +94,7 @@ export default function TemplateManagement() {
       setIsFeatured(template.isFeatured || false);
       setIsTrending(template.isTrending || false);
       setCustomFields(template.customFields || []);
+      setFormId(template.formId || '');
     } else {
       setEditingId(null);
       setTitle('');
@@ -98,12 +107,8 @@ export default function TemplateManagement() {
       setStatus('Active');
       setIsFeatured(false);
       setIsTrending(false);
-      setCustomFields([
-        { id: 'f1', name: 'Bride Name', type: 'text', required: true },
-        { id: 'f2', name: 'Groom Name', type: 'text', required: true },
-        { id: 'f3', name: 'Event Date & Time', type: 'text', required: true },
-        { id: 'f4', name: 'Event Venue', type: 'text', required: true }
-      ]);
+      setCustomFields([]);
+      setFormId('');
     }
     setNewFieldName('');
     setIsModalOpen(true);
@@ -130,7 +135,7 @@ export default function TemplateManagement() {
     try {
       const data = { 
         title, category, price, discountPrice, description, 
-        thumbnailBase64, videoUrl, status, isFeatured, isTrending, customFields 
+        thumbnailBase64, videoUrl, status, isFeatured, isTrending, customFields, formId 
       };
       
       if (editingId) {
@@ -372,25 +377,42 @@ export default function TemplateManagement() {
 
                 {/* Custom Fields Section */}
                 <div className="border border-gray-800 rounded-xl p-4 bg-gray-800/20">
-                   <h3 className="text-lg font-bold text-white mb-4">Customization Fields</h3>
-                   <p className="text-sm text-gray-400 mb-4">Users will fill highly specific details for this template during order.</p>
+                   <h3 className="text-lg font-bold text-white mb-4">Checkout Form Assignment</h3>
+                   <p className="text-sm text-gray-400 mb-4">Select the custom form users will fill out when ordering this template. Create new forms in the Form Builder.</p>
                    
-                   <div className="flex gap-2 mb-4">
-                     <input type="text" value={newFieldName} onChange={e => setNewFieldName(e.target.value)} placeholder="e.g. Venue Details" className="flex-1 bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" />
-                     <button type="button" onClick={addCustomField} className="bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-medium">Add Field</button>
+                   <div className="mb-4">
+                      <select 
+                        value={formId} 
+                        onChange={(e) => setFormId(e.target.value)}
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
+                      >
+                         <option value="">Legacy Simple Form (Uses fields below)</option>
+                         {availableForms.map(f => (
+                           <option key={f.id} value={f.id}>{f.name}</option>
+                         ))}
+                      </select>
                    </div>
                    
-                   <div className="space-y-2">
-                     {customFields.map((field) => (
-                       <div key={field.id} className="flex justify-between items-center bg-gray-800 px-4 py-2 rounded-lg text-sm text-gray-300">
-                         <span>{field.name}</span>
-                         <button type="button" onClick={() => removeCustomField(field.id)} className="text-red-400 p-1 hover:bg-red-400/10 rounded">
-                           <Trash2 className="w-4 h-4" />
-                         </button>
+                   {!formId && (
+                     <>
+                       <div className="flex gap-2 mb-4">
+                         <input type="text" value={newFieldName} onChange={e => setNewFieldName(e.target.value)} placeholder="e.g. Venue Details" className="flex-1 bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" />
+                         <button type="button" onClick={addCustomField} className="bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-medium">Add Field</button>
                        </div>
-                     ))}
-                     {customFields.length === 0 && <p className="text-sm text-gray-500 text-center py-2">No custom fields defined.</p>}
-                   </div>
+                       
+                       <div className="space-y-2">
+                         {customFields.map((field) => (
+                           <div key={field.id} className="flex justify-between items-center bg-gray-800 px-4 py-2 rounded-lg text-sm text-gray-300">
+                             <span>{field.name}</span>
+                             <button type="button" onClick={() => removeCustomField(field.id)} className="text-red-400 p-1 hover:bg-red-400/10 rounded">
+                               <Trash2 className="w-4 h-4" />
+                             </button>
+                           </div>
+                         ))}
+                         {customFields.length === 0 && <p className="text-sm text-gray-500 text-center py-2">No custom fields defined.</p>}
+                       </div>
+                     </>
+                   )}
                 </div>
 
                 <div>

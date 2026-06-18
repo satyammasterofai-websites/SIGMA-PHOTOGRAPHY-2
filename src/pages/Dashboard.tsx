@@ -31,7 +31,7 @@ export default function DashboardLayout() {
   ];
 
   return (
-    <div className="min-h-screen bg-gray-50 flex">
+    <div className="min-h-screen bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] flex">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 
@@ -45,7 +45,7 @@ export default function DashboardLayout() {
         <div className="h-full flex flex-col pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center justify-between px-6 mb-8">
             <Link to="/" className="flex items-center gap-2 cursor-pointer">
-              <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-gradient-brand text-white shadow-lg">
+              <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-gradient-primary text-white shadow-lg">
                 <Camera className="w-4 h-4 absolute z-10" />
               </div>
               <span className="font-display font-bold text-lg tracking-tight">
@@ -77,6 +77,13 @@ export default function DashboardLayout() {
           </nav>
 
           <div className="px-4 mt-6">
+            <Link
+              to="/"
+              className="flex w-full items-center gap-3 px-3 py-2.5 mb-2 rounded-xl text-sm font-medium text-brand-purple hover:bg-brand-purple/10 transition-colors"
+            >
+              <ExternalLink className="w-5 h-5 text-brand-purple" />
+              Go Back to Site
+            </Link>
             <button
               onClick={handleLogout}
               className="flex w-full items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium text-red-600 hover:bg-red-50 transition-colors"
@@ -93,7 +100,7 @@ export default function DashboardLayout() {
         {/* Mobile Header */}
         <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
             <div className="flex items-center gap-2">
-              <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-gradient-brand text-white shadow-lg">
+              <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-gradient-primary text-white shadow-lg">
                 <Camera className="w-4 h-4 absolute z-10" />
               </div>
               <span className="font-display font-bold text-lg tracking-tight">SIGMAPRO</span>

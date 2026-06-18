@@ -155,7 +155,12 @@ export default function ManageOrders() {
                                        <h4 className="text-white font-bold mt-4 mb-2">Customization Data</h4>
                                        <div className="space-y-1 text-sm bg-gray-800 p-3 rounded-lg">
                                          {Object.entries(order.customData).map(([k, v]) => (
-                                            <div key={k} className="text-gray-300"><span className="text-gray-500">{k}:</span> {v as string}</div>
+                                            <div key={k} className="text-gray-300">
+                                              <span className="text-gray-500">{k}:</span> 
+                                              <pre className="inline-block whitespace-pre-wrap text-xs ml-2 align-top font-sans">
+                                                {typeof v === 'object' ? JSON.stringify(v, null, 2) : String(v)}
+                                              </pre>
+                                            </div>
                                          ))}
                                        </div>
                                      </>

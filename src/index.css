@@ -2,35 +2,47 @@
 @import "tailwindcss";
 
 @theme {
-  --color-brand-purple: #4c1d95; /* deep purple */
-  --color-brand-indigo: #4338ca;
-  --color-brand-blue: #2563eb;
-  --color-brand-electric: #0ea5e9;
-  --color-brand-teal: #0d9488;
-  --color-brand-cyan: #06b6d4;
-  --color-brand-gold: #fbbf24;
-  --color-brand-cream: #fdfbf7;
+  --color-brand-purple: #5B3DF5;
+  --color-brand-indigo: #6A4CFF;
+  --color-brand-blue: #3B82F6;
+  --color-brand-cyan: #06B6D4;
+  --color-brand-blush: #F8B4C8;
+  --color-brand-rose: #F472B6;
+  --color-brand-lavender: #E9D5FF;
+  --color-brand-ivory: #FFF8F2;
+  --color-brand-navy: #0F172A;
+  --color-brand-slate: #475569;
   
   --font-sans: 'Inter', ui-sans-serif, system-ui, -apple-system, sans-serif;
   --font-display: 'Space Grotesk', ui-sans-serif, system-ui, -apple-system, sans-serif;
 }
 
 @layer utilities {
-  .text-gradient-brand {
-    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-purple via-brand-indigo to-brand-electric;
+  .text-gradient-primary {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-purple via-brand-indigo to-brand-blue;
   }
-  .bg-gradient-brand {
-    @apply bg-gradient-to-r from-brand-purple via-brand-indigo to-brand-electric;
+  .bg-gradient-primary {
+    @apply bg-gradient-to-r from-brand-purple via-brand-indigo to-brand-blue;
   }
-  .bg-gradient-metallic {
-    @apply bg-gradient-to-r from-indigo-900 via-purple-800 to-indigo-900;
+  .bg-gradient-secondary {
+    @apply bg-gradient-to-r from-brand-rose to-brand-purple;
+  }
+  .text-gradient-premium {
+    @apply bg-clip-text text-transparent bg-gradient-to-r from-brand-rose via-brand-purple to-brand-cyan;
+  }
+  .bg-gradient-premium {
+    @apply bg-gradient-to-r from-brand-rose via-brand-purple to-brand-cyan;
   }
   
   .glassmorphism {
     @apply bg-white/70 backdrop-blur-md border border-white/40 shadow-xl;
   }
   .glassmorphism-dark {
-    @apply bg-gray-900/80 backdrop-blur-lg border border-white/10 shadow-2xl;
+    @apply bg-brand-navy/80 backdrop-blur-lg border border-white/10 shadow-2xl;
+  }
+  
+  .hide-scrollbar::-webkit-scrollbar {
+    display: none;
   }
 }
 
@@ -39,6 +51,6 @@ html {
 }
 
 body {
-  @apply bg-brand-cream text-gray-900 antialiased;
+  @apply bg-brand-ivory text-brand-navy antialiased;
 }
 

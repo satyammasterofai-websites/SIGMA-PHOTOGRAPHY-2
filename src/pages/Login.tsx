@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
-import { Camera, LogIn } from 'lucide-react';
+import { Camera, ArrowLeft } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { doc, getDoc } from 'firebase/firestore';
 import { useAuthStore } from '../store/useAuthStore';
@@ -63,25 +63,32 @@ export default function Login() {
   };
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col justify-center py-12 sm:px-6 lg:px-8">
+    <div className="min-h-screen bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] flex flex-col justify-center py-12 sm:px-6 lg:px-8 relative text-brand-navy">
+      <div className="absolute top-6 left-6 md:top-8 md:left-8">
+        <Link to="/" className="flex items-center gap-2 text-sm font-medium text-gray-600 hover:text-brand-purple transition-colors bg-white px-4 py-2 rounded-full shadow-sm border border-gray-200">
+          <ArrowLeft className="w-4 h-4" /> Go Back to Site
+        </Link>
+      </div>
+      
       <div className="sm:mx-auto sm:w-full sm:max-w-md">
         <div className="flex justify-center mb-6">
           <Link to="/">
-            <div className="relative flex items-center justify-center w-12 h-12 rounded-full bg-gradient-brand text-white shadow-lg">
-              <Camera className="w-6 h-6 absolute z-10" />
+            <div className="relative flex items-center justify-center w-16 h-16 rounded-full bg-gradient-premium text-white shadow-xl shadow-brand-purple/20 transition-transform hover:scale-110">
+              <Camera className="w-8 h-8 absolute z-10" />
+              <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent animate-[spin_3s_linear_infinite]" />
             </div>
           </Link>
         </div>
-        <h2 className="mt-2 text-center text-3xl font-display font-extrabold text-gray-900">
-          Welcome back
+        <h2 className="mt-2 text-center text-4xl font-display font-extrabold text-brand-navy">
+          Welcome Back
         </h2>
-        <p className="mt-2 text-center text-sm text-gray-600">
-          Sign in to access your SIGMAPHOTOGRAPHY dashboard.
+        <p className="mt-2 text-center text-sm font-medium text-brand-slate">
+          Sign in to access your luxury cinematic templates.
         </p>
       </div>
 
       <div className="mt-8 sm:mx-auto sm:w-full sm:max-w-md">
-        <div className="bg-white py-8 px-4 shadow sm:rounded-2xl sm:px-10 border border-gray-100">
+        <div className="bg-white py-8 px-4 shadow-xl shadow-brand-purple/5 sm:rounded-3xl sm:px-10 border border-brand-purple/10">
           <form className="space-y-6" onSubmit={handleEmailLogin}>
             <div>
               <label className="block text-sm font-medium text-gray-700">Email address</label>
@@ -91,7 +98,8 @@ export default function Login() {
                   required
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-brand-purple focus:border-brand-purple sm:text-sm"
+                  className="appearance-none block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-brand-purple focus:border-brand-purple sm:text-sm bg-gray-50"
+                  placeholder="Enter your email"
                 />
               </div>
             </div>
@@ -104,7 +112,8 @@ export default function Login() {
                   required
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="appearance-none block w-full px-3 py-2 border border-gray-300 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-brand-purple focus:border-brand-purple sm:text-sm"
+                  className="appearance-none block w-full px-4 py-3 border border-gray-200 rounded-xl shadow-sm placeholder-gray-400 focus:outline-none focus:ring-brand-purple focus:border-brand-purple sm:text-sm bg-gray-50"
+                  placeholder="Enter your password"
                 />
               </div>
             </div>
@@ -113,20 +122,20 @@ export default function Login() {
               <button
                 type="submit"
                 disabled={loading}
-                className="w-full flex justify-center py-2.5 px-4 border border-transparent rounded-xl shadow-sm text-sm font-medium text-white bg-gray-900 hover:bg-brand-purple focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-purple transition-colors disabled:opacity-50"
+                className="w-full flex justify-center py-3.5 px-4 border border-transparent rounded-xl shadow-lg text-sm font-bold text-white bg-gradient-premium hover:opacity-90 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-purple transition-all disabled:opacity-50"
               >
                 {loading ? 'Signing in...' : 'Sign in'}
               </button>
             </div>
           </form>
 
-          <div className="mt-6">
+          <div className="mt-8">
             <div className="relative">
               <div className="absolute inset-0 flex items-center">
                 <div className="w-full border-t border-gray-200" />
               </div>
               <div className="relative flex justify-center text-sm">
-                <span className="px-2 bg-white text-gray-500">Or continue with</span>
+                <span className="px-4 bg-white text-gray-500 font-medium">Or continue with</span>
               </div>
             </div>
 
@@ -134,19 +143,19 @@ export default function Login() {
               <button
                 onClick={handleGoogleLogin}
                 disabled={loading}
-                className="w-full flex items-center justify-center gap-3 py-2.5 px-4 border border-gray-300 rounded-xl shadow-sm text-sm font-medium text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-purple transition-colors disabled:opacity-50"
+                className="w-full flex items-center justify-center gap-3 py-3.5 px-4 border border-gray-200 rounded-xl shadow-sm text-sm font-bold text-gray-700 bg-white hover:bg-gray-50 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-brand-purple transition-colors disabled:opacity-50"
               >
                 <img src="https://www.svgrepo.com/show/475656/google-color.svg" className="w-5 h-5" alt="Google logo" />
-                Google
+                Sign in with Google
               </button>
             </div>
           </div>
 
-          <div className="mt-6 text-center">
+          <div className="mt-8 text-center bg-gray-50 p-4 rounded-xl border border-gray-100">
             <p className="text-sm text-gray-600">
               Don't have an account?{' '}
-              <Link to="/signup" className="font-medium text-brand-purple hover:text-brand-indigo">
-                Sign up
+              <Link to="/signup" className="font-bold text-brand-purple hover:text-brand-indigo">
+                Register here
               </Link>
             </p>
           </div>

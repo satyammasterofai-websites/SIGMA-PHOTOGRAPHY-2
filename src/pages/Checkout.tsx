@@ -5,9 +5,61 @@ import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Upload, X, File, ShieldCheck, CheckCircle2, MessageSquare, CreditCard, Play } from 'lucide-react';
+import { Upload, X, File, ShieldCheck, CheckCircle2, MessageSquare, CreditCard, Play, ChevronRight, ChevronLeft, Calendar, User, Music, HelpCircle, MapPin, Plus, Trash2, Languages } from 'lucide-react';
 import toast from 'react-hot-toast';
 import VideoModal from '../components/VideoModal';
+
+const t = {
+  details: { en: 'Details', hi: 'विवरण' },
+  family: { en: 'Family', hi: 'परिवार' },
+  events: { en: 'Events', hi: 'कार्यक्रम' },
+  additionalInfo: { en: 'Additional Info', hi: 'अतिरिक्त जानकारी' },
+  uploads: { en: 'Uploads', hi: 'अपलोड' },
+  reviewOrder: { en: 'Review & Order', hi: 'समीक्षा और ऑर्डर' },
+
+  yourDetails: { en: 'Your Details', hi: 'आपका विवरण' },
+  yourDetailsDesc: { en: 'We need this to contact you regarding the order.', hi: 'ऑर्डर के संबंध में आपसे संपर्क करने के लिए हमें इसकी आवश्यकता है।' },
+  fullName: { en: 'Full Name', hi: 'पूरा नाम' },
+  whatsappNumber: { en: 'WhatsApp Number', hi: 'व्हाट्सएप नंबर' },
+
+  groomDetails: { en: 'Groom Details', hi: 'वर का विवरण' },
+  brideDetails: { en: 'Bride Details', hi: 'वधू का विवरण' },
+
+  eventDetails: { en: 'Event Details', hi: 'कार्यक्रम का विवरण' },
+  addEvent: { en: 'Add Event', hi: 'कार्यक्रम जोड़ें' },
+  eventType: { en: 'Event Type', hi: 'कार्यक्रम का प्रकार' },
+  eventDate: { en: 'Event Date', hi: 'कार्यक्रम की तिथि' },
+  eventTime: { en: 'Event Time', hi: 'कार्यक्रम का समय' },
+  eventVenue: { en: 'Event Venue Name', hi: 'कार्यक्रम स्थल का नाम' },
+  fullAddress: { en: 'Full Address', hi: 'पूरा पता' },
+  noEventsAdded: { en: 'No events added yet. Click "Add Event" to proceed.', hi: 'अभी तक कोई कार्यक्रम नहीं जोड़ा गया है। आगे बढ़ने के लिए "कार्यक्रम जोड़ें" पर क्लिक करें।' },
+
+  uploadVaultInfo: { en: 'Upload beautiful memories, photos, custom music, or specific text notes to be included in your invitation.', hi: 'अपने निमंत्रण में शामिल करने के लिए खूबसूरत यादें, तस्वीरें, कस्टम संगीत या विशिष्ट टेक्स्ट नोट्स अपलोड करें।' },
+  secureArtifactVault: { en: 'Secure Artifact Vault', hi: 'सुरक्षित अपलोड वॉल्ट' },
+  uploadPhotos: { en: 'Upload Photos', hi: 'तस्वीरें अपलोड करें' },
+  coupleBrideGroom: { en: 'Couple, Bride, Groom', hi: 'युगल, वधू, वर' },
+  uploadCustomMusic: { en: 'Upload Custom Music', hi: 'कस्टम संगीत अपलोड करें' },
+  mp3wav: { en: 'MP3, WAV files', hi: 'MP3, WAV फ़ाइलें' },
+  uploadedAssets: { en: 'Uploaded Assets', hi: 'अपलोड किए गए एसेट्स' },
+  filesTooHeavy: { en: 'Are your files too heavy? Or you prefer sending them on WhatsApp safely?', hi: 'क्या आपकी फ़ाइलें बहुत भारी हैं? या आप उन्हें व्हाट्सएप पर सुरक्षित रूप से भेजना पसंद करते हैं?' },
+  sendFilesLater: { en: 'Send Files Later on WhatsApp', hi: 'व्हाट्सएप पर बाद में फ़ाइलें भेजें' },
+
+  finalReview: { en: 'Final Review', hi: 'अंतिम समीक्षा' },
+  contactInfo: { en: 'Contact Info', hi: 'संपर्क जानकारी' },
+  gotCoupon: { en: 'Got a Coupon Code?', hi: 'क्या आपके पास कूपन कोड है?' },
+  apply: { en: 'Apply', hi: 'लागू करें' },
+  basePrice: { en: 'Base Price', hi: 'मूल मूल्य' },
+  discount: { en: 'Discount', hi: 'छूट' },
+  total: { en: 'Total', hi: 'कुल योग' },
+  orderViaWhatsapp: { en: 'Order via WhatsApp', hi: 'व्हाट्सएप के माध्यम से ऑर्डर करें' },
+  payOnline: { en: 'Pay Online', hi: 'ऑनलाइन भुगतान करें' },
+
+  back: { en: 'Back', hi: 'पीछे' },
+  nextStep: { en: 'Next Step', hi: 'अगला कदम' },
+
+  selectEventType: { en: 'Select Event Type', hi: 'कार्यक्रम का प्रकार चुनें' },
+  other: { en: 'Other', hi: 'अन्य' }
+};
 
 export default function Checkout() {
   const { id } = useParams();
@@ -17,14 +69,23 @@ export default function Checkout() {
   
   const [template, setTemplate] = useState<any>(stateTemplate || null);
   const [settings, setSettings] = useState<any>(null);
-  const [loading, setLoading] = useState(!stateTemplate);
+  const [formConfig, setFormConfig] = useState<any>(null);
+  const [loading, setLoading] = useState(true);
   const [showVideo, setShowVideo] = useState(false);
-  
+  const [lang, setLang] = useState<'en'|'hi'>('en');
+
   // Custom Fields State
-  const [formData, setFormData] = useState<Record<string, string>>({});
+  const [formData, setFormData] = useState<Record<string, any>>({
+    bride: {},
+    groom: {},
+    events: [],
+    additional: {}
+  });
+  
+  const [legacyFormData, setLegacyFormData] = useState<Record<string, string>>({});
   
   // File Uploads
-  const [files, setFiles] = useState<Array<{ name: string, base64: string }>>([]);
+  const [files, setFiles] = useState<Array<{ name: string, base64: string, type: 'photo' | 'music' | 'instruction' | 'other' }>>([]);
   const [fileProgress, setFileProgress] = useState(0);
 
   // Pricing State
@@ -41,31 +102,40 @@ export default function Checkout() {
   // Payment Options Popups
   const [paymentSuccessPopup, setPaymentSuccessPopup] = useState<{show: boolean, msg: string}>({show: false, msg: ''});
 
+  const [currentStep, setCurrentStep] = useState(1);
+
   useEffect(() => {
     const fetchData = async () => {
       try {
          if (!id) return;
          
-         // Try fetching if we don't have the template yet or we just want fresh settings
          try {
            const settingsSnap = await getDoc(doc(db, 'settings', 'config'));
            if (settingsSnap.exists()) {
              setSettings(settingsSnap.data());
            }
-         } catch (err) {
-           console.error("Error fetching settings:", err);
-         }
+         } catch (err) {}
 
-         if (!template) {
+         let currentTemplate = template;
+         if (!currentTemplate) {
            const tmplSnap = await getDoc(doc(db, 'templates', id));
            if (tmplSnap.exists()) {
-             setTemplate({ id: tmplSnap.id, ...tmplSnap.data() });
+             currentTemplate = { id: tmplSnap.id, ...tmplSnap.data() };
+             setTemplate(currentTemplate);
            } else {
              toast.error("Template not found");
+             return;
            }
          }
+
+         if (currentTemplate?.formId) {
+            const formSnap = await getDoc(doc(db, 'settings', 'data', 'custom_forms', currentTemplate.formId));
+            if (formSnap.exists()) {
+               setFormConfig(formSnap.data());
+            }
+         }
       } catch (err) {
-         console.error("Template fetch error:", err);
+         console.error("Fetch error:", err);
       } finally {
          setLoading(false);
       }
@@ -73,7 +143,7 @@ export default function Checkout() {
     fetchData();
   }, [id, template]);
 
-  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const handleFileUpload = async (e: React.ChangeEvent<HTMLInputElement>, type: 'photo' | 'music' | 'instruction' | 'other') => {
     if (e.target.files && e.target.files.length > 0) {
        let uploaded = [...files];
        setFileProgress(0);
@@ -82,7 +152,7 @@ export default function Checkout() {
           const reader = new FileReader();
           await new Promise<void>((resolve) => {
             reader.onload = (ev) => {
-              uploaded.push({ name: file.name, base64: ev.target?.result as string });
+              uploaded.push({ name: file.name, base64: ev.target?.result as string, type });
               setFileProgress(Math.round(((i + 1) / e.target.files!.length) * 100));
               resolve();
             };
@@ -90,7 +160,7 @@ export default function Checkout() {
           });
        }
        setFiles(uploaded);
-       toast.success("Files successfully uploaded to Secure Vault");
+       toast.success("Files successfully uploaded");
     }
   };
 
@@ -109,7 +179,6 @@ export default function Checkout() {
      
      const matched = settings.coupons.find((c: any) => c.code.toUpperCase() === couponCode.trim().toUpperCase());
      if (matched) {
-       // Ignore expiry for now or simple check
        if (matched.expiryDate) {
          const today = new Date().toISOString().split('T')[0];
          if (today > matched.expiryDate) {
@@ -124,13 +193,11 @@ export default function Checkout() {
      }
   };
 
-  // Pricing Calculations
   const basePrice = Number(template?.price) || 0;
   const initialPrice = template?.discountPrice ? Number(template.discountPrice) : basePrice;
   const discountAmount = appliedCoupon ? (initialPrice * (Number(appliedCoupon.percentage) / 100)) : 0;
   const finalPrice = Math.round(initialPrice - discountAmount);
 
-  // WhatsApp Redirect URL
   const [waUrlToOpen, setWaUrlToOpen] = useState('');
 
   const createOrderRecord = async (paymentStatus: string, viaMethod: string) => {
@@ -145,7 +212,7 @@ export default function Checkout() {
           price: finalPrice || 0,
           paymentStatus: paymentStatus || 'Pending',
           status: 'Pending',
-          customData: formData || {},
+          customData: formConfig ? formData : legacyFormData,
           filesCount: files.length || 0,
           viaMethod: viaMethod || 'Direct'
        });
@@ -158,7 +225,7 @@ export default function Checkout() {
                 files: files
              });
           } catch(err) {
-             console.error("Files too large or storage error:", err);
+             console.error("Files too large:", err);
           }
        }
        return orderRef.id;
@@ -173,15 +240,31 @@ export default function Checkout() {
      const displayOrderId = orderId === 'ORDER_ERR' ? `REQ-${Math.floor(Math.random() * 100000)}` : orderId;
      
      let customFieldsText = '';
-     if (template?.customFields && template.customFields.length > 0) {
-         customFieldsText += `*Customization Details*`;
-         for(const f of template.customFields) {
-            customFieldsText += `\n- ${f.name}: ${formData[f.id] || 'Not provided'}`;
-         }
-         customFieldsText += '\n\n';
+     if (formConfig) {
+        customFieldsText += `*Details*\n`;
+        Object.entries(formData.bride).forEach(([k,v]) => customFieldsText += `${k}: ${v}\n`);
+        Object.entries(formData.groom).forEach(([k,v]) => customFieldsText += `${k}: ${v}\n`);
+        
+        if (formData.events.length > 0) {
+          customFieldsText += `\n*Events*\n`;
+          formData.events.forEach((ev: any, idx: number) => {
+            customFieldsText += `${idx+1}. ${ev.type} - ${ev.date} ${ev.time} @ ${ev.venue}\n`;
+          });
+        }
+        
+        customFieldsText += `\n*Additional Details*\n`;
+        Object.entries(formData.additional).forEach(([k,v]) => customFieldsText += `${k}: ${v}\n`);
+     } else {
+        if (template?.customFields && template.customFields.length > 0) {
+            customFieldsText += `*Customization Details*`;
+            for(const f of template.customFields) {
+               customFieldsText += `\n- ${f.name}: ${legacyFormData[f.id] || 'Not provided'}`;
+            }
+            customFieldsText += '\n\n';
+        }
      }
      
-     let pricingText = `*Pricing Summary*\nBase Price: ₹${basePrice}`;
+     let pricingText = `\n*Pricing Summary*\nBase Price: ₹${basePrice}`;
      if (basePrice > initialPrice) {
          pricingText += `\nDiscounted Price: ₹${initialPrice}`;
      }
@@ -217,192 +300,530 @@ export default function Checkout() {
      setPaymentSuccessPopup({ show: true, msg: 'Order saved! Please click below to send us your details on WhatsApp.' });
   };
 
-  const initiateOrder = () => {
-     if (!customerName || !customerPhone) {
-        toast.error("Please provide your Name and Phone Number");
-        return;
-     }
-     const requiredFields = template?.customFields?.filter((f: any) => f.required) || [];
-     for (const f of requiredFields) {
-       if (!formData[f.id]) {
-          toast.error(`Please fill out: ${f.name}`);
-          return;
-       }
-     }
-     
-     // Skip payment gateway entirely, just proceed to WhatsApp
-     proceedToWhatsApp('WhatsApp Direct');
+  const initiatePayment = async () => {
+    // Mock Online payment
+    setPaymentSuccessPopup({ show: true, msg: 'Initializing secure payment gateway...' });
+    setTimeout(async () => {
+       const orderId = await createOrderRecord('Paid Online', 'Online Payment');
+       setPaymentSuccessPopup({ show: true, msg: 'Payment successful! Redirecting to WhatsApp to send assets.' });
+       const url = getWaUrl(orderId);
+       setWaUrlToOpen(url);
+    }, 2000);
   };
 
-  if (loading) return <div className="min-h-screen bg-gray-50 flex items-center justify-center"><div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin"></div></div>;
+  if (loading) return <div className="min-h-screen bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] flex items-center justify-center"><div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin"></div></div>;
 
   if (!template) {
     return (
-      <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center">
+      <div className="min-h-screen bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] flex flex-col items-center justify-center">
         <h2 className="text-2xl font-bold mb-4">Template Not Found</h2>
         <button onClick={() => navigate('/gallery')} className="px-6 py-2 bg-brand-purple text-white rounded-xl">Back to Gallery</button>
       </div>
     );
   }
 
+  // --- Dynamic Form Steps Logic ---
+  const steps = [
+    t.brideDetails[lang],
+    t.groomDetails[lang],
+    t.eventDetails[lang],
+    t.uploads[lang],
+    t.reviewOrder[lang],
+    'WhatsApp / Payment'
+  ];
+
+  const handleNext = () => {
+    if (currentStep === 1 && (!customerName || !customerPhone)) {
+       toast.error("Please provide your Contact Details");
+       return;
+    }
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setCurrentStep(prev => prev + 1);
+  };
+
+  const handlePrev = () => {
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    setCurrentStep(prev => prev - 1);
+  };
+
+  const renderField = (field: any, section: string) => {
+     let val = '';
+     if (section === 'legacy') val = legacyFormData[field.id] || '';
+     else val = formData[section]?.[field.id] || '';
+
+     const onChange = (e: any) => {
+        if (section === 'legacy') {
+           setLegacyFormData({...legacyFormData, [field.id]: e.target.value});
+        } else {
+           setFormData({
+             ...formData,
+             [section]: { ...formData[section], [field.id]: e.target.value }
+           });
+        }
+     };
+
+     const commonClasses = "w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple transition-all";
+
+     const dynamicTranslations: Record<string, string> = {
+         "father name": "पिता का नाम (Father Name)",
+         "mother name": "माता का नाम (Mother Name)",
+         "grandfather name": "दादा का नाम (Grandfather Name)",
+         "grandmother name": "दादी का नाम (Grandmother Name)",
+         "brother name": "भाई का नाम (Brother Name)",
+         "sister name": "बहन का नाम (Sister Name)",
+         "name": "नाम (Name)",
+         "address": "पता (Address)",
+         "contact number": "संपर्क नंबर (Contact Number)",
+         "phone": "फ़ोन (Phone)",
+         "email": "ईमेल (Email)",
+         "groom name": "वर का नाम (Groom Name)",
+         "bride name": "वधू का नाम (Bride Name)",
+         "bride father name": "वधू के पिता का नाम (Bride's Father Name)",
+         "bride mother name": "वधू की माता का नाम (Bride's Mother Name)",
+         "groom father name": "वर के पिता का नाम (Groom's Father Name)",
+         "groom mother name": "वर की माता का नाम (Groom's Mother Name)",
+         "bride grandfather name": "वधू के दादा का नाम (Bride's Grandfather Name)",
+         "bride grandmother name": "वधू की दादी का नाम (Bride's Grandmother Name)",
+         "groom grandfather name": "वर के दादा का नाम (Groom's Grandfather Name)",
+         "groom grandmother name": "वर की दादी का नाम (Groom's Grandmother Name)",
+         "date": "तिथि (Date)",
+         "time": "समय (Time)",
+         "venue": "स्थल (Venue)",
+         "venue name": "स्थल का नाम (Venue Name)",
+         "subtitle": "उपशीर्षक (Subtitle)",
+         "title": "शीर्षक (Title)",
+         "message": "संदेश (Message)",
+         "note": "नोट (Note)",
+         "family details": "परिवार का विवरण (Family Details)",
+         "function name": "समारोह का नाम (Function Name)"
+     };
+
+     const lowered = field.name.toLowerCase().trim();
+     let translatedMatch = dynamicTranslations[lowered];
+     if (!translatedMatch) {
+         // Fallback keyword matching
+         if (lowered.includes('father name')) translatedMatch = 'पिता का नाम (Father Name)';
+         else if (lowered.includes('mother name')) translatedMatch = 'माता का नाम (Mother Name)';
+         else if (lowered.includes('grandfather name')) translatedMatch = 'दादा का नाम (Grandfather Name)';
+         else if (lowered.includes('grandmother name')) translatedMatch = 'दादी का नाम (Grandmother Name)';
+         else if (lowered.includes('brother name')) translatedMatch = 'भाई का नाम (Brother Name)';
+         else if (lowered.includes('sister name')) translatedMatch = 'बहन का नाम (Sister Name)';
+     }
+     
+     const translatedLabel = lang === 'hi' ? (translatedMatch || field.name) : field.name;
+
+     return (
+       <div key={field.id} className="md:col-span-1">
+         <label className="block text-sm font-semibold text-gray-700 mb-2">
+            {translatedLabel} {field.required && <span className="text-red-500">*</span>}
+         </label>
+         {field.type === 'textarea' ? (
+           <textarea value={val} onChange={onChange} className={commonClasses} rows={3} placeholder={translatedLabel} />
+         ) : (
+           <input type={field.type || 'text'} value={val} onChange={onChange} className={commonClasses} placeholder={translatedLabel} />
+         )}
+       </div>
+     );
+  };
+
+  // Step 1: Customer Contact + Family (if dynamic)
+  const renderBrideDetails = () => (
+    <div className="space-y-8 animate-fade-in-up">
+      <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
+         <div className="flex flex-col items-center text-center mb-8">
+            <div className="w-16 h-16 bg-gradient-premium text-white rounded-full flex items-center justify-center mb-4 shadow-xl">
+               <User className="w-8 h-8" />
+            </div>
+            <h2 className="text-3xl font-display font-medium text-brand-navy">{t.yourDetails[lang]} & Bride Info</h2>
+         </div>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t.fullName[lang]} <span className="text-red-500">*</span></label>
+              <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="John Doe" />
+            </div>
+            <div>
+              <label className="block text-sm font-semibold text-gray-700 mb-2">{t.whatsappNumber[lang]} <span className="text-red-500">*</span></label>
+              <input type="text" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="+91 9876543210" />
+            </div>
+         </div>
+
+         <div className="w-full h-px bg-brand-purple/10 mb-8" />
+
+         <h3 className="text-2xl font-display text-brand-navy mb-6">👰 Bride's Details</h3>
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            {formConfig?.familySettings?.brideFields?.map((f: any) => renderField(f, 'bride')) || (
+              <>
+                 <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Bride's Full Name</label>
+                    <input type="text" className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="Her Name" />
+                 </div>
+                 <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Father's Name</label>
+                    <input type="text" className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="Father's Name" />
+                 </div>
+                 <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Mother's Name</label>
+                    <input type="text" className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="Mother's Name" />
+                 </div>
+              </>
+            )}
+         </div>
+      </div>
+    </div>
+  );
+
+  const renderGroomDetails = () => (
+    <div className="space-y-8 animate-fade-in-up">
+       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
+          <div className="flex flex-col items-center text-center mb-8">
+            <h2 className="text-3xl font-display font-medium text-brand-navy">👨 Groom's Details</h2>
+            <p className="text-brand-slate mt-2">Enter the groom's family details</p>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             {formConfig?.familySettings?.groomFields?.map((f: any) => renderField(f, 'groom')) || (
+              <>
+                 <div className="md:col-span-2">
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Groom's Full Name</label>
+                    <input type="text" className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="His Name" />
+                 </div>
+                 <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Father's Name</label>
+                    <input type="text" className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="Father's Name" />
+                 </div>
+                 <div>
+                    <label className="block text-sm font-semibold text-gray-700 mb-2">Mother's Name</label>
+                    <input type="text" className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="Mother's Name" />
+                 </div>
+              </>
+            )}
+          </div>
+       </div>
+    </div>
+  );
+
+  // Step 2: Events
+  const addEvent = () => {
+     setFormData({ ...formData, events: [...formData.events, { type: '', date: '', time: '', venue: '', address: '' }] });
+  };
+  const updateEvent = (idx: number, k: string, v: string) => {
+     const newEvents = [...formData.events];
+     newEvents[idx][k] = v;
+     setFormData({...formData, events: newEvents});
+  };
+  const removeEvent = (idx: number) => {
+     const newEvents = [...formData.events];
+     newEvents.splice(idx, 1);
+     setFormData({...formData, events: newEvents});
+  };
+
+  const renderStepEvents = () => (
+    <div className="space-y-6 animate-fade-in-up">
+       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
+          <div className="flex justify-between items-center mb-6">
+             <h2 className="text-2xl font-display font-semibold text-gray-900 flex items-center gap-2">📅 {t.eventDetails[lang]}</h2>
+             <button onClick={addEvent} className="text-brand-purple bg-brand-purple/10 px-4 py-2 rounded-lg font-medium text-sm flex items-center gap-1 hover:bg-brand-purple/20 transition-colors">
+                <Plus className="w-4 h-4"/> {t.addEvent[lang]}
+             </button>
+          </div>
+          
+          <div className="space-y-8">
+             {formData.events.map((ev: any, idx: number) => (
+                <div key={idx} className="relative p-6 bg-gray-50 border border-gray-200 rounded-2xl">
+                   <button onClick={() => removeEvent(idx)} className="absolute top-4 right-4 text-red-500 bg-red-50 p-2 rounded-lg hover:bg-red-100 transition"><Trash2 className="w-4 h-4"/></button>
+                   <h3 className="font-bold text-gray-800 mb-4">{t.events[lang]} {idx + 1}</h3>
+                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">{t.eventType[lang]}</label>
+                        <select value={ev.type} onChange={(e) => updateEvent(idx, 'type', e.target.value)} className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-4 py-3">
+                           <option value="">{t.selectEventType[lang]}</option>
+                           {formConfig?.eventSettings?.eventTypes?.map((tType: string) => <option key={tType} value={tType}>{tType}</option>)}
+                           <option value="Other">{t.other[lang]}</option>
+                        </select>
+                      </div>
+                      <div>
+                        <label className="block text-sm font-semibold text-gray-700 mb-2">{t.eventDate[lang]}</label>
+                        <input type="date" value={ev.date} onChange={(e) => updateEvent(idx, 'date', e.target.value)} className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-4 py-3" />
+                      </div>
+                      <div>
+                         <label className="block text-sm font-semibold text-gray-700 mb-2">{t.eventTime[lang]}</label>
+                         <input type="time" value={ev.time} onChange={(e) => updateEvent(idx, 'time', e.target.value)} className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-4 py-3" />
+                      </div>
+                      <div>
+                         <label className="block text-sm font-semibold text-gray-700 mb-2">{t.eventVenue[lang]}</label>
+                         <input type="text" value={ev.venue} onChange={(e) => updateEvent(idx, 'venue', e.target.value)} placeholder="Hotel Grand" className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-4 py-3" />
+                      </div>
+                      <div className="md:col-span-2">
+                         <label className="block text-sm font-semibold text-gray-700 mb-2">{t.fullAddress[lang]}</label>
+                         <textarea value={ev.address} onChange={(e) => updateEvent(idx, 'address', e.target.value)} rows={2} placeholder="Full address" className="w-full bg-white border border-gray-200 text-gray-900 rounded-xl px-4 py-3 resize-none" />
+                      </div>
+                   </div>
+                </div>
+             ))}
+             {formData.events.length === 0 && (
+                <div className="text-center py-12 text-gray-500 border-2 border-dashed border-gray-200 rounded-2xl">
+                   {t.noEventsAdded[lang]}
+                </div>
+             )}
+          </div>
+       </div>
+    </div>
+  );
+
+  // Step 3: Additional
+  const renderStepAdditional = () => (
+    <div className="space-y-6 animate-fade-in-up">
+       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
+          <h2 className="text-2xl font-display font-semibold text-gray-900 mb-6 flex items-center gap-2">📝 {t.additionalInfo[lang]}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             {formConfig.additionalFields.map((f: any) => renderField(f, 'additional'))}
+          </div>
+       </div>
+    </div>
+  );
+
+  // Step 4: Uploads
+  const renderStepUploads = () => (
+    <div className="space-y-6 animate-fade-in-up">
+      <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
+         <div className="flex items-center gap-3 mb-6">
+            <ShieldCheck className="w-8 h-8 text-green-500" />
+            <h2 className="text-2xl font-bold text-gray-900">{t.secureArtifactVault[lang]}</h2>
+         </div>
+         <p className="text-gray-500 mb-8">{t.uploadVaultInfo[lang]}</p>
+         
+         <div className="grid grid-cols-1 md:grid-cols-2 gap-6 mb-8">
+            {formConfig?.uploadSettings?.photoUploadEnabled && (
+               <div className="relative border border-dashed border-brand-purple/40 bg-purple-50/50 rounded-2xl p-6 text-center hover:bg-purple-50 transition cursor-pointer">
+                  <Upload className="w-8 h-8 text-brand-purple mx-auto mb-3" />
+                  <p className="font-semibold text-gray-900">{t.uploadPhotos[lang]}</p>
+                  <p className="text-xs text-gray-500">{t.coupleBrideGroom[lang]}</p>
+                  <input type="file" multiple accept="image/*" onChange={(e) => handleFileUpload(e, 'photo')} className="absolute inset-0 opacity-0 cursor-pointer" />
+               </div>
+            )}
+            {formConfig?.uploadSettings?.musicUploadEnabled && (
+               <div className="relative border border-dashed border-blue-400/40 bg-blue-50/50 rounded-2xl p-6 text-center hover:bg-blue-50 transition cursor-pointer">
+                  <Music className="w-8 h-8 text-blue-500 mx-auto mb-3" />
+                  <p className="font-semibold text-gray-900">{t.uploadCustomMusic[lang]}</p>
+                  <p className="text-xs text-gray-500">{t.mp3wav[lang]}</p>
+                  <input type="file" multiple accept="audio/*" onChange={(e) => handleFileUpload(e, 'music')} className="absolute inset-0 opacity-0 cursor-pointer" />
+               </div>
+            )}
+         </div>
+
+         {fileProgress > 0 && fileProgress < 100 && (
+           <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6">
+             <div className="bg-brand-purple h-2.5 rounded-full transition-all" style={{ width: `${fileProgress}%` }}></div>
+           </div>
+         )}
+
+         {files.length > 0 && (
+           <div className="space-y-3">
+              <h4 className="font-semibold text-sm text-gray-900 mb-4">{t.uploadedAssets[lang]}</h4>
+              {files.map((file, i) => (
+                 <div key={i} className="flex items-center justify-between bg-white border border-gray-100 shadow-sm rounded-xl p-4">
+                    <div className="flex items-center gap-3">
+                       {file.type === 'music' ? <Music className="w-5 h-5 text-blue-500" /> : <File className="w-5 h-5 text-brand-purple" />}
+                       <span className="text-sm font-medium text-gray-800 truncate max-w-[200px]">{file.name}</span>
+                       <span className="text-xs text-gray-400 uppercase">({file.type})</span>
+                    </div>
+                    <button onClick={() => removeFile(i)} className="text-red-500 p-2 hover:bg-red-50 rounded-lg transition">
+                      <X className="w-4 h-4" />
+                    </button>
+                 </div>
+              ))}
+           </div>
+         )}
+         
+         <div className="mt-8 pt-8 border-t border-gray-100 text-center">
+            <p className="text-sm text-gray-500 mb-4">{t.filesTooHeavy[lang]}</p>
+            <button onClick={() => proceedToWhatsApp('File Upload Fallback')} className="mx-auto px-6 py-3 bg-[#25D366]/10 text-[#25D366] font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-[#25D366]/20 transition-colors">
+              <MessageSquare className="w-5 h-5" /> {t.sendFilesLater[lang]}
+            </button>
+         </div>
+      </div>
+    </div>
+  );
+
+  // Legacy Step (If no formConfig assigned)
+  const renderLegacyDetails = () => (
+    <div className="space-y-8 animate-fade-in-up">
+       {/* Contact Block */}
+       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
+          <h2 className="text-2xl font-bold text-gray-900 mb-6">{t.contactInfo[lang]}</h2>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-2">{t.fullName[lang]}</label>
+               <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-brand-purple" placeholder="John Doe" />
+             </div>
+             <div>
+               <label className="block text-sm font-medium text-gray-700 mb-2">{t.whatsappNumber[lang]}</label>
+               <input type="text" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-brand-purple" placeholder="+91 9876543210" />
+             </div>
+          </div>
+       </div>
+
+       {/* Custom Fields Block */}
+       {template?.customFields && template.customFields.length > 0 && (
+         <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
+           <h2 className="text-2xl font-bold text-gray-900 mb-2">{lang === 'hi' ? 'अनुकूलन विवरण' : 'Customization Details'}</h2>
+           <p className="text-gray-500 mb-6 whitespace-pre-wrap text-sm leading-relaxed">{settings?.checkoutFormNote || '📝 Important Instructions / महत्वपूर्ण निर्देश\nEnglish:\nFill Carefully: Please enter the details of your events exactly as you want them to appear on your invitation card.'}</p>
+           
+           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+             {template.customFields.map((field: any) => renderField(field, 'legacy'))}
+           </div>
+         </div>
+       )}
+
+       {/* Upload Vault */}
+       {renderStepUploads()}
+    </div>
+  );
+
+  // Step 5: Review
+  const renderStepReview = () => (
+    <div className="space-y-6 animate-fade-in-up">
+       <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100">
+           <div className="flex items-center gap-3 mb-8">
+               <CheckCircle2 className="w-8 h-8 text-brand-purple" />
+               <h2 className="text-3xl font-display font-bold text-gray-900">{t.finalReview[lang]}</h2>
+           </div>
+
+           <div className="flex gap-6 mb-10 bg-gray-50 p-6 rounded-2xl border border-gray-100 items-center">
+              <div className="w-32 h-20 rounded-xl bg-gray-200 overflow-hidden flex-shrink-0 relative cursor-pointer shadow" onClick={() => template?.videoUrl && setShowVideo(true)}>
+                 {template?.thumbnailBase64 && <img src={template.thumbnailBase64} alt="Thumb" className="w-full h-full object-cover" />}
+                 {template?.videoUrl && (
+                   <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
+                      <Play className="w-6 h-6 text-white fill-white" />
+                   </div>
+                 )}
+              </div>
+              <div>
+                 <h4 className="font-bold text-xl text-gray-900">{template?.title}</h4>
+                 <span className="text-sm font-medium text-brand-purple px-3 py-1 bg-brand-purple/10 rounded-full mt-2 inline-block">{template?.category}</span>
+              </div>
+           </div>
+           
+           <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 mb-10">
+              <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2"><MapPin className="w-4 h-4 text-brand-purple"/> {t.contactInfo[lang]}</h3>
+              <p className="text-sm text-gray-700"><strong>Name:</strong> {customerName}</p>
+              <p className="text-sm text-gray-700 mt-2"><strong>WhatsApp:</strong> {customerPhone}</p>
+           </div>
+
+           <hr className="border-gray-200 mb-8" />
+
+           <div className="max-w-md ml-auto">
+             <div className="flex gap-2 mb-6">
+               <input type="text" value={couponCode} onChange={e => setCouponCode(e.target.value)} placeholder={t.gotCoupon[lang]} className="flex-1 bg-white border border-gray-200 text-gray-900 rounded-xl px-4 py-3" />
+               <button onClick={applyCoupon} className="px-6 py-3 bg-gray-900 hover:bg-black transition-colors text-white font-medium rounded-xl text-sm">{t.apply[lang]}</button>
+             </div>
+
+             <div className="space-y-4 mb-6 text-sm">
+                <div className="flex justify-between text-gray-600 font-medium">
+                   <span>{t.basePrice[lang]}</span>
+                   <span>₹{basePrice}</span>
+                </div>
+                {basePrice > initialPrice && (
+                  <div className="flex justify-between text-gray-600">
+                     <span>{t.discount[lang]}</span>
+                     <span className="text-green-600">- ₹{(basePrice - initialPrice).toFixed(0)}</span>
+                  </div>
+                )}
+                
+                {appliedCoupon && (
+                  <div className="flex justify-between items-center text-green-600 font-semibold p-3 bg-green-50 rounded-xl">
+                     <span className="flex items-center gap-2"><CheckCircle2 className="w-4 h-4" /> {appliedCoupon.code}</span>
+                     <span>- ₹{discountAmount.toFixed(0)}</span>
+                  </div>
+                )}
+             </div>
+
+             <div className="flex justify-between items-center bg-gray-50 p-6 rounded-2xl border border-gray-200">
+               <span className="text-xl font-bold text-gray-900">{t.total[lang]}</span>
+               <span className="text-4xl font-display font-bold text-brand-purple">₹{finalPrice}</span>
+             </div>
+           </div>
+       </div>
+    </div>
+  );
+
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col">
+    <div className="min-h-screen bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] flex flex-col">
       {showVideo && template?.videoUrl && <VideoModal url={template.videoUrl} onClose={() => setShowVideo(false)} />}
       <Navbar />
       
-      <main className="flex-1 pt-24 pb-16">
-        <div className="max-w-7xl mx-auto px-6">
-          <div className="flex flex-col lg:flex-row gap-8">
-             
-             {/* Left Column: Form & Customization */}
-             <div className="flex-1 space-y-8">
-               
-               {/* Contact Block */}
-               <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
-                  <h2 className="text-2xl font-bold text-gray-900 mb-6">Contact Details</h2>
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     <div>
-                       <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
-                       <input type="text" value={customerName} onChange={e => setCustomerName(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-brand-purple" placeholder="John Doe" />
-                     </div>
-                     <div>
-                       <label className="block text-sm font-medium text-gray-700 mb-2">WhatsApp Number</label>
-                       <input type="text" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-brand-purple" placeholder="+91 9876543210" />
-                     </div>
-                  </div>
-               </div>
+      <main className="flex-1 pt-24 pb-20">
+        <div className="max-w-4xl mx-auto px-4 sm:px-6">
+           
+           {/* Language Res */}
+           <div className="flex justify-end mb-6">
+              <button 
+                onClick={() => setLang(l => l === 'en' ? 'hi' : 'en')}
+                className="flex items-center gap-2 px-4 py-2 bg-white border border-gray-200 rounded-xl text-gray-700 hover:bg-gray-50 focus:ring-2 focus:ring-brand-purple/20 transition-all font-semibold shadow-sm"
+              >
+                <Languages className="w-5 h-5" />
+                {lang === 'en' ? 'Convert to Hindi' : 'Convert to English'}
+              </button>
+           </div>
 
-               {/* Custom Fields Block */}
-               {template?.customFields && template.customFields.length > 0 && (
-                 <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
-                   <h2 className="text-2xl font-bold text-gray-900 mb-2">Customization Details</h2>
-                   <p className="text-gray-500 mb-6 whitespace-pre-wrap text-sm leading-relaxed">{settings?.checkoutFormNote || '📝 Important Instructions / महत्वपूर्ण निर्देश\nEnglish:\nFill Carefully: Please enter the details of your events exactly as you want them to appear on your invitation card.\nNot Applicable: If a specific ceremony is not happening, or if you wish to keep that information private, simply enter "0" or "N/A" in that field.\nAdditional Requests: If you have any extra details or special instructions to add, please use the "Other" section.\nहिंदी:\nध्यानपूर्वक भरें: आपके यहाँ जो-जो फंक्शन होने वाले हैं, उनकी सही जानकारी इस फॉर्म में भरें ताकि कार्ड में वही दिखाई दे।\nजानकारी न होने पर: यदि कोई फंक्शन आपके यहाँ नहीं है या आप उसकी जानकारी शेयर नहीं करना चाहते, तो उस बॉक्स में "0" या "N/A" लिख दें।\nअन्य जानकारी: यदि आप कोई अतिरिक्त जानकारी या स्पेशल नोट जोड़ना चाहते हैं, तो उसे "Other" वाले सेक्शन में लिख सकते हैं।\nThank you! If you face any issues while filling out the form, feel free to contact us. / धन्यवाद! यदि आपको फॉर्म भरने में कोई समस्या आए, तो हमसे संपर्क करें।'}</p>
-                   
-                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                     {template.customFields.map((field: any) => (
-                       <div key={field.id} className="md:col-span-1">
-                         <label className="block text-sm font-medium text-gray-700 mb-2">{field.name} {field.required && '*'}</label>
-                         <input 
-                           type="text" 
-                           value={formData[field.id] || ''} 
-                           onChange={e => setFormData({...formData, [field.id]: e.target.value})} 
-                           className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-brand-purple" 
-                         />
+           {/* Progress Bar */}
+           <div className="mb-10">
+              <div className="flex items-center justify-between relative z-10 w-full overflow-hidden px-4 md:px-0">
+                 {steps.map((step, idx) => (
+                    <div key={idx} className="flex flex-col items-center gap-2 flex-1 relative min-w-[60px]">
+                       <div className={`w-10 h-10 rounded-full flex items-center justify-center font-bold shadow-sm transition-colors z-10 ${currentStep > idx + 1 ? 'bg-green-500 text-white' : currentStep === idx + 1 ? 'bg-brand-purple text-white ring-4 ring-brand-purple/20' : 'bg-white text-gray-400 border border-gray-200'}`}>
+                          {currentStep > idx + 1 ? <CheckCircle2 className="w-5 h-5" /> : idx + 1}
                        </div>
-                     ))}
-                   </div>
+                       <span className={`text-xs font-semibold text-center hidden md:block ${currentStep >= idx + 1 ? 'text-gray-900' : 'text-gray-400'}`}>{step}</span>
+                    </div>
+                 ))}
+                 <div className="absolute top-5 left-[10%] right-[10%] md:left-8 md:right-8 h-1 bg-gray-200 -z-0 rounded-full">
+                    <div className="h-full bg-brand-purple rounded-full transition-all duration-300" style={{ width: `${((currentStep - 1) / (Math.max(1, steps.length - 1))) * 100}%` }}></div>
                  </div>
-               )}
+              </div>
+           </div>
 
-               {/* Secure Artifact Vault */}
-               <div className="bg-white p-6 md:p-8 rounded-3xl shadow-sm border border-gray-100">
-                   <div className="flex items-center gap-2 mb-2">
-                     <ShieldCheck className="w-6 h-6 text-green-500" />
-                     <h2 className="text-2xl font-bold text-gray-900">Secure Artifact Vault</h2>
-                   </div>
-                   <p className="text-gray-500 mb-6">Upload photos, assets, or text notes for your video.</p>
-                   
-                   <div className="relative border-2 border-dashed border-gray-300 bg-gray-50 rounded-2xl p-8 flex flex-col items-center justify-center text-center hover:border-brand-purple transition-colors cursor-pointer mb-6 group">
-                      <Upload className="w-10 h-10 text-gray-400 group-hover:text-brand-purple mb-4" />
-                      <p className="font-medium text-gray-700 mb-1">Click to upload files</p>
-                      <p className="text-sm text-gray-500">Max size 50MB. PNG, JPG, PDF.</p>
-                      <input type="file" multiple onChange={handleFileUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                   </div>
-
-                   {fileProgress > 0 && fileProgress < 100 && (
-                     <div className="w-full bg-gray-200 rounded-full h-2.5 mb-6">
-                       <div className="bg-brand-purple h-2.5 rounded-full" style={{ width: `${fileProgress}%` }}></div>
-                     </div>
-                   )}
-
-                   {files.length > 0 && (
-                     <div className="space-y-3">
-                        <h4 className="font-medium text-sm text-gray-400">Uploaded Files</h4>
-                        {files.map((file, i) => (
-                           <div key={i} className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-xl p-3">
-                              <div className="flex items-center gap-3">
-                                 <File className="w-5 h-5 text-brand-purple" />
-                                 <span className="text-sm text-gray-700 font-medium truncate max-w-[200px]">{file.name}</span>
-                              </div>
-                              <button onClick={() => removeFile(i)} className="text-red-500 p-1 hover:bg-red-50 rounded-lg">
-                                <X className="w-4 h-4" />
-                              </button>
-                           </div>
-                        ))}
-                     </div>
-                   )}
-                   
-                   <div className="mt-6 border-t border-gray-100 pt-6">
-                      <p className="text-sm text-gray-500 text-center mb-4">Alternatively, send files directly on WhatsApp.</p>
-                      <button onClick={() => proceedToWhatsApp('File Upload Fallback')} className="w-full py-3 bg-green-50 text-green-600 font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-green-100 transition-colors">
-                        <MessageSquare className="w-5 h-5" /> Send Files on WhatsApp
-                      </button>
-                   </div>
-               </div>
-             </div>
-             
-             {/* Right Column: Pricing & Summary */}
-             <div className="w-full lg:w-[400px]">
-                <div className="bg-white rounded-3xl p-6 shadow-sm border border-gray-100 sticky top-32">
-                   <h3 className="text-xl font-bold text-gray-900 mb-6">Order Summary</h3>
-                   
-                   {/* Template Mini-Card */}
-                   <div className="flex gap-4 mb-6">
-                      <div className="w-24 h-16 rounded-xl bg-gray-100 overflow-hidden flex-shrink-0 relative group cursor-pointer" onClick={() => template?.videoUrl && setShowVideo(true)}>
-                         {template?.thumbnailBase64 && <img src={template.thumbnailBase64} alt="Thumb" className="w-full h-full object-cover" />}
-                         {template?.videoUrl && (
-                           <div className="absolute inset-0 bg-black/30 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity backdrop-blur-sm">
-                              <Play className="w-6 h-6 text-white fill-white" />
-                           </div>
-                         )}
-                      </div>
-                      <div>
-                         <h4 className="font-bold text-gray-900 line-clamp-1">{template?.title}</h4>
-                         <span className="text-xs font-medium text-brand-purple px-2 py-0.5 bg-brand-purple/10 rounded-full mt-1 inline-block">{template?.category}</span>
-                      </div>
-                   </div>
-
-                   <hr className="border-gray-100 mb-6" />
-
-                   <div className="flex gap-2 mb-6">
-                     <input type="text" value={couponCode} onChange={e => setCouponCode(e.target.value)} placeholder="Coupon Code" className="flex-1 bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-2 text-sm" />
-                     <button onClick={applyCoupon} className="px-4 py-2 bg-gray-900 text-white font-medium rounded-xl text-sm">Apply</button>
-                   </div>
-
-                   <div className="space-y-4 mb-6 text-sm">
-                      <div className="flex justify-between text-gray-600">
-                         <span>Template Base Price</span>
-                         <span>₹{basePrice}</span>
-                      </div>
-                      {basePrice > initialPrice && (
-                        <div className="flex justify-between text-gray-600">
-                           <span>Template Discount</span>
-                           <span className="text-green-600">- ₹{(basePrice - initialPrice).toFixed(0)}</span>
-                        </div>
-                      )}
-                      
-                      {appliedCoupon && (
-                        <div className="flex justify-between items-center text-green-600 font-medium">
-                           <span className="flex items-center gap-1"><CheckCircle2 className="w-4 h-4" /> Coupon ({appliedCoupon.code})</span>
-                           <span>- ₹{discountAmount.toFixed(0)}</span>
-                        </div>
-                      )}
-                   </div>
-
-                   <hr className="border-gray-100 mb-6" />
-
-                   <div className="flex justify-between items-center mb-8">
-                     <span className="text-lg font-bold text-gray-900">Total</span>
-                     <span className="text-3xl font-bold text-gray-900">₹{finalPrice}</span>
-                   </div>
-
-                   <button onClick={initiateOrder} className="w-full py-4 bg-brand-purple hover:bg-purple-700 text-white font-bold rounded-xl shadow-lg transition-colors flex items-center justify-center gap-2">
-                      Place Order
-                   </button>
+           {/* Content */}
+           <div className="relative">
+              {currentStep === 1 && renderBrideDetails() /* Bride */}
+              {currentStep === 2 && renderGroomDetails() /* Groom */}
+              {currentStep === 3 && renderStepEvents()}
+              {currentStep === 4 && renderStepUploads()}
+              {currentStep === 5 && renderStepReview()}
+              {currentStep === 6 && (
+                <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 mt-12 text-center">
+                  <h3 className="text-2xl font-bold mb-8">Complete Your Order</h3>
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <button 
+                      onClick={() => proceedToWhatsApp('WhatsApp Direct')} 
+                      className="w-full py-4 bg-[#25D366] hover:bg-[#1DA851] text-white font-bold rounded-2xl shadow-xl shadow-[#25D366]/20 transition-all flex items-center justify-center gap-2"
+                    >
+                       <MessageSquare className="w-6 h-6" /> {t.orderViaWhatsapp[lang]}
+                    </button>
+                    <button 
+                      onClick={initiatePayment} 
+                      className="w-full py-4 bg-gray-900 hover:bg-black text-white font-bold rounded-2xl shadow-xl transition-all flex items-center justify-center gap-2"
+                    >
+                       <CreditCard className="w-6 h-6" /> {t.payOnline[lang]} ₹{finalPrice}
+                    </button>
+                  </div>
                 </div>
-             </div>
+              )}
+           </div>
 
-          </div>
+           {/* Navigation */}
+           {currentStep < steps.length && (
+              <div className="mt-8 flex justify-between items-center border-t border-gray-200 pt-6">
+                 {currentStep > 1 ? (
+                   <button onClick={handlePrev} className="px-6 py-3 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 flex items-center gap-2 transition shadow-sm">
+                      <ChevronLeft className="w-5 h-5"/> {t.back[lang]}
+                   </button>
+                 ) : <div></div>}
+                 
+                 <button onClick={handleNext} className="px-8 py-3 bg-brand-purple text-white font-bold rounded-xl hover:bg-purple-700 shadow-lg shadow-purple-500/30 flex items-center gap-2 transition ml-auto">
+                    {t.nextStep[lang]} <ChevronRight className="w-5 h-5"/>
+                 </button>
+              </div>
+           )}
         </div>
       </main>
       
@@ -425,9 +846,9 @@ export default function Checkout() {
                      setPaymentSuccessPopup({show: false, msg: ''});
                      navigate(user ? '/dashboard' : '/');
                    }}
-                   className="w-full py-3 bg-brand-purple text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-purple-700 transition"
+                   className="w-full py-3 bg-brand-purple text-white font-bold rounded-xl flex items-center justify-center gap-2 hover:bg-purple-700 transition shadow-lg"
                 >
-                   <MessageSquare className="w-5 h-5"/> Send to WhatsApp
+                   <MessageSquare className="w-5 h-5"/> Send on WhatsApp
                 </a>
               ) : (
                 <div className="w-full py-3 bg-gray-200 text-gray-500 font-bold rounded-xl flex items-center justify-center cursor-not-allowed">

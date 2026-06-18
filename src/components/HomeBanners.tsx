@@ -21,7 +21,7 @@ export default function HomeBanners() {
   const prevBanner = () => setCurrentIndex((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
 
   return (
-    <section className="py-8 bg-gray-50/50 w-full overflow-hidden border-y border-brand-purple/10">
+    <section className="py-8 w-full overflow-hidden border-y border-brand-purple/10">
       <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
         <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5 bg-white group">
           <div className="w-full relative flex items-center justify-center min-h-[200px] md:min-h-[400px]">

@@ -13,7 +13,7 @@ export default function ManageTestimonials() {
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'testimonials'), (snapshot) => {
-      let list = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
+      let list: any[] = snapshot.docs.map(d => ({ id: d.id, ...d.data() }));
       list = list.sort((a, b) => (a.order || 0) - (b.order || 0));
       setTestimonials(list);
     }, (error) => {

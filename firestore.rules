@@ -80,6 +80,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /custom_forms/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /notifications/{document=**} {
       allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
       allow write: if isAdmin();
