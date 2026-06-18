@@ -51,8 +51,8 @@ export default function PremiumGallery() {
   useEffect(() => {
     let result = templates;
     if (activeCategory !== 'All') {
-      const normalizedActive = activeCategory.trim().toLowerCase();
-      result = result.filter(t => t.category && t.category.trim().toLowerCase() === normalizedActive);
+      const normalizedActive = activeCategory.trim().toLowerCase().replace(/\s+/g, ' ');
+      result = result.filter(t => t.category && t.category.trim().toLowerCase().replace(/\s+/g, ' ') === normalizedActive);
     }
     if (searchQuery) {
       result = result.filter(t => 
@@ -89,7 +89,7 @@ export default function PremiumGallery() {
             </div>
             <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 scrollbar-hide">
               {categories.map(cat => {
-                const isActive = activeCategory.trim().toLowerCase() === cat.trim().toLowerCase();
+                const isActive = activeCategory.trim().toLowerCase().replace(/\s+/g, ' ') === cat.trim().toLowerCase().replace(/\s+/g, ' ');
                 return (
                   <button
                     key={cat}

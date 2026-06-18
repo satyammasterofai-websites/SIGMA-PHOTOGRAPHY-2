@@ -202,7 +202,7 @@ export default function Checkout() {
 
   const createOrderRecord = async (paymentStatus: string, viaMethod: string) => {
      try {
-       const orderRef = await addDoc(collection(db, 'orders'), {
+       const cleanData = JSON.parse(JSON.stringify({
           createdAt: new Date().toISOString(),
           templateId: template?.id || '',
           templateName: template?.title || template?.name || 'Template',
@@ -215,14 +215,17 @@ export default function Checkout() {
           customData: formConfig ? formData : legacyFormData,
           filesCount: files.length || 0,
           viaMethod: viaMethod || 'Direct'
-       });
+       }));
+       const orderRef = await addDoc(collection(db, 'orders'), cleanData);
 
        if (files.length > 0) {
           try {
+             // In case base64 string is large but also contains invalid nested arrays or object properties
+             const cleanFiles = JSON.parse(JSON.stringify(files));
              await addDoc(collection(db, 'order_files'), {
                 orderId: orderRef.id,
                 userId: user ? user.uid : null,
-                files: files
+                files: cleanFiles
              });
           } catch(err) {
              console.error("Files too large:", err);

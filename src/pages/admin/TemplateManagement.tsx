@@ -98,7 +98,7 @@ export default function TemplateManagement() {
     } else {
       setEditingId(null);
       setTitle('');
-      setCategory('Wedding');
+      setCategory(categories.length > 0 ? categories[0] : 'Wedding');
       setPrice('');
       setDiscountPrice('');
       setDescription('');
@@ -133,8 +133,13 @@ export default function TemplateManagement() {
     }
     
     try {
+      let finalCategory = category;
+      if (!categories.includes(category) && categories.length > 0) {
+        finalCategory = categories[0];
+      }
+      
       const data = { 
-        title, category, price, discountPrice, description, 
+        title, category: finalCategory, price, discountPrice, description, 
         thumbnailBase64, videoUrl, status, isFeatured, isTrending, customFields, formId 
       };
       
