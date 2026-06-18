@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
+import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { signInWithEmailAndPassword, signInWithPopup, GoogleAuthProvider } from 'firebase/auth';
 import { auth, db } from '../lib/firebase';
 import { Camera, ArrowLeft } from 'lucide-react';
@@ -13,11 +13,20 @@ export default function Login() {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
+  const location = useLocation();
+  const redirectTo = location.state?.redirectTo;
+  const template = location.state?.template;
 
   const handleCustomRedirect = async (user: any) => {
     try {
       const isAdminEmail = user.email && ADMIN_EMAILS.includes(user.email.toLowerCase());
       const userDoc = await getDoc(doc(db, 'users', user.uid));
+      
+      if (redirectTo) {
+         navigate(redirectTo, { state: { template } });
+         return;
+      }
+      
       if (isAdminEmail || (userDoc.exists() && userDoc.data().role === 'admin')) {
         navigate('/admin');
       } else {
@@ -26,6 +35,10 @@ export default function Login() {
     } catch (error) {
       console.error("Permission error redirecting:", error);
       // Fallback
+      if (redirectTo) {
+         navigate(redirectTo, { state: { template } });
+         return;
+      }
       if (user.email && ADMIN_EMAILS.includes(user.email.toLowerCase())) {
         navigate('/admin');
       } else {

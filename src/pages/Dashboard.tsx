@@ -236,6 +236,12 @@ function MyOrders() {
                      <span>{new Date(order.createdAt).toLocaleDateString()}</span>
                      <span>•</span>
                      <span>₹{order.price}</span>
+                     {order.advancePayment !== undefined && order.advancePayment > 0 && (
+                       <>
+                         <span>•</span>
+                         <span className="text-orange-600 font-medium">Advance: ₹{order.advancePayment} ({order.advancePaymentStatus || 'Pending'})</span>
+                       </>
+                     )}
                   </div>
                </div>
                <div className="flex items-center gap-3">

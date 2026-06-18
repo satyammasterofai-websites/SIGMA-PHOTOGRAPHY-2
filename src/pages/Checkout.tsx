@@ -73,6 +73,14 @@ export default function Checkout() {
   const [loading, setLoading] = useState(true);
   const [showVideo, setShowVideo] = useState(false);
   const [lang, setLang] = useState<'en'|'hi'>('en');
+  const { user } = useAuthStore();
+
+  useEffect(() => {
+    if (!user && !loading) {
+      toast.error('Please login first to access the checkout page.');
+      navigate('/login', { state: { redirectTo: `/checkout/${id}` } });
+    }
+  }, [user, loading, navigate, id]);
 
   // Custom Fields State
   const [formData, setFormData] = useState<Record<string, any>>({
@@ -91,9 +99,6 @@ export default function Checkout() {
   // Pricing State
   const [couponCode, setCouponCode] = useState('');
   const [appliedCoupon, setAppliedCoupon] = useState<any>(null);
-
-  // Auth User
-  const { user } = useAuthStore();
 
   // Additional Details State
   const [customerName, setCustomerName] = useState(user?.displayName || '');
@@ -210,6 +215,8 @@ export default function Checkout() {
           customerName: customerName || '',
           customerPhone: customerPhone || '',
           price: finalPrice || 0,
+          advancePayment: Number(template?.advancePayment) || 0,
+          advancePaymentStatus: 'Pending',
           paymentStatus: paymentStatus || 'Pending',
           status: 'Pending',
           customData: formConfig ? formData : legacyFormData,
@@ -275,6 +282,9 @@ export default function Checkout() {
         pricingText += `\n*COUPON APPLIED*: ${appliedCoupon.code} (-${appliedCoupon.percentage}%)`;
      }
      pricingText += `\n*FINAL PRICE*: ₹${finalPrice}`;
+     if (template?.advancePayment) {
+        pricingText += `\n*ADVANCE PAYMENT REQUIRED*: ₹${template.advancePayment}`;
+     }
 
      const allDetails = customFieldsText + pricingText;
      
@@ -300,7 +310,8 @@ export default function Checkout() {
      const orderId = await createOrderRecord('Pending', viaMethod);
      const url = getWaUrl(orderId);
      setWaUrlToOpen(url);
-     setPaymentSuccessPopup({ show: true, msg: 'Order saved! Please click below to send us your details on WhatsApp.' });
+     const advanceMsg = template?.advancePayment ? ` Note: An advance payment of ₹${template.advancePayment} is required.` : '';
+     setPaymentSuccessPopup({ show: true, msg: `Order saved! Please click below to send us your details on WhatsApp.${advanceMsg}` });
   };
 
   const initiatePayment = async () => {
@@ -308,7 +319,8 @@ export default function Checkout() {
     setPaymentSuccessPopup({ show: true, msg: 'Initializing secure payment gateway...' });
     setTimeout(async () => {
        const orderId = await createOrderRecord('Paid Online', 'Online Payment');
-       setPaymentSuccessPopup({ show: true, msg: 'Payment successful! Redirecting to WhatsApp to send assets.' });
+       const advanceMsg = template?.advancePayment ? ` Note: An advance payment of ₹${template.advancePayment} is required.` : '';
+       setPaymentSuccessPopup({ show: true, msg: `Payment successful! Redirecting to WhatsApp to send assets.${advanceMsg}` });
        const url = getWaUrl(orderId);
        setWaUrlToOpen(url);
     }, 2000);
@@ -778,7 +790,12 @@ export default function Checkout() {
              </div>
 
              <div className="flex justify-between items-center bg-gray-50 p-6 rounded-2xl border border-gray-200">
-               <span className="text-xl font-bold text-gray-900">{t.total[lang]}</span>
+               <div>
+                 <span className="text-xl font-bold text-gray-900 block">{t.total[lang]}</span>
+                 {template?.advancePayment && (
+                   <span className="text-sm font-medium text-orange-600">Advance Required: ₹{template.advancePayment}</span>
+                 )}
+               </div>
                <span className="text-4xl font-display font-bold text-brand-purple">₹{finalPrice}</span>
              </div>
            </div>

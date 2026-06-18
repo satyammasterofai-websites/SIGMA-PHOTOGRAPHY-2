@@ -7,11 +7,14 @@ import { Search, Play, Star, TrendingUp } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import VideoModal from '../components/VideoModal';
 import { useSiteContent } from '../hooks/useSiteContent';
+import { useAuthStore } from '../store/useAuthStore';
+import toast from 'react-hot-toast';
 
 const defaultCategories = ['Wedding', 'Engagement', 'Birthday', 'Anniversary', 'Baby Shower', 'Housewarming', 'Corporate', 'Religious'];
 
 export default function PremiumGallery() {
   const { categories: cmsCategories } = useSiteContent();
+  const { user } = useAuthStore();
   const [templates, setTemplates] = useState<any[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -166,7 +169,14 @@ export default function PremiumGallery() {
                         </div>
                         
                         <button 
-                          onClick={() => navigate(`/checkout/${template.id}`, { state: { template } })}
+                          onClick={() => {
+                            if (!user) {
+                              toast.error('Please login first to order templates.');
+                              navigate('/login', { state: { redirectTo: `/checkout/${template.id}` } });
+                            } else {
+                              navigate(`/checkout/${template.id}`, { state: { template } });
+                            }
+                          }}
                           className="px-6 py-2 bg-gray-900 hover:bg-brand-purple text-white font-medium rounded-xl transition-colors shadow-md shadow-gray-900/10 hover:shadow-brand-purple/20"
                         >
                           Customize & Order

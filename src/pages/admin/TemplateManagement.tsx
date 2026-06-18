@@ -23,6 +23,7 @@ export default function TemplateManagement() {
   const [status, setStatus] = useState('Active');
   const [isFeatured, setIsFeatured] = useState(false);
   const [isTrending, setIsTrending] = useState(false);
+  const [advancePayment, setAdvancePayment] = useState('');
   
   // Custom Fields
   const [customFields, setCustomFields] = useState<any[]>([]);
@@ -93,6 +94,7 @@ export default function TemplateManagement() {
       setStatus(template.status || 'Active');
       setIsFeatured(template.isFeatured || false);
       setIsTrending(template.isTrending || false);
+      setAdvancePayment(template.advancePayment || '');
       setCustomFields(template.customFields || []);
       setFormId(template.formId || '');
     } else {
@@ -107,6 +109,7 @@ export default function TemplateManagement() {
       setStatus('Active');
       setIsFeatured(false);
       setIsTrending(false);
+      setAdvancePayment('');
       setCustomFields([]);
       setFormId('');
     }
@@ -140,7 +143,7 @@ export default function TemplateManagement() {
       
       const data = { 
         title, category: finalCategory, price, discountPrice, description, 
-        thumbnailBase64, videoUrl, status, isFeatured, isTrending, customFields, formId 
+        thumbnailBase64, videoUrl, status, isFeatured, isTrending, advancePayment, customFields, formId 
       };
       
       if (editingId) {
@@ -347,6 +350,14 @@ export default function TemplateManagement() {
                       type="number" value={discountPrice} onChange={(e) => setDiscountPrice(e.target.value)}
                       className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500"
                       placeholder="1999"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Advance Payment (₹)</label>
+                    <input 
+                      type="number" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500"
+                      placeholder="e.g. 500"
                     />
                   </div>
                   <div>
