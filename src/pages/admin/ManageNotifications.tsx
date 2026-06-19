@@ -111,8 +111,8 @@ export default function ManageNotifications() {
     <div className="w-full">
       <div className="flex justify-between items-center mb-6">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Announcement Bars</h1>
-          <p className="text-gray-500 text-sm mt-1">Manage scrolling announcement bars at the top of the site. Logged in as: {user?.email}</p>
+          <h1 className="text-2xl font-bold text-brand-navy">Announcement Bars</h1>
+          <p className="text-brand-slate text-sm mt-1">Manage scrolling announcement bars at the top of the site. Logged in as: {user?.email}</p>
         </div>
         <div className="flex gap-2">
           <button 

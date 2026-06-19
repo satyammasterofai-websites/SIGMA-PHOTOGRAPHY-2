@@ -64,7 +64,7 @@ export default function ManageUsers() {
           </div>
         </div>
       )}
-      <h1 className="text-2xl font-bold text-white mb-6">User Management</h1>
+      <h1 className="text-2xl font-bold text-brand-navy mb-6">User Management</h1>
       <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-gray-300">

@@ -277,7 +277,8 @@ export default function Checkout() {
     }
 
     const matched = settings.coupons.find(
-      (c: any) => c.code.toUpperCase() === couponCode.trim().toUpperCase(),
+      (c: any) =>
+        c.code.replace(/\s+/g, "").toUpperCase() === couponCode.replace(/\s+/g, "").toUpperCase(),
     );
     if (matched) {
       if (matched.expiryDate) {

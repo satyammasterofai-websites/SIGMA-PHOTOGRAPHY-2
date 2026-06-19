@@ -167,8 +167,8 @@ export default function SiteContentManagement() {
   return (
     <div className="w-full">
       <div className="mb-8">
-        <h1 className="text-2xl md:text-3xl font-display font-bold text-white">Website Content</h1>
-        <p className="text-gray-400 mt-1">Manage all public-facing website content in real-time.</p>
+        <h1 className="text-2xl md:text-3xl font-display font-bold text-brand-navy">Website Content</h1>
+        <p className="text-brand-slate mt-1">Manage all public-facing website content in real-time.</p>
       </div>
 
       <div className="flex flex-col lg:flex-row gap-6">

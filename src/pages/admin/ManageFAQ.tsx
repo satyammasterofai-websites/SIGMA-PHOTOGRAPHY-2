@@ -45,7 +45,7 @@ export default function ManageFAQ() {
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">FAQ Management</h1>
+        <h1 className="text-2xl font-bold text-brand-navy">FAQ Management</h1>
         <button 
           onClick={() => { setFormData({ id: '', question: '', answer: '' }); setShowModal(true); }}
           className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2"

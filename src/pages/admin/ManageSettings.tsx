@@ -68,8 +68,9 @@ export default function ManageSettings() {
     return () => unsub();
   }, []);
 
-  const saveSettings = async () => {
+  const saveSettings = async (updatedCoupons?: any[]) => {
     try {
+      const finalCoupons = Array.isArray(updatedCoupons) ? updatedCoupons : coupons;
       await setDoc(
         doc(db, "settings", "config"),
         {
@@ -80,7 +81,7 @@ export default function ManageSettings() {
             enabled: waOrderingEnabled,
           },
           checkoutFormNote,
-          coupons,
+          coupons: finalCoupons,
         },
         { merge: true },
       );
@@ -90,27 +91,31 @@ export default function ManageSettings() {
     }
   };
 
-  const addCoupon = () => {
+  const addCoupon = async () => {
     if (!newCoupon.code || !newCoupon.percentage) return;
-    setCoupons([...coupons, { id: Date.now().toString(), ...newCoupon }]);
+    const updated = [...coupons, { id: Date.now().toString(), ...newCoupon }];
+    setCoupons(updated);
     setNewCoupon({ code: "", percentage: "", expiryDate: "" });
+    await saveSettings(updated);
   };
 
-  const removeCoupon = (id: string) => {
-    setCoupons(coupons.filter((c) => c.id !== id));
+  const removeCoupon = async (id: string) => {
+    const updated = coupons.filter((c) => c.id !== id);
+    setCoupons(updated);
+    await saveSettings(updated);
   };
 
   return (
     <div className="w-full">
       <div className="flex justify-between items-center mb-8">
         <div>
-          <h1 className="text-2xl font-bold text-white">System Settings</h1>
-          <p className="text-gray-400 mt-1">
+          <h1 className="text-2xl font-bold text-brand-navy">System Settings</h1>
+          <p className="text-brand-slate mt-1">
             Manage global configurations for checkout.
           </p>
         </div>
         <button
-          onClick={saveSettings}
+          onClick={() => saveSettings()}
           className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-xl flex items-center gap-2 font-medium"
         >
           <Save className="w-4 h-4" /> Save Changes

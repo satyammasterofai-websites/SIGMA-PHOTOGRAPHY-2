@@ -131,7 +131,7 @@ export default function ManageTestimonials() {
         </div>
       )}
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Testimonials Gallery</h1>
+        <h1 className="text-2xl font-bold text-brand-navy">Testimonials Gallery</h1>
         <button 
           onClick={() => { setFormData({ id: '', imageUrl: '', isVisible: true, order: testimonials.length }); setShowModal(true); }}
           className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2"

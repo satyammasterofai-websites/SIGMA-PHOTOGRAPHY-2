@@ -211,8 +211,8 @@ export default function TemplateManagement() {
       )}
       <div className="flex justify-between items-center mb-8">
         <div>
-           <h1 className="text-2xl md:text-3xl font-display font-bold text-white">Template Management</h1>
-           <p className="text-gray-400 mt-1">Manage standard invitation packages and themes.</p>
+           <h1 className="text-2xl md:text-3xl font-display font-bold text-brand-navy">Template Management</h1>
+           <p className="text-brand-slate mt-1">Manage standard invitation packages and themes.</p>
         </div>
         <button 
           onClick={() => openForm()}

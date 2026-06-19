@@ -186,7 +186,7 @@ export default function ManageForms() {
   return (
     <div className="p-6">
       <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold text-white">Form Builder</h1>
+        <h1 className="text-2xl font-bold text-brand-navy">Form Builder</h1>
         <button onClick={createDefaultForm} className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2">
           <Plus className="w-4 h-4" /> Create New Form
         </button>
@@ -221,7 +221,7 @@ export default function ManageForms() {
         <div className="fixed inset-0 bg-black/80 flex items-center justify-center p-4 z-50 overflow-y-auto">
           <div className="bg-gray-900 border border-gray-800 rounded-3xl p-8 w-full max-w-4xl max-h-[90vh] my-auto flex flex-col relative overflow-hidden">
             <div className="flex justify-between items-center mb-6 shrink-0">
-               <h2 className="text-2xl font-bold text-white">Edit Form Layout</h2>
+              <h2 className="text-2xl font-bold text-white">Edit Form Layout</h2>
                <button onClick={() => setEditingForm(null)} className="text-gray-400 hover:text-white bg-gray-800 p-2 rounded-full"><X className="w-5 h-5"/></button>
             </div>
 

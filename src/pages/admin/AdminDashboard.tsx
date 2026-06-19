@@ -337,8 +337,8 @@ function Placeholder({ title }: { title: string }) {
   return (
     <div className="max-w-7xl mx-auto h-full flex flex-col">
        <div className="mb-8">
-         <h1 className="text-2xl md:text-3xl font-display font-bold text-white">{title}</h1>
-         <p className="text-gray-400 mt-1">Manage and update {title.toLowerCase()} configurations.</p>
+         <h1 className="text-2xl md:text-3xl font-display font-bold text-brand-navy">{title}</h1>
+         <p className="text-brand-slate mt-1">Manage and update {title.toLowerCase()} configurations.</p>
       </div>
       <div className="flex-1 bg-gray-900 border border-gray-800 rounded-2xl flex flex-col items-center justify-center p-8 text-center shadow-sm">
          <Settings className="w-16 h-16 text-gray-700 mb-4 animate-[spin_4s_linear_infinite]" />
