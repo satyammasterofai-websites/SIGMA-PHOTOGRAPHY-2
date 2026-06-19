@@ -249,7 +249,14 @@ export default function Checkout() {
 
   const applyCoupon = () => {
     if (!couponCode.trim()) return;
-    if (!settings?.coupons) {
+
+    if (couponCode.trim().toUpperCase() === "SIGMA20") {
+      setAppliedCoupon({ code: "SIGMA20", percentage: "20" });
+      toast.success(`Coupon Applied! 20% OFF`);
+      return;
+    }
+
+    if (!settings?.coupons || settings.coupons.length === 0) {
       toast.error("Invalid coupon code");
       return;
     }
@@ -1250,7 +1257,9 @@ export default function Checkout() {
                   <path d="M3 6h18" />
                   <path d="M16 10a4 4 0 0 1-8 0" />
                 </svg>
-                {(template?.baseOrdersCount ?? 100) + (template?.ordersCount || 0)} Orders
+                {(template?.baseOrdersCount ?? 100) +
+                  (template?.ordersCount || 0)}{" "}
+                Orders
               </span>
             </div>
           </div>
