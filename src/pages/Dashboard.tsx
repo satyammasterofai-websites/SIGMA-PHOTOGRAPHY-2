@@ -241,11 +241,11 @@ function MyOrders() {
                          <span>{new Date(order.createdAt).toLocaleDateString()}</span>
                          <span>•</span>
                          <span>₹{order.price}</span>
-                         {order.advancePayment !== undefined && order.advancePayment > 0 && (
+                         {(order.advancePayment > 0 || order.advancePaymentStatus) && (
                            <>
                              <span>•</span>
-                             <span className={`font-medium ${order.advancePaymentStatus === 'Received' ? 'text-green-600' : 'text-orange-600'}`}>
-                               Advance: ₹{order.advancePayment} ({order.advancePaymentStatus || 'Pending'})
+                             <span className={`font-medium ${order.advancePaymentStatus === 'Received' ? 'text-green-600' : (order.advancePaymentStatus === 'Pending' ? 'text-orange-600' : 'text-gray-500')}`}>
+                               Advance: ₹{order.advancePayment || 0} ({order.advancePaymentStatus || 'Pending'})
                              </span>
                            </>
                          )}
@@ -314,10 +314,10 @@ function MyOrders() {
                           <span className="w-1/3 text-gray-500">Status:</span>
                           <span className="w-2/3 font-medium text-gray-900">{order.paymentStatus || 'Pending'}</span>
                        </div>
-                       {order.advancePayment !== undefined && order.advancePayment > 0 && (
+                       {(order.advancePayment > 0 || order.advancePaymentStatus) && (
                          <div className="flex">
                             <span className="w-1/3 text-gray-500">Advance:</span>
-                            <span className="w-2/3 font-medium text-gray-900">₹{order.advancePayment} ({order.advancePaymentStatus || 'Pending'})</span>
+                            <span className={`w-2/3 font-medium ${order.advancePaymentStatus === 'Received' ? 'text-green-600' : 'text-gray-900'}`}>₹{order.advancePayment || 0} ({order.advancePaymentStatus || 'Pending'})</span>
                          </div>
                        )}
                     </div>
