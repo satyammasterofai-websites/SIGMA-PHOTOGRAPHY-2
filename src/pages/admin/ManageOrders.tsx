@@ -146,7 +146,41 @@ export default function ManageOrders() {
                                   <h4 className="text-white font-bold mb-3 flex items-center gap-2"><Package className="w-4 h-4"/> Order Details</h4>
                                   <div className="space-y-2 text-sm">
                                     <div className="flex text-gray-400"><span className="w-1/3">Via Method:</span><span className="text-white">{order.viaMethod || 'Unknown'}</span></div>
-                                    <div className="flex text-gray-400"><span className="w-1/3">Payment:</span><span className="text-white">{order.paymentStatus || 'Unknown'}</span></div>
+                                    <div className="flex text-gray-400 items-center">
+                                      <span className="w-1/3">Payment:</span>
+                                      <span className={`text-sm font-medium ${order.paymentStatus === 'Received' || order.paymentStatus === 'Paid Online' ? 'text-green-400' : 'text-orange-400'}`}>
+                                        {order.paymentStatus || 'Unknown'}
+                                      </span>
+                                      {order.paymentStatus !== 'Received' && order.paymentStatus !== 'Paid Online' ? (
+                                        <button
+                                          onClick={async () => {
+                                            try {
+                                              await updateDoc(doc(db, 'orders', order.id), { paymentStatus: 'Received', status: 'Processing' });
+                                              toast.success('Payment marked as received, status set to Processing');
+                                            } catch (e) {
+                                              toast.error('Failed to update payment status');
+                                            }
+                                          }}
+                                          className="ml-3 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-2 py-0.5 rounded text-xs"
+                                        >
+                                          Mark Received
+                                        </button>
+                                      ) : (
+                                        <button
+                                          onClick={async () => {
+                                            try {
+                                              await updateDoc(doc(db, 'orders', order.id), { paymentStatus: 'Pending', status: 'Pending' });
+                                              toast.success('Payment reverted to Pending');
+                                            } catch (e) {
+                                              toast.error('Failed to update payment status');
+                                            }
+                                          }}
+                                          className="ml-3 bg-gray-500/20 text-gray-400 hover:bg-gray-500/30 px-2 py-0.5 rounded text-xs"
+                                        >
+                                          Revert
+                                        </button>
+                                      )}
+                                    </div>
                                     {order.advancePayment !== undefined && order.advancePayment > 0 && (
                                       <div className="flex text-gray-400 items-center">
                                          <span className="w-1/3">Advance:</span>
@@ -158,8 +192,8 @@ export default function ManageOrders() {
                                            <button 
                                              onClick={async () => {
                                                try {
-                                                 await updateDoc(doc(db, 'orders', order.id), { advancePaymentStatus: 'Received' });
-                                                 toast.success('Marked advance as received');
+                                                 await updateDoc(doc(db, 'orders', order.id), { advancePaymentStatus: 'Received', status: 'Processing' });
+                                                 toast.success('Marked advance as received & set to processing');
                                                } catch(e) { toast.error('Failed to update'); }
                                              }}
                                              className="ml-2 bg-green-500/20 text-green-400 hover:bg-green-500/30 px-2 py-0.5 rounded text-xs"
@@ -170,7 +204,7 @@ export default function ManageOrders() {
                                            <button 
                                              onClick={async () => {
                                                try {
-                                                 await updateDoc(doc(db, 'orders', order.id), { advancePaymentStatus: 'Pending' });
+                                                 await updateDoc(doc(db, 'orders', order.id), { advancePaymentStatus: 'Pending', status: 'Pending' });
                                                  toast.success('Reverted to pending');
                                                } catch(e) { toast.error('Failed to update'); }
                                              }}

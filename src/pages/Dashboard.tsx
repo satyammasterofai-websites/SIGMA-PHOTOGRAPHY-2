@@ -4,7 +4,7 @@ import { useAuthStore } from '../store/useAuthStore';
 import { auth, db } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
 import { collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
-import { Camera, LayoutDashboard, ShoppingBag, Download, User, LogOut, Menu, X, ExternalLink } from 'lucide-react';
+import { Camera, LayoutDashboard, ShoppingBag, Download, User, LogOut, Menu, X, ExternalLink, CheckCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function DashboardLayout() {
@@ -271,7 +271,18 @@ function MyOrders() {
               </div>
 
               {(order.customData && Object.keys(order.customData).length > 0) || order.customerPhone ? (
-                <div className="bg-gray-50/50 p-6 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+                <div className="bg-gray-50/50 p-6 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4 relative">
+                  {(order.paymentStatus === 'Received' || order.advancePaymentStatus === 'Received' || order.status === 'Processing') && (
+                     <div className="md:col-span-2 mb-2 bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-start gap-3">
+                        <div className="mt-0.5">
+                           <CheckCircle className="w-5 h-5 text-blue-500" />
+                        </div>
+                        <div>
+                           <h5 className="text-sm font-bold text-blue-800">Payment Received & Processing</h5>
+                           <p className="text-xs text-blue-600 mt-0.5">We have received your payment/advance. Your video creation is currently under process. You will be notified once it's complete.</p>
+                        </div>
+                     </div>
+                  )}
                   <div>
                     <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Order Details</h4>
                     <div className="space-y-2">
