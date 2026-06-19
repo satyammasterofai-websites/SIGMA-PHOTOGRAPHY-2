@@ -76,6 +76,14 @@ export default function PremiumGallery() {
         (t.description || '').toLowerCase().includes(searchQuery.toLowerCase())
       );
     }
+    
+    // Sort by orders count
+    result.sort((a, b) => {
+      const aOrders = (a.baseOrdersCount ?? 100) + (a.ordersCount || 0);
+      const bOrders = (b.baseOrdersCount ?? 100) + (b.ordersCount || 0);
+      return bOrders - aOrders;
+    });
+    
     setFilteredTemplates(result);
   }, [searchQuery, activeCategory, templates]);
 
@@ -180,7 +188,7 @@ export default function PremiumGallery() {
                       </div>
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-purple bg-brand-purple/5 w-fit px-2.5 py-1 rounded-full mb-3">
                         <ShoppingBag className="w-3.5 h-3.5" />
-                        {100 + (template.ordersCount || 0)} Orders
+                        {(template.baseOrdersCount ?? 100) + (template.ordersCount || 0)} Orders
                       </div>
                       <p className="text-gray-500 text-sm line-clamp-2 mb-4 flex-1">{template.description}</p>
                       

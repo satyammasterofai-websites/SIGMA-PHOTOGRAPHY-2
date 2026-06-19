@@ -24,6 +24,7 @@ export default function TemplateManagement() {
   const [isFeatured, setIsFeatured] = useState(false);
   const [isTrending, setIsTrending] = useState(false);
   const [advancePayment, setAdvancePayment] = useState('');
+  const [baseOrdersCount, setBaseOrdersCount] = useState<number>(100);
   
   // Custom Fields
   const [customFields, setCustomFields] = useState<any[]>([]);
@@ -95,6 +96,7 @@ export default function TemplateManagement() {
       setIsFeatured(template.isFeatured || false);
       setIsTrending(template.isTrending || false);
       setAdvancePayment(template.advancePayment || '');
+      setBaseOrdersCount(template.baseOrdersCount ?? 100);
       setCustomFields(template.customFields || []);
       setFormId(template.formId || '');
     } else {
@@ -110,6 +112,7 @@ export default function TemplateManagement() {
       setIsFeatured(false);
       setIsTrending(false);
       setAdvancePayment('');
+      setBaseOrdersCount(100);
       setCustomFields([]);
       setFormId('');
     }
@@ -147,7 +150,8 @@ export default function TemplateManagement() {
       
       const data = { 
         title, category: finalCategory, price, discountPrice, description, 
-        thumbnailBase64, videoUrl, status, isFeatured, isTrending, advancePayment: advancePayment ? Number(advancePayment) : 0, customFields, formId 
+        thumbnailBase64, videoUrl, status, isFeatured, isTrending, advancePayment: advancePayment ? Number(advancePayment) : 0, 
+        baseOrdersCount: Number(baseOrdersCount), customFields, formId 
       };
       
       if (editingId) {
@@ -232,6 +236,7 @@ export default function TemplateManagement() {
                   <th className="px-6 py-4">Title</th>
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Price</th>
+                  <th className="px-6 py-4">Orders</th>
                   <th className="px-6 py-4">Status</th>
                   <th className="px-6 py-4 text-right">Actions</th>
                 </tr>
@@ -255,6 +260,9 @@ export default function TemplateManagement() {
                       </span>
                     </td>
                     <td className="px-6 py-4">₹{template.price} {template.discountPrice && <span className="text-gray-500 line-through text-xs ml-1">₹{template.discountPrice}</span>}</td>
+                    <td className="px-6 py-4 text-cyan-400 font-medium">
+                      {(template.baseOrdersCount ?? 100) + (template.ordersCount || 0)}
+                    </td>
                     <td className="px-6 py-4">
                        <span className={`px-2.5 py-1 rounded-md text-xs font-medium ${template.status === 'Hidden' ? 'bg-red-500/10 text-red-400' : 'bg-green-500/10 text-green-400'}`}>
                          {template.status || 'Active'}
@@ -362,6 +370,14 @@ export default function TemplateManagement() {
                       type="number" value={advancePayment} onChange={(e) => setAdvancePayment(e.target.value)}
                       className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500"
                       placeholder="e.g. 500"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Base Orders Count</label>
+                    <input 
+                      type="number" value={baseOrdersCount} onChange={(e) => setBaseOrdersCount(Number(e.target.value))}
+                      className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500"
+                      placeholder="e.g. 100"
                     />
                   </div>
                   <div>
