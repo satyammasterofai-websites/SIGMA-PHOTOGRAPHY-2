@@ -124,6 +124,19 @@ export default function Checkout() {
   const [showVideo, setShowVideo] = useState(false);
   const [lang, setLang] = useState<"en" | "hi">("en");
   const { user } = useAuthStore();
+  const [onlineUsersCount, setOnlineUsersCount] = useState(50);
+
+  useEffect(() => {
+    const baseNum = settings?.baseOnlineUsers ?? 50;
+    const base = baseNum + (user ? 1 : 0);
+    const fluctuation = () => Math.floor(Math.random() * 4);
+    setOnlineUsersCount(base + fluctuation());
+
+    const interval = setInterval(() => {
+      setOnlineUsersCount(base + fluctuation());
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [user, settings?.baseOnlineUsers]);
 
   useEffect(() => {
     if (!user && !loading) {
@@ -1260,6 +1273,15 @@ export default function Checkout() {
                 {(template?.baseOrdersCount ?? 100) +
                   (template?.ordersCount || 0)}{" "}
                 Orders
+              </span>
+            </div>
+            <div className="flex items-center gap-2 mt-3">
+              <span className="relative flex h-2 w-2">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
+              </span>
+              <span className="text-xs font-semibold text-green-600">
+                {onlineUsersCount}+ people are online
               </span>
             </div>
           </div>

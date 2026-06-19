@@ -57,9 +57,14 @@ export default function HomeBanners() {
 
   return (
     <section className="pt-32 pb-8 w-full overflow-hidden">
-      <div className="max-w-7xl mx-auto px-4 sm:px-6 w-full">
-        <div className="relative rounded-[2rem] overflow-hidden shadow-2xl ring-1 ring-black/5 bg-transparent group">
-          <div className="w-full relative flex items-center justify-center min-h-[300px] md:min-h-[500px]">
+      <div className="w-full">
+        <div className="relative overflow-hidden shadow-2xl bg-black group w-full">
+          <div className="w-full relative flex items-center justify-center">
+            {/* Invisible placeholder to maintain exact aspect ratio of the current real image */}
+            {banners[currentIndex] && (
+              <img src={banners[currentIndex].image} className="w-full h-auto invisible" alt="Placeholder" />
+            )}
+            
              <AnimatePresence initial={false} custom={direction}>
                 <motion.img
                   key={currentIndex}
@@ -76,7 +81,7 @@ export default function HomeBanners() {
                   }}
                   src={banners[currentIndex]?.image}
                   alt="Promotional Banner"
-                  className="absolute w-full h-full object-cover md:object-contain rounded-[2rem]"
+                  className="absolute inset-0 w-full h-full object-contain object-center"
                 />
              </AnimatePresence>
           </div>
@@ -85,30 +90,30 @@ export default function HomeBanners() {
             <>
               <button 
                 onClick={prevBanner}
-                className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 bg-white/70 backdrop-blur-xl border border-white text-gray-900 p-3 md:p-4 rounded-full shadow-2xl transition-all duration-300 hover:bg-white hover:scale-105 active:scale-95 group/btn"
+                className="absolute left-4 md:left-8 top-1/2 -translate-y-1/2 bg-transparent text-white p-3 md:p-4 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 group/btn z-30 drop-shadow-md"
               >
-                <ChevronLeft className="w-6 h-6 md:w-7 md:h-7 transition-transform group-hover/btn:-translate-x-0.5" strokeWidth={2.5} />
+                <ChevronLeft className="w-8 h-8 md:w-10 md:h-10 transition-transform group-hover/btn:-translate-x-1 drop-shadow-lg" strokeWidth={2.5} />
               </button>
               <button 
                 onClick={nextBanner}
-                className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 bg-white/70 backdrop-blur-xl border border-white text-gray-900 p-3 md:p-4 rounded-full shadow-2xl transition-all duration-300 hover:bg-white hover:scale-105 active:scale-95 group/btn"
+                className="absolute right-4 md:right-8 top-1/2 -translate-y-1/2 bg-transparent text-white p-3 md:p-4 rounded-full transition-all duration-300 hover:scale-110 active:scale-95 group/btn z-30 drop-shadow-md"
               >
-                <ChevronRight className="w-6 h-6 md:w-7 md:h-7 transition-transform group-hover/btn:translate-x-0.5" strokeWidth={2.5} />
+                <ChevronRight className="w-8 h-8 md:w-10 md:h-10 transition-transform group-hover/btn:translate-x-1 drop-shadow-lg" strokeWidth={2.5} />
               </button>
               
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-10 bg-white/30 backdrop-blur-xl border border-white/40 px-5 py-2.5 rounded-full shadow-lg">
+              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-30 bg-black/30 backdrop-blur-md border border-white/10 px-5 py-2.5 rounded-full shadow-lg">
                 {banners.map((_: any, idx: number) => (
                   <button
                     key={idx}
                     onClick={() => setSpecificBanner(idx)}
-                    className={`h-2 rounded-full transition-all duration-500 ease-out ${idx === currentIndex ? 'bg-gray-900 w-8' : 'bg-gray-900/30 hover:bg-gray-900/50 w-2'}`}
+                    className={`h-2 rounded-full transition-all duration-500 ease-out border border-transparent shadow-sm ${idx === currentIndex ? 'bg-white w-8' : 'bg-white/50 hover:bg-white w-2'}`}
                   />
                 ))}
               </div>
             </>
           )}
           
-          <div className="absolute inset-0 ring-1 ring-inset ring-black/5 rounded-[2rem] pointer-events-none z-20"></div>
+          <div className="absolute inset-0 pointer-events-none z-20"></div>
         </div>
       </div>
     </section>

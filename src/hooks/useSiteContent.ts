@@ -1,9 +1,15 @@
-import { useState, useEffect } from 'react';
-import { doc, getDoc, collection, getDocs, onSnapshot } from 'firebase/firestore';
-import { db } from '../lib/firebase';
+import { useState, useEffect } from "react";
+import {
+  doc,
+  getDoc,
+  collection,
+  getDocs,
+  onSnapshot,
+} from "firebase/firestore";
+import { db } from "../lib/firebase";
 
 export function useSiteContent() {
-  const [logoBase64, setLogoBase64] = useState('');
+  const [logoBase64, setLogoBase64] = useState("");
   const [hero, setHero] = useState<any>(null);
   const [contact, setContact] = useState<any>(null);
   const [about, setAbout] = useState<any>(null);
@@ -13,56 +19,105 @@ export function useSiteContent() {
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [faqs, setFaqs] = useState<any[]>([]);
   const [banners, setBanners] = useState<any[]>([]);
+  const [settings, setSettings] = useState<any>(null);
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    const unsubLogo = onSnapshot(doc(db, 'content', 'logo'), (doc) => {
-      if (doc.exists()) setLogoBase64(doc.data().image || '');
-    }, () => {});
+    const unsubLogo = onSnapshot(
+      doc(db, "content", "logo"),
+      (doc) => {
+        if (doc.exists()) setLogoBase64(doc.data().image || "");
+      },
+      () => {},
+    );
 
-    const unsubHero = onSnapshot(doc(db, 'content', 'hero'), (doc) => {
-      if (doc.exists()) setHero(doc.data());
-    }, () => {});
+    const unsubHero = onSnapshot(
+      doc(db, "content", "hero"),
+      (doc) => {
+        if (doc.exists()) setHero(doc.data());
+      },
+      () => {},
+    );
 
-    const unsubContact = onSnapshot(doc(db, 'content', 'contact'), (doc) => {
-      if (doc.exists()) setContact(doc.data());
-    }, () => {});
+    const unsubContact = onSnapshot(
+      doc(db, "content", "contact"),
+      (doc) => {
+        if (doc.exists()) setContact(doc.data());
+      },
+      () => {},
+    );
 
-    const unsubAbout = onSnapshot(doc(db, 'content', 'about'), (doc) => {
-      if (doc.exists()) setAbout(doc.data());
-    }, () => {});
+    const unsubAbout = onSnapshot(
+      doc(db, "content", "about"),
+      (doc) => {
+        if (doc.exists()) setAbout(doc.data());
+      },
+      () => {},
+    );
 
-    const unsubFeatures = onSnapshot(doc(db, 'content', 'features'), (doc) => {
-      if (doc.exists()) setFeatures(doc.data().items || []);
-    }, () => {});
+    const unsubFeatures = onSnapshot(
+      doc(db, "content", "features"),
+      (doc) => {
+        if (doc.exists()) setFeatures(doc.data().items || []);
+      },
+      () => {},
+    );
 
-    const unsubCategories = onSnapshot(doc(db, 'content', 'categories'), (doc) => {
-      if (doc.exists()) setCategories(doc.data().items || []);
-    }, () => {});
+    const unsubCategories = onSnapshot(
+      doc(db, "content", "categories"),
+      (doc) => {
+        if (doc.exists()) setCategories(doc.data().items || []);
+      },
+      () => {},
+    );
 
-    const unsubTemplates = onSnapshot(collection(db, 'templates'), (snapshot) => {
-      const list: any[] = [];
-      snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
-      setTemplates(list);
-    }, () => {});
+    const unsubTemplates = onSnapshot(
+      collection(db, "templates"),
+      (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
+        setTemplates(list);
+      },
+      () => {},
+    );
 
-    const unsubTestimonials = onSnapshot(collection(db, 'testimonials'), (snapshot) => {
-      const list: any[] = [];
-      snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
-      setTestimonials(list);
-    }, () => {});
+    const unsubTestimonials = onSnapshot(
+      collection(db, "testimonials"),
+      (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
+        setTestimonials(list);
+      },
+      () => {},
+    );
 
-    const unsubFaqs = onSnapshot(collection(db, 'faqs'), (snapshot) => {
-      const list: any[] = [];
-      snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
-      setFaqs(list);
-    }, () => {});
+    const unsubFaqs = onSnapshot(
+      collection(db, "faqs"),
+      (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
+        setFaqs(list);
+      },
+      () => {},
+    );
 
-    const unsubBanners = onSnapshot(collection(db, 'banners'), (snapshot) => {
-      const list: any[] = [];
-      snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
-      setBanners(list);
-    }, () => {});
+    const unsubBanners = onSnapshot(
+      collection(db, "banners"),
+      (snapshot) => {
+        const list: any[] = [];
+        snapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
+        setBanners(list);
+      },
+      () => {},
+    );
+
+    const unsubSettings = onSnapshot(
+      doc(db, "settings", "config"),
+      (doc) => {
+        if (doc.exists()) setSettings(doc.data());
+      },
+      () => {},
+    );
 
     // To prevent infinite loading
     setLoading(false);
@@ -77,8 +132,22 @@ export function useSiteContent() {
       unsubTestimonials();
       unsubFaqs();
       unsubBanners();
+      unsubSettings();
     };
   }, []);
 
-  return { logoBase64, hero, contact, about, features, categories, templates, testimonials, faqs, banners, loading };
+  return {
+    logoBase64,
+    hero,
+    contact,
+    about,
+    features,
+    categories,
+    templates,
+    testimonials,
+    faqs,
+    banners,
+    settings,
+    loading,
+  };
 }
