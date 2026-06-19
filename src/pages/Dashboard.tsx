@@ -1,11 +1,35 @@
-import { useState, useEffect } from 'react';
-import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom';
-import { useAuthStore } from '../store/useAuthStore';
-import { auth, db } from '../lib/firebase';
-import { signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
-import { Camera, LayoutDashboard, ShoppingBag, Download, User, LogOut, Menu, X, ExternalLink, CheckCircle } from 'lucide-react';
-import toast from 'react-hot-toast';
+import { useState, useEffect } from "react";
+import {
+  Routes,
+  Route,
+  Link,
+  useNavigate,
+  useLocation,
+} from "react-router-dom";
+import { useAuthStore } from "../store/useAuthStore";
+import { auth, db } from "../lib/firebase";
+import { signOut } from "firebase/auth";
+import {
+  collection,
+  query,
+  where,
+  getDocs,
+  orderBy,
+  onSnapshot,
+} from "firebase/firestore";
+import {
+  Camera,
+  LayoutDashboard,
+  ShoppingBag,
+  Download,
+  User,
+  LogOut,
+  Menu,
+  X,
+  ExternalLink,
+  CheckCircle,
+} from "lucide-react";
+import toast from "react-hot-toast";
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -16,32 +40,34 @@ export default function DashboardLayout() {
   const handleLogout = async () => {
     try {
       await signOut(auth);
-      toast.success('Successfully logged out');
-      navigate('/');
+      toast.success("Successfully logged out");
+      navigate("/");
     } catch (e) {
-      toast.error('Failed to log out');
+      toast.error("Failed to log out");
     }
   };
 
   const navItems = [
-    { name: 'Dashboard', path: '/dashboard', icon: LayoutDashboard },
-    { name: 'My Orders', path: '/dashboard/orders', icon: ShoppingBag },
-    { name: 'Downloads', path: '/dashboard/downloads', icon: Download },
-    { name: 'Profile', path: '/dashboard/profile', icon: User },
+    { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
+    { name: "My Orders", path: "/dashboard/orders", icon: ShoppingBag },
+    { name: "Downloads", path: "/dashboard/downloads", icon: Download },
+    { name: "Profile", path: "/dashboard/profile", icon: User },
   ];
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] flex">
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
-        <div 
+        <div
           className="fixed inset-0 bg-gray-900/50 z-40 lg:hidden"
           onClick={() => setSidebarOpen(false)}
         />
       )}
 
       {/* Sidebar */}
-      <div className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 lg:translate-x-0 lg:static lg:w-64 ${sidebarOpen ? 'translate-x-0' : '-translate-x-full'}`}>
+      <div
+        className={`fixed inset-y-0 left-0 z-50 w-64 bg-white border-r border-gray-200 transform transition-transform duration-300 lg:translate-x-0 lg:static lg:w-64 ${sidebarOpen ? "translate-x-0" : "-translate-x-full"}`}
+      >
         <div className="h-full flex flex-col pt-5 pb-4 overflow-y-auto">
           <div className="flex items-center justify-between px-6 mb-8">
             <Link to="/" className="flex items-center gap-2 cursor-pointer">
@@ -52,7 +78,10 @@ export default function DashboardLayout() {
                 SIGMA<span className="text-brand-purple font-light">PRO</span>
               </span>
             </Link>
-            <button onClick={() => setSidebarOpen(false)} className="lg:hidden text-gray-500">
+            <button
+              onClick={() => setSidebarOpen(false)}
+              className="lg:hidden text-gray-500"
+            >
               <X className="w-5 h-5" />
             </button>
           </div>
@@ -66,10 +95,14 @@ export default function DashboardLayout() {
                   to={item.path}
                   onClick={() => setSidebarOpen(false)}
                   className={`flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm font-medium transition-colors ${
-                    active ? 'bg-brand-purple/10 text-brand-purple' : 'text-gray-700 hover:bg-gray-50'
+                    active
+                      ? "bg-brand-purple/10 text-brand-purple"
+                      : "text-gray-700 hover:bg-gray-50"
                   }`}
                 >
-                  <item.icon className={`w-5 h-5 ${active ? 'text-brand-purple' : 'text-gray-400'}`} />
+                  <item.icon
+                    className={`w-5 h-5 ${active ? "text-brand-purple" : "text-gray-400"}`}
+                  />
                   {item.name}
                 </Link>
               );
@@ -99,25 +132,30 @@ export default function DashboardLayout() {
       <div className="flex-1 flex flex-col overflow-hidden">
         {/* Mobile Header */}
         <div className="lg:hidden bg-white border-b border-gray-200 px-4 py-3 flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-gradient-primary text-white shadow-lg">
-                <Camera className="w-4 h-4 absolute z-10" />
-              </div>
-              <span className="font-display font-bold text-lg tracking-tight">SIGMAPRO</span>
+          <div className="flex items-center gap-2">
+            <div className="relative flex items-center justify-center w-8 h-8 rounded-full bg-gradient-primary text-white shadow-lg">
+              <Camera className="w-4 h-4 absolute z-10" />
             </div>
-            <button onClick={() => setSidebarOpen(true)} className="p-2 -mr-2 text-gray-600 rounded-md">
-              <Menu className="w-6 h-6" />
-            </button>
+            <span className="font-display font-bold text-lg tracking-tight">
+              SIGMAPRO
+            </span>
+          </div>
+          <button
+            onClick={() => setSidebarOpen(true)}
+            className="p-2 -mr-2 text-gray-600 rounded-md"
+          >
+            <Menu className="w-6 h-6" />
+          </button>
         </div>
 
         <main className="flex-1 overflow-y-auto w-full">
           <div className="p-6 md:p-8 max-w-7xl mx-auto w-full">
-             <Routes>
-                <Route path="/" element={<DashboardHome />} />
-                <Route path="/orders" element={<MyOrders />} />
-                <Route path="/downloads" element={<Downloads />} />
-                <Route path="/profile" element={<Profile />} />
-             </Routes>
+            <Routes>
+              <Route path="/" element={<DashboardHome />} />
+              <Route path="/orders" element={<MyOrders />} />
+              <Route path="/downloads" element={<Downloads />} />
+              <Route path="/profile" element={<Profile />} />
+            </Routes>
           </div>
         </main>
       </div>
@@ -130,60 +168,87 @@ function DashboardHome() {
   const [stats, setStats] = useState({ pending: 0, total: 0, downloads: 0 });
 
   useEffect(() => {
-     if (!user) return;
-     const q = query(collection(db, 'orders'), where('userId', '==', user.uid));
-     const unsubscribe = onSnapshot(q, (sn) => {
-       const orders = sn.docs.map(doc => doc.data());
-       setStats({
+    if (!user) return;
+    const q = query(collection(db, "orders"), where("userId", "==", user.uid));
+    const unsubscribe = onSnapshot(
+      q,
+      (sn) => {
+        const orders = sn.docs.map((doc) => doc.data());
+        setStats({
           total: orders.length,
-          pending: orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length,
-          downloads: orders.filter(o => o.downloadUrl).length
-       });
-     }, (err) => {
-       console.error(err);
-     });
+          pending: orders.filter(
+            (o) => o.status === "Pending" || o.status === "Processing",
+          ).length,
+          downloads: orders.filter((o) => o.downloadUrl).length,
+        });
+      },
+      (err) => {
+        console.error(err);
+      },
+    );
 
-     return () => unsubscribe();
+    return () => unsubscribe();
   }, [user]);
 
   return (
     <div>
-      <h1 className="text-2xl font-bold text-gray-900 mb-6">Welcome back, {user?.displayName || 'User'}!</h1>
+      <h1 className="text-2xl font-bold text-gray-900 mb-6">
+        Welcome back, {user?.displayName || "User"}!
+      </h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <Link to="/dashboard/orders" className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-brand-purple hover:shadow-md transition-all">
-           <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
-             <LayoutDashboard className="w-6 h-6 text-orange-500" />
-           </div>
-           <div>
-             <p className="text-sm text-gray-500 font-medium">Pending Orders</p>
-             <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
-           </div>
+        <Link
+          to="/dashboard/orders"
+          className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-brand-purple hover:shadow-md transition-all"
+        >
+          <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
+            <LayoutDashboard className="w-6 h-6 text-orange-500" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 font-medium">Pending Orders</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
+          </div>
         </Link>
-        <Link to="/dashboard/orders" className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-brand-purple hover:shadow-md transition-all">
-           <div className="w-12 h-12 rounded-xl bg-brand-purple/10 flex items-center justify-center">
-             <ShoppingBag className="w-6 h-6 text-brand-purple" />
-           </div>
-           <div>
-             <p className="text-sm text-gray-500 font-medium">Total Orders</p>
-             <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
-           </div>
+        <Link
+          to="/dashboard/orders"
+          className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-brand-purple hover:shadow-md transition-all"
+        >
+          <div className="w-12 h-12 rounded-xl bg-brand-purple/10 flex items-center justify-center">
+            <ShoppingBag className="w-6 h-6 text-brand-purple" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 font-medium">Total Orders</p>
+            <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
+          </div>
         </Link>
-        <Link to="/dashboard/downloads" className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-brand-purple hover:shadow-md transition-all">
-           <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
-             <Download className="w-6 h-6 text-green-500" />
-           </div>
-           <div>
-             <p className="text-sm text-gray-500 font-medium">Downloads</p>
-             <p className="text-2xl font-bold text-gray-900">{stats.downloads}</p>
-           </div>
+        <Link
+          to="/dashboard/downloads"
+          className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-brand-purple hover:shadow-md transition-all"
+        >
+          <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
+            <Download className="w-6 h-6 text-green-500" />
+          </div>
+          <div>
+            <p className="text-sm text-gray-500 font-medium">Downloads</p>
+            <p className="text-2xl font-bold text-gray-900">
+              {stats.downloads}
+            </p>
+          </div>
         </Link>
       </div>
       <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-8 text-center shadow-sm">
-         <h2 className="text-lg font-bold text-gray-800 mb-2">Create New Application</h2>
-         <p className="text-gray-500 mb-6 max-w-sm mx-auto">Browse our premium templates and start crafting your masterpiece today.</p>
-         <Link to="/gallery" className="inline-flex items-center justify-center px-6 py-2 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-brand-purple hover:bg-brand-indigo transition-colors gap-2">
-            Browse Templates
-         </Link>
+        <h2 className="text-lg font-bold text-gray-800 mb-2">
+          Create New Application
+        </h2>
+        <p className="text-gray-500 mb-6 max-w-sm mx-auto">
+          Browse our premium templates and start crafting your masterpiece
+          today.
+        </p>
+        <Link
+          to="/gallery"
+          className="inline-flex items-center justify-center px-6 py-2 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-brand-purple hover:bg-brand-indigo transition-colors gap-2"
+        >
+          Browse Templates
+        </Link>
       </div>
     </div>
   );
@@ -195,20 +260,30 @@ function MyOrders() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-     if (!user) return;
-     const q = query(collection(db, 'orders'), where('userId', '==', user.uid));
-     const unsubscribe = onSnapshot(q, (sn) => {
-       const list = sn.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
-       // Sort locally
-       list.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-       setOrders(list);
-       setLoading(false);
-     }, (err) => {
-       console.error(err);
-       setLoading(false);
-     });
+    if (!user) return;
+    const q = query(collection(db, "orders"), where("userId", "==", user.uid));
+    const unsubscribe = onSnapshot(
+      q,
+      (sn) => {
+        const list = sn.docs.map((doc) => ({
+          id: doc.id,
+          ...(doc.data() as any),
+        }));
+        // Sort locally
+        list.sort(
+          (a, b) =>
+            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+        );
+        setOrders(list);
+        setLoading(false);
+      },
+      (err) => {
+        console.error(err);
+        setLoading(false);
+      },
+    );
 
-     return () => unsubscribe();
+    return () => unsubscribe();
   }, [user]);
 
   if (loading) return <div>Loading...</div>;
@@ -224,102 +299,164 @@ function MyOrders() {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map(order => (
-            <div key={order.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm flex flex-col">
+          {orders.map((order) => (
+            <div
+              key={order.id}
+              className="bg-white border border-gray-100 rounded-2xl shadow-sm flex flex-col"
+            >
               <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
-                 <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
-                   {order.thumbnailBase64 && (
-                     <div className="w-24 h-16 rounded overflow-hidden flex-shrink-0 border border-gray-100 flex items-center justify-center bg-gray-50">
-                       <img src={order.thumbnailBase64} alt="Thumbnail" className="w-full h-full object-contain" />
-                     </div>
-                   )}
-                   <div>
-                      <h3 className="font-bold text-gray-900 text-lg mb-1">{order.templateName || 'Order'}</h3>
-                      <div className="flex flex-wrap gap-3 text-sm text-gray-500">
-                         <span>Order ID: <span className="font-mono text-xs">{order.id}</span></span>
-                         <span>•</span>
-                         <span>{new Date(order.createdAt).toLocaleDateString()}</span>
-                         <span>•</span>
-                         <span>₹{order.price}</span>
-                         {(order.advancePayment > 0 || order.advancePaymentStatus) && (
-                           <>
-                             <span>•</span>
-                             <span className={`font-medium ${order.advancePaymentStatus === 'Received' ? 'text-green-600' : (order.advancePaymentStatus === 'Pending' ? 'text-orange-600' : 'text-gray-500')}`}>
-                               Advance: ₹{order.advancePayment || 0} ({order.advancePaymentStatus || 'Pending'})
-                             </span>
-                           </>
-                         )}
-                      </div>
-                   </div>
-                 </div>
-                 <div className="flex items-center gap-3">
-                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                      order.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                      order.status === 'Processing' ? 'bg-blue-100 text-blue-700' :
-                      order.status === 'Delivered' ? 'bg-purple-100 text-purple-700' :
-                      'bg-yellow-100 text-yellow-700'
-                    }`}>
-                      {order.status || 'Pending'}
-                    </span>
-                    
-                    {order.downloadUrl && (
-                      <a href={order.downloadUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm font-medium text-brand-purple hover:underline bg-brand-purple/5 px-4 py-2 rounded-xl">
-                        <Download className="w-4 h-4" /> Download
-                      </a>
-                    )}
-                 </div>
-              </div>
-
-              {(order.customData && Object.keys(order.customData).length > 0) || order.customerPhone ? (
-                <div className="bg-gray-50/50 p-6 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4 relative">
-                  {(order.paymentStatus === 'Received' || order.advancePaymentStatus === 'Received' || order.status === 'Processing') && (
-                     <div className="md:col-span-2 mb-2 bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-start gap-3">
-                        <div className="mt-0.5">
-                           <CheckCircle className="w-5 h-5 text-blue-500" />
-                        </div>
-                        <div>
-                           <h5 className="text-sm font-bold text-blue-800">Payment Received & Processing</h5>
-                           <p className="text-xs text-blue-600 mt-0.5">We have received your payment/advance. Your video creation is currently under process. You will be notified once it's complete.</p>
-                        </div>
-                     </div>
+                <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                  {order.thumbnailBase64 && (
+                    <div className="w-24 h-16 rounded overflow-hidden flex-shrink-0 border border-gray-100 flex items-center justify-center bg-gray-50">
+                      <img
+                        src={order.thumbnailBase64}
+                        alt="Thumbnail"
+                        className="w-full h-full object-contain"
+                      />
+                    </div>
                   )}
                   <div>
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Order Details</h4>
+                    <h3 className="font-bold text-gray-900 text-lg mb-1">
+                      {order.templateName || "Order"}
+                    </h3>
+                    <div className="flex flex-wrap gap-3 text-sm text-gray-500">
+                      <span>
+                        Order ID:{" "}
+                        <span className="font-mono text-xs">{order.id}</span>
+                      </span>
+                      <span>•</span>
+                      <span>
+                        {new Date(order.createdAt).toLocaleDateString()}
+                      </span>
+                      <span>•</span>
+                      <span>₹{order.price}</span>
+                      {(order.advancePayment > 0 ||
+                        order.advancePaymentStatus) && (
+                        <>
+                          <span>•</span>
+                          <span
+                            className={`font-medium ${order.advancePaymentStatus === "Received" ? "text-green-600" : order.advancePaymentStatus === "Pending" ? "text-orange-600" : "text-gray-500"}`}
+                          >
+                            Advance: ₹{order.advancePayment || 0} (
+                            {order.advancePaymentStatus || "Pending"})
+                          </span>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                </div>
+                <div className="flex items-center gap-3">
+                  <span
+                    className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      order.status === "Completed"
+                        ? "bg-green-100 text-green-700"
+                        : order.status === "Processing"
+                          ? "bg-blue-100 text-blue-700"
+                          : order.status === "Delivered"
+                            ? "bg-purple-100 text-purple-700"
+                            : order.status === "Cancelled"
+                              ? "bg-red-100 text-red-700"
+                              : "bg-yellow-100 text-yellow-700"
+                    }`}
+                  >
+                    {order.status || "Pending"}
+                  </span>
+
+                  {order.downloadUrl && (
+                    <a
+                      href={order.downloadUrl}
+                      target="_blank"
+                      rel="noreferrer"
+                      className="flex items-center gap-1 text-sm font-medium text-brand-purple hover:underline bg-brand-purple/5 px-4 py-2 rounded-xl"
+                    >
+                      <Download className="w-4 h-4" /> Download
+                    </a>
+                  )}
+                </div>
+              </div>
+
+              {(order.customData && Object.keys(order.customData).length > 0) ||
+              order.customerPhone ? (
+                <div className="bg-gray-50/50 p-6 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4 relative">
+                  {(order.paymentStatus === "Received" ||
+                    order.advancePaymentStatus === "Received" ||
+                    order.status === "Processing") && (
+                    <div className="md:col-span-2 mb-2 bg-blue-50 border border-blue-100 rounded-lg p-3 flex items-start gap-3">
+                      <div className="mt-0.5">
+                        <CheckCircle className="w-5 h-5 text-blue-500" />
+                      </div>
+                      <div>
+                        <h5 className="text-sm font-bold text-blue-800">
+                          Payment Received & Processing
+                        </h5>
+                        <p className="text-xs text-blue-600 mt-0.5">
+                          We have received your payment/advance. Your video
+                          creation is currently under process. You will be
+                          notified once it's complete.
+                        </p>
+                      </div>
+                    </div>
+                  )}
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                      Order Details
+                    </h4>
                     <div className="space-y-2">
-                       {order.customerPhone && (
-                          <div className="flex">
-                             <span className="w-1/3 text-sm text-gray-500">Phone:</span>
-                             <span className="w-2/3 text-sm font-medium text-gray-900">{order.customerPhone}</span>
-                          </div>
-                       )}
-                       {order.customData && Object.entries(order.customData).map(([k, v]) => {
-                         if (typeof v === 'boolean') v = v ? 'Yes' : 'No';
-                         return (
-                           <div key={k} className="flex">
-                              <span className="w-1/3 text-sm text-gray-500 capitalize">{k.replace(/_/g, ' ')}:</span>
-                              <span className="w-2/3 text-sm font-medium text-gray-900 border-l border-gray-200 pl-2 ml-2">{String(v || 'N/A')}</span>
-                           </div>
-                         );
-                       })}
+                      {order.customerPhone && (
+                        <div className="flex">
+                          <span className="w-1/3 text-sm text-gray-500">
+                            Phone:
+                          </span>
+                          <span className="w-2/3 text-sm font-medium text-gray-900">
+                            {order.customerPhone}
+                          </span>
+                        </div>
+                      )}
+                      {order.customData &&
+                        Object.entries(order.customData).map(([k, v]) => {
+                          if (typeof v === "boolean") v = v ? "Yes" : "No";
+                          return (
+                            <div key={k} className="flex">
+                              <span className="w-1/3 text-sm text-gray-500 capitalize">
+                                {k.replace(/_/g, " ")}:
+                              </span>
+                              <span className="w-2/3 text-sm font-medium text-gray-900 border-l border-gray-200 pl-2 ml-2">
+                                {String(v || "N/A")}
+                              </span>
+                            </div>
+                          );
+                        })}
                     </div>
                   </div>
                   <div>
-                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Payment Info</h4>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">
+                      Payment Info
+                    </h4>
                     <div className="space-y-2 text-sm">
-                       <div className="flex">
-                          <span className="w-1/3 text-gray-500">Method:</span>
-                          <span className="w-2/3 font-medium text-gray-900">{order.viaMethod || 'WhatsApp'}</span>
-                       </div>
-                       <div className="flex">
-                          <span className="w-1/3 text-gray-500">Status:</span>
-                          <span className="w-2/3 font-medium text-gray-900">{order.paymentStatus || 'Pending'}</span>
-                       </div>
-                       {(order.advancePayment > 0 || order.advancePaymentStatus) && (
-                         <div className="flex">
-                            <span className="w-1/3 text-gray-500">Advance:</span>
-                            <span className={`w-2/3 font-medium ${order.advancePaymentStatus === 'Received' ? 'text-green-600' : 'text-gray-900'}`}>₹{order.advancePayment || 0} ({order.advancePaymentStatus || 'Pending'})</span>
-                         </div>
-                       )}
+                      <div className="flex">
+                        <span className="w-1/3 text-gray-500">Method:</span>
+                        <span className="w-2/3 font-medium text-gray-900">
+                          {order.viaMethod || "WhatsApp"}
+                        </span>
+                      </div>
+                      <div className="flex">
+                        <span className="w-1/3 text-gray-500">Status:</span>
+                        <span className="w-2/3 font-medium text-gray-900">
+                          {order.paymentStatus || "Pending"}
+                        </span>
+                      </div>
+                      {(order.advancePayment > 0 ||
+                        order.advancePaymentStatus) && (
+                        <div className="flex">
+                          <span className="w-1/3 text-gray-500">Advance:</span>
+                          <span
+                            className={`w-2/3 font-medium ${order.advancePaymentStatus === "Received" ? "text-green-600" : "text-gray-900"}`}
+                          >
+                            ₹{order.advancePayment || 0} (
+                            {order.advancePaymentStatus || "Pending"})
+                          </span>
+                        </div>
+                      )}
                     </div>
                   </div>
                 </div>
@@ -338,18 +475,24 @@ function Downloads() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-     if (!user) return;
-     const q = query(collection(db, 'orders'), where('userId', '==', user.uid));
-     const unsubscribe = onSnapshot(q, (sn) => {
-       const list = sn.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) })).filter((o: any) => o.downloadUrl);
-       setDownloads(list);
-       setLoading(false);
-     }, (err) => {
-       console.error(err);
-       setLoading(false);
-     });
+    if (!user) return;
+    const q = query(collection(db, "orders"), where("userId", "==", user.uid));
+    const unsubscribe = onSnapshot(
+      q,
+      (sn) => {
+        const list = sn.docs
+          .map((doc) => ({ id: doc.id, ...(doc.data() as any) }))
+          .filter((o: any) => o.downloadUrl);
+        setDownloads(list);
+        setLoading(false);
+      },
+      (err) => {
+        console.error(err);
+        setLoading(false);
+      },
+    );
 
-     return () => unsubscribe();
+    return () => unsubscribe();
   }, [user]);
 
   if (loading) return <div>Loading...</div>;
@@ -360,23 +503,40 @@ function Downloads() {
       {downloads.length === 0 ? (
         <div className="bg-white border border-gray-100 rounded-2xl shadow-sm p-8 text-center">
           <Download className="w-12 h-12 text-gray-300 mx-auto mb-4" />
-          <h3 className="text-lg font-medium text-gray-900">No downloads available</h3>
-          <p className="text-gray-500 mt-1">Your completed invitation videos will appear here.</p>
+          <h3 className="text-lg font-medium text-gray-900">
+            No downloads available
+          </h3>
+          <p className="text-gray-500 mt-1">
+            Your completed invitation videos will appear here.
+          </p>
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-           {downloads.map(d => (
-             <div key={d.id} className="bg-white p-6 border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col items-center text-center">
-                <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-green-500 mb-4">
-                  <Download className="w-8 h-8" />
-                </div>
-                <h3 className="font-bold text-gray-900 mb-1 line-clamp-1">{d.templateName || 'Custom Template'}</h3>
-                <p className="text-xs text-gray-500 mb-4">{new Date(d.createdAt).toLocaleDateString()} • Order #{d.id.slice(-6)}</p>
-                <a href={d.downloadUrl} target="_blank" rel="noreferrer" className="w-full py-2 bg-brand-purple hover:bg-purple-700 text-white rounded-xl text-sm font-bold transition-colors">
-                  Download Video
-                </a>
-             </div>
-           ))}
+          {downloads.map((d) => (
+            <div
+              key={d.id}
+              className="bg-white p-6 border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col items-center text-center"
+            >
+              <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-green-500 mb-4">
+                <Download className="w-8 h-8" />
+              </div>
+              <h3 className="font-bold text-gray-900 mb-1 line-clamp-1">
+                {d.templateName || "Custom Template"}
+              </h3>
+              <p className="text-xs text-gray-500 mb-4">
+                {new Date(d.createdAt).toLocaleDateString()} • Order #
+                {d.id.slice(-6)}
+              </p>
+              <a
+                href={d.downloadUrl}
+                target="_blank"
+                rel="noreferrer"
+                className="w-full py-2 bg-brand-purple hover:bg-purple-700 text-white rounded-xl text-sm font-bold transition-colors"
+              >
+                Download Video
+              </a>
+            </div>
+          ))}
         </div>
       )}
     </div>
@@ -385,45 +545,55 @@ function Downloads() {
 
 function Profile() {
   const { user } = useAuthStore();
-  
+
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">My Profile</h1>
       <div className="bg-white border border-gray-100 rounded-2xl shadow-sm overflow-hidden max-w-2xl">
         <div className="p-6 md:p-8">
-           <div className="flex items-center gap-6 mb-8">
-              <div className="w-24 h-24 rounded-full bg-gray-100 border border-gray-200 overflow-hidden shadow-sm">
-                {user?.photoURL ? (
-                  <img src={user.photoURL} alt="Profile" className="w-full h-full object-cover" />
-                ) : (
-                  <User className="w-10 h-10 text-gray-400 m-auto mt-7" />
-                )}
+          <div className="flex items-center gap-6 mb-8">
+            <div className="w-24 h-24 rounded-full bg-gray-100 border border-gray-200 overflow-hidden shadow-sm">
+              {user?.photoURL ? (
+                <img
+                  src={user.photoURL}
+                  alt="Profile"
+                  className="w-full h-full object-cover"
+                />
+              ) : (
+                <User className="w-10 h-10 text-gray-400 m-auto mt-7" />
+              )}
+            </div>
+            <div>
+              <h2 className="text-xl font-bold text-gray-900">
+                {user?.displayName || "User"}
+              </h2>
+              <p className="text-gray-500">{user?.email}</p>
+              <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-2">
+                Active Account
+              </span>
+            </div>
+          </div>
+
+          <div className="border-t border-gray-200 pt-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+              <div>
+                <label className="block text-sm font-medium text-gray-700">
+                  User ID
+                </label>
+                <div className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded-lg border border-gray-200 font-mono select-all">
+                  {user?.uid}
+                </div>
               </div>
               <div>
-                 <h2 className="text-xl font-bold text-gray-900">{user?.displayName || 'User'}</h2>
-                 <p className="text-gray-500">{user?.email}</p>
-                 <span className="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-green-100 text-green-800 mt-2">
-                   Active Account
-                 </span>
+                <label className="block text-sm font-medium text-gray-700">
+                  Account Role
+                </label>
+                <div className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded-lg border border-gray-200 capitalize">
+                  User
+                </div>
               </div>
-           </div>
-           
-           <div className="border-t border-gray-200 pt-6">
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700">User ID</label>
-                    <div className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded-lg border border-gray-200 font-mono select-all">
-                       {user?.uid}
-                    </div>
-                 </div>
-                 <div>
-                    <label className="block text-sm font-medium text-gray-700">Account Role</label>
-                    <div className="mt-1 text-sm text-gray-900 bg-gray-50 p-2 rounded-lg border border-gray-200 capitalize">
-                       User
-                    </div>
-                 </div>
-              </div>
-           </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
