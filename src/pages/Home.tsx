@@ -10,8 +10,8 @@ export default function Home() {
     <div className="min-h-screen font-sans overflow-x-hidden selection:bg-brand-purple/30 selection:text-brand-purple text-brand-navy">
       <Navbar />
       <main className="bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB]">
-        <Hero />
         <HomeBanners />
+        <Hero />
         <TemplateCategories />
         <ContactAndTestimonials />
       </main>
