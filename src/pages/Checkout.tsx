@@ -1235,29 +1235,29 @@ export default function Checkout() {
           </h2>
         </div>
 
-        <div className="flex gap-6 mb-10 bg-gray-50 p-6 rounded-2xl border border-gray-100 items-center">
+        <div className="flex flex-col sm:flex-row gap-6 mb-10 bg-gray-50 p-6 rounded-2xl border border-gray-100 sm:items-center">
           <div
-            className="w-32 h-20 rounded-xl bg-gray-200 overflow-hidden flex-shrink-0 relative cursor-pointer shadow"
+            className="w-full sm:w-48 aspect-video rounded-xl bg-white overflow-hidden flex-shrink-0 relative cursor-pointer shadow border border-gray-100"
             onClick={() => template?.videoUrl && setShowVideo(true)}
           >
             {template?.thumbnailBase64 && (
               <img
                 src={template.thumbnailBase64}
                 alt="Thumb"
-                className="w-full h-full object-cover"
+                className="w-full h-full object-contain"
               />
             )}
             {template?.videoUrl && (
               <div className="absolute inset-0 bg-black/40 flex items-center justify-center backdrop-blur-sm">
-                <Play className="w-6 h-6 text-white fill-white" />
+                <Play className="w-8 h-8 text-white fill-white drop-shadow-md" />
               </div>
             )}
           </div>
-          <div>
-            <h4 className="font-bold text-xl text-gray-900">
+          <div className="flex-1">
+            <h4 className="font-bold text-xl sm:text-2xl text-gray-900 leading-tight">
               {template?.title}
             </h4>
-            <div className="flex items-center gap-2 mt-2">
+            <div className="flex flex-wrap items-center gap-2 sm:gap-3 mt-3">
               <span className="text-sm font-medium text-brand-purple px-3 py-1 bg-brand-purple/10 rounded-full inline-block">
                 {template?.category}
               </span>
@@ -1285,7 +1285,7 @@ export default function Checkout() {
                 onClick={() => setReviewsTemplateId(template?.id)}
                 className="text-xs font-bold text-yellow-600 bg-yellow-50 hover:bg-yellow-100 px-3 py-1 flex items-center gap-1 rounded-full border border-yellow-200 transition"
               >
-                <Star className="w-3 h-3 fill-current" /> Reviews
+                <Star className="w-3.5 h-3.5 fill-current" /> Reviews
               </button>
             </div>
           </div>

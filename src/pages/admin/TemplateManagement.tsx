@@ -245,9 +245,9 @@ export default function TemplateManagement() {
                 {templates.map(template => (
                   <tr key={template.id} className="hover:bg-gray-800/30 transition-colors">
                     <td className="px-6 py-4">
-                       <div className="w-16 h-12 rounded-lg bg-gray-800 overflow-hidden">
+                       <div className="w-16 h-12 rounded-lg bg-gray-800 overflow-hidden flex items-center justify-center">
                           {(template.thumbnailBase64 || template.image) ? (
-                            <img src={template.thumbnailBase64 || template.image} alt={template.title} className="w-full h-full object-cover" />
+                            <img src={template.thumbnailBase64 || template.image} alt={template.title} className="w-full h-full object-contain bg-white" />
                           ) : (
                             <div className="w-full h-full flex items-center justify-center text-gray-600">No Img</div>
                           )}
@@ -309,7 +309,7 @@ export default function TemplateManagement() {
                    <div className="relative w-full h-48 md:w-64 rounded-xl border-2 border-dashed border-gray-700 bg-gray-800 flex items-center justify-center overflow-hidden hover:border-indigo-500 transition-colors group cursor-pointer">
                       {thumbnailBase64 ? (
                         <>
-                          <img src={thumbnailBase64} alt="Preview" className="w-full h-full object-cover" />
+                          <img src={thumbnailBase64} alt="Preview" className="w-full h-full object-contain bg-white" />
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-sm">
                             Change Image
                           </div>

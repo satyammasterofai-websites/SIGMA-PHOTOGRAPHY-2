@@ -243,12 +243,12 @@ export default function PremiumGallery() {
                   key={template.id}
                   className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all border border-gray-100 group flex flex-col"
                 >
-                  <div className="relative aspect-video overflow-hidden bg-gray-100">
+                  <div className="relative aspect-video overflow-hidden bg-gray-100 md:aspect-[4/3] lg:aspect-video">
                     {template.thumbnailBase64 || template.image ? (
                       <img
                         src={template.thumbnailBase64 || template.image}
                         alt={template.title}
-                        className="w-full h-full object-cover"
+                        className="w-full h-full object-contain bg-white"
                       />
                     ) : (
                       <div className="w-full h-full flex items-center justify-center text-gray-400">
