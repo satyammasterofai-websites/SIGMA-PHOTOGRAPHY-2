@@ -1,9 +1,6 @@
-import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Check, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
-import { doc, getDoc } from 'firebase/firestore';
-import { db } from '../lib/firebase';
 
 const pricingPlans = [
   {
@@ -30,53 +27,6 @@ const pricingPlans = [
 ];
 
 export default function Pricing() {
-  const [couponCode, setCouponCode] = useState('');
-  const [discount, setDiscount] = useState(0);
-  const [errorMsg, setErrorMsg] = useState('');
-  const [successMsg, setSuccessMsg] = useState('');
-  const [coupons, setCoupons] = useState<any[]>([]);
-
-  useEffect(() => {
-    const fetchCoupons = async () => {
-      try {
-        const snap = await getDoc(doc(db, 'settings', 'config'));
-        if (snap.exists()) {
-          setCoupons(snap.data().coupons || []);
-        }
-      } catch (err) {}
-    };
-    fetchCoupons();
-  }, []);
-
-  const handleApplyCoupon = () => {
-    setErrorMsg('');
-    setSuccessMsg('');
-    if (!couponCode.trim()) return;
-
-    if (couponCode.toUpperCase() === 'SIGMA20') {
-      setDiscount(0.20);
-      setSuccessMsg('20% Discount Applied Successfully!');
-      return;
-    }
-
-    const matched = coupons.find((c: any) => c.code.toUpperCase() === couponCode.trim().toUpperCase());
-    if (matched) {
-       if (matched.expiryDate) {
-         const today = new Date().toISOString().split('T')[0];
-         if (today > matched.expiryDate) {
-            setErrorMsg("This coupon has expired");
-            setDiscount(0);
-            return;
-         }
-       }
-       setDiscount(Number(matched.percentage) / 100);
-       setSuccessMsg(`${matched.percentage}% Discount Applied Successfully!`);
-    } else {
-       setDiscount(0);
-       setErrorMsg("Invalid code");
-    }
-  };
-
   return (
     <section id="pricing" className="py-24 bg-brand-ivory w-full">
       <div className="max-w-7xl mx-auto px-6">
@@ -90,30 +40,9 @@ export default function Pricing() {
           </p>
         </div>
 
-        <div className="max-w-md mx-auto mb-12 glassmorphism-dark p-6 rounded-3xl">
-           <h3 className="text-white font-bold mb-3 text-center">Have a Coupon Code?</h3>
-           <div className="flex gap-2">
-             <input 
-               type="text" 
-               value={couponCode}
-               onChange={(e) => setCouponCode(e.target.value)}
-               placeholder="Enter SIGMA20"
-               className="flex-1 bg-white/10 border border-white/20 rounded-xl px-4 py-3 text-white placeholder:text-gray-400 focus:outline-none focus:ring-2 focus:ring-brand-cyan"
-             />
-             <button onClick={handleApplyCoupon} className="px-6 py-3 bg-gradient-primary text-white font-bold rounded-xl hover:opacity-90 transition-all shadow-md shadow-brand-purple/20">
-               Apply
-             </button>
-           </div>
-           {successMsg ? (
-             <p className="text-brand-cyan text-sm mt-3 text-center font-medium animate-pulse">{successMsg}</p>
-           ) : (
-             errorMsg && <p className="text-brand-rose text-sm mt-3 text-center opacity-80">{errorMsg}</p>
-           )}
-        </div>
-
         <div className="grid grid-cols-1 md:grid-cols-3 gap-8 items-stretch">
           {pricingPlans.map((plan, index) => {
-            const finalPrice = discount > 0 ? Math.floor(plan.price * (1 - discount)) : plan.price;
+            const finalPrice = plan.price;
             
             return (
               <motion.div
@@ -136,9 +65,6 @@ export default function Pricing() {
                   <p className="text-sm text-brand-slate font-medium mb-6">{plan.description}</p>
                   
                   <div className="mb-6">
-                    {discount > 0 && (
-                      <span className="text-brand-slate/50 line-through text-lg font-bold mr-2">₹ {plan.price.toLocaleString()}</span>
-                    )}
                     <span className="text-5xl font-display font-black text-transparent bg-clip-text bg-gradient-primary">
                       ₹ {finalPrice.toLocaleString()}
                     </span>
