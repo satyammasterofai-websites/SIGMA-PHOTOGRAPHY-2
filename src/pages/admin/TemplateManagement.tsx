@@ -117,6 +117,10 @@ export default function TemplateManagement() {
     setIsModalOpen(true);
   };
 
+  const updateCustomField = (id: string, key: string, val: any) => {
+    setCustomFields(customFields.map(f => f.id === id ? { ...f, [key]: val } : f));
+  };
+
   const addCustomField = () => {
     if (newFieldName.trim()) {
       setCustomFields([...customFields, { id: Date.now().toString(), name: newFieldName.trim(), type: 'text', required: true }]);
@@ -416,13 +420,30 @@ export default function TemplateManagement() {
                          <button type="button" onClick={addCustomField} className="bg-indigo-500 text-white px-4 py-2 rounded-xl text-sm font-medium">Add Field</button>
                        </div>
                        
-                       <div className="space-y-2">
+                       <div className="space-y-3">
                          {customFields.map((field) => (
-                           <div key={field.id} className="flex justify-between items-center bg-gray-800 px-4 py-2 rounded-lg text-sm text-gray-300">
-                             <span>{field.name}</span>
-                             <button type="button" onClick={() => removeCustomField(field.id)} className="text-red-400 p-1 hover:bg-red-400/10 rounded">
-                               <Trash2 className="w-4 h-4" />
-                             </button>
+                           <div key={field.id} className="flex flex-col gap-2 bg-gray-800 p-3 rounded-lg text-sm text-gray-300">
+                             <div className="flex justify-between items-center">
+                               <input type="text" value={field.name} onChange={e => updateCustomField(field.id, 'name', e.target.value)} className="bg-gray-700 text-white px-2 py-1 rounded" />
+                               <button type="button" onClick={() => removeCustomField(field.id)} className="text-red-400 p-1 hover:bg-red-400/10 rounded">
+                                 <Trash2 className="w-4 h-4" />
+                               </button>
+                             </div>
+                             <div className="flex gap-2">
+                               <select value={field.type || 'text'} onChange={e => updateCustomField(field.id, 'type', e.target.value)} className="bg-gray-700 text-white px-2 py-1 rounded text-xs flex-1">
+                                 <option value="text">Text</option>
+                                 <option value="textarea">Textarea</option>
+                                 <option value="phone">Phone</option>
+                                 <option value="number">Number</option>
+                                 <option value="date">Date</option>
+                               </select>
+                               <input type="number" placeholder="Min" value={field.minLength || ''} onChange={e => updateCustomField(field.id, 'minLength', e.target.value)} className="bg-gray-700 text-white px-2 py-1 rounded text-xs w-16" />
+                               <input type="number" placeholder="Max" value={field.maxLength || ''} onChange={e => updateCustomField(field.id, 'maxLength', e.target.value)} className="bg-gray-700 text-white px-2 py-1 rounded text-xs w-16" />
+                               <label className="flex items-center gap-1 text-xs">
+                                 <input type="checkbox" checked={field.required} onChange={e => updateCustomField(field.id, 'required', e.target.checked)} />
+                                 Req
+                               </label>
+                             </div>
                            </div>
                          ))}
                          {customFields.length === 0 && <p className="text-sm text-gray-500 text-center py-2">No custom fields defined.</p>}

@@ -384,10 +384,86 @@ export default function Checkout() {
   }
 
   const handleNext = () => {
-    if (currentStep === 1 && (!customerName || !customerPhone)) {
-       toast.error("Please provide your Contact Details");
-       return;
+    const currentStepId = dynamicSteps[currentStep - 1]?.id;
+
+    if (currentStepId === 'contact_and_details' || currentStepId === 'contact') {
+       if (!customerName || !customerPhone) {
+          toast.error("Please provide your Contact Details");
+          return;
+       }
+       if (!/^\d{10}$/.test(customerPhone.trim())) {
+          toast.error("Contact number must be exactly 10 digits");
+          return;
+       }
     }
+
+    const validateFields = (fields: any[], dataSection: string) => {
+      for (const f of fields || []) {
+        const val = (dataSection === 'legacy' ? legacyFormData[f.id] : formData[dataSection]?.[f.id]) || '';
+        if (f.required && !val.toString().trim()) {
+          toast.error(`Please fill out: ${f.name}`);
+          return false;
+        }
+        if (val.toString().trim()) {
+           const strVal = val.toString().trim();
+           if (f.type === 'phone') {
+              if (!/^\d+$/.test(strVal)) {
+                 toast.error(`${f.name} must contain only numbers`);
+                 return false;
+              }
+              if (f.minLength && strVal.length < parseInt(f.minLength)) {
+                 toast.error(`${f.name} must be at least ${f.minLength} digits`);
+                 return false;
+              }
+              if (f.maxLength && strVal.length > parseInt(f.maxLength)) {
+                 toast.error(`${f.name} must be at most ${f.maxLength} digits`);
+                 return false;
+              }
+              if (!f.minLength && !f.maxLength && strVal.length !== 10) {
+                 toast.error(`${f.name} must be exactly 10 digits`);
+                 return false;
+              }
+           } else if (f.type === 'number') {
+              if (isNaN(Number(strVal))) {
+                 toast.error(`${f.name} must be a number`);
+                 return false;
+              }
+           }
+           if (f.type !== 'phone' && f.type !== 'number') {
+              if (f.minLength && strVal.length < parseInt(f.minLength)) {
+                 toast.error(`${f.name} must be at least ${f.minLength} characters`);
+                 return false;
+              }
+              if (f.maxLength && strVal.length > parseInt(f.maxLength)) {
+                 toast.error(`${f.name} must be at most ${f.maxLength} characters`);
+                 return false;
+              }
+           }
+        }
+      }
+      return true;
+    };
+
+    if (currentStepId === 'legacy_details') {
+       if (!validateFields(template?.customFields, 'legacy')) return;
+    } else if (currentStepId === 'bride') {
+       if (!validateFields(formConfig?.familySettings?.brideFields, 'bride')) return;
+    } else if (currentStepId === 'groom') {
+       if (!validateFields(formConfig?.familySettings?.groomFields, 'groom')) return;
+    } else if (currentStepId === 'additional') {
+       if (!validateFields(formConfig?.additionalFields, 'additional')) return;
+    }
+
+    if (currentStepId === 'events') {
+       for (let i = 0; i < formData.events.length; i++) {
+          const ev = formData.events[i];
+          if (!ev.type || !ev.date || !ev.time || !ev.venue) {
+             toast.error(`Please fill all required details for Event ${i + 1}`);
+             return;
+          }
+       }
+    }
+
     window.scrollTo({ top: 0, behavior: 'smooth' });
     setCurrentStep(prev => prev + 1);
   };
@@ -403,12 +479,19 @@ export default function Checkout() {
      else val = formData[section]?.[field.id] || '';
 
      const onChange = (e: any) => {
+        let updateVal = e.target.value;
+        if (field.type === 'phone' || field.name.toLowerCase().includes('phone') || field.name.toLowerCase().includes('number')) {
+            if (field.type === 'phone') {
+                updateVal = updateVal.replace(/\D/g, '');
+            }
+        }
+        
         if (section === 'legacy') {
-           setLegacyFormData({...legacyFormData, [field.id]: e.target.value});
+           setLegacyFormData({...legacyFormData, [field.id]: updateVal});
         } else {
            setFormData({
              ...formData,
-             [section]: { ...formData[section], [field.id]: e.target.value }
+             [section]: { ...formData[section], [field.id]: updateVal }
            });
         }
      };
@@ -469,9 +552,9 @@ export default function Checkout() {
             {translatedLabel} {field.required && <span className="text-red-500">*</span>}
          </label>
          {field.type === 'textarea' ? (
-           <textarea value={val} onChange={onChange} className={commonClasses} rows={3} placeholder={translatedLabel} />
+           <textarea value={val} onChange={onChange} className={commonClasses} rows={3} placeholder={translatedLabel} maxLength={field.maxLength ? parseInt(field.maxLength) : undefined} />
          ) : (
-           <input type={field.type || 'text'} value={val} onChange={onChange} className={commonClasses} placeholder={translatedLabel} />
+           <input type={field.type === 'phone' ? 'tel' : (field.type || 'text')} value={val} onChange={onChange} className={commonClasses} placeholder={translatedLabel} maxLength={field.maxLength ? parseInt(field.maxLength) : (field.type === 'phone' ? 10 : undefined)} />
          )}
        </div>
      );
@@ -495,7 +578,10 @@ export default function Checkout() {
             </div>
             <div>
               <label className="block text-sm font-semibold text-gray-700 mb-2">{t.whatsappNumber[lang]} <span className="text-red-500">*</span></label>
-              <input type="text" value={customerPhone} onChange={e => setCustomerPhone(e.target.value)} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="+91 9876543210" />
+              <input type="tel" maxLength={10} value={customerPhone} onChange={e => {
+                const val = e.target.value.replace(/\D/g, '');
+                setCustomerPhone(val);
+              }} className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3" placeholder="9876543210" />
             </div>
          </div>
       </div>

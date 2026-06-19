@@ -151,8 +151,17 @@ export default function ManageForms() {
                       <option value="text">Text</option>
                       <option value="textarea">Textarea</option>
                       <option value="number">Number</option>
+                      <option value="phone">Phone</option>
                       <option value="date">Date</option>
                    </select>
+                </div>
+                <div className="w-full md:w-24">
+                   <label className="text-xs text-gray-500 mb-1 block">Min Length</label>
+                   <input type="number" value={f.minLength || ''} onChange={e => updateField(section, i, 'minLength', e.target.value)} className="w-full bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-lg text-sm" placeholder="Any" />
+                </div>
+                <div className="w-full md:w-24">
+                   <label className="text-xs text-gray-500 mb-1 block">Max Length</label>
+                   <input type="number" value={f.maxLength || ''} onChange={e => updateField(section, i, 'maxLength', e.target.value)} className="w-full bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-lg text-sm" placeholder="Any" />
                 </div>
                 <div className="flex items-center gap-2 mt-4 md:mt-0 pt-2 md:pt-0">
                    <label className="flex items-center gap-2 text-sm text-gray-300">
