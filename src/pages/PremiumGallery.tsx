@@ -56,6 +56,48 @@ export default function PremiumGallery() {
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const navigate = useNavigate();
 
+  const [couponInputs, setCouponInputs] = useState<Record<string, string>>({});
+  const [appliedCoupons, setAppliedCoupons] = useState<Record<string, any>>({});
+
+  const handleApplyCouponFromGallery = (templateId: string) => {
+    const code = couponInputs[templateId];
+    if (!code?.trim()) return;
+
+    if (code.trim().toUpperCase() === "SIGMA20") {
+      setAppliedCoupons((prev) => ({
+        ...prev,
+        [templateId]: { code: "SIGMA20", percentage: "20" },
+      }));
+      toast.success(`Coupon Applied! 20% OFF`);
+      return;
+    }
+
+    if (!settings?.coupons || settings.coupons.length === 0) {
+      toast.error("Invalid coupon code");
+      return;
+    }
+
+    const matched = settings.coupons.find(
+      (c: any) => c.code.toUpperCase() === code.trim().toUpperCase(),
+    );
+    if (matched) {
+      if (matched.expiryDate) {
+        const today = new Date().toISOString().split("T")[0];
+        if (today > matched.expiryDate) {
+          toast.error("This coupon has expired");
+          return;
+        }
+      }
+      setAppliedCoupons((prev) => ({
+        ...prev,
+        [templateId]: matched,
+      }));
+      toast.success(`Coupon Applied! ${matched.percentage}% OFF`);
+    } else {
+      toast.error("Invalid coupon code");
+    }
+  };
+
   const dynamicCategories =
     cmsCategories.length > 0
       ? cmsCategories.map((c) => c.name)
@@ -250,50 +292,112 @@ export default function PremiumGallery() {
                       {template.description}
                     </p>
 
-                    <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">
-                      <div>
-                        {template.discountPrice ? (
-                          <div className="flex flex-col">
-                            <span className="text-xs text-gray-400 line-through">
-                              ₹{template.price}
+                    <div className="mt-auto">
+                      {!appliedCoupons[template.id] && (
+                        <div className="flex gap-2 mb-4">
+                          <input
+                            type="text"
+                            placeholder="Have a coupon?"
+                            value={couponInputs[template.id] || ""}
+                            onChange={(e) =>
+                              setCouponInputs((p) => ({
+                                ...p,
+                                [template.id]: e.target.value,
+                              }))
+                            }
+                            className="flex-1 bg-gray-50 border border-gray-200 text-sm rounded-lg px-3 py-1.5 focus:border-brand-purple focus:ring-1 focus:ring-brand-purple outline-none uppercase font-medium"
+                          />
+                          <button
+                            onClick={() =>
+                              handleApplyCouponFromGallery(template.id)
+                            }
+                            className="px-3 py-1.5 text-xs font-semibold bg-gray-900 text-white rounded-lg hover:bg-brand-purple transition-colors"
+                          >
+                            Apply
+                          </button>
+                        </div>
+                      )}
+
+                      <div className="flex items-center justify-between pt-4 border-t border-gray-100">
+                        <div>
+                          {(() => {
+                            const appliedCoupon = appliedCoupons[template.id];
+                            const basePrice = Number(template.price) || 0;
+                            const currentPrice = template.discountPrice
+                              ? Number(template.discountPrice)
+                              : basePrice;
+                            const finalPrice = appliedCoupon
+                              ? Math.round(
+                                  currentPrice *
+                                    (1 -
+                                      Number(appliedCoupon.percentage) / 100),
+                                )
+                              : currentPrice;
+
+                            return (
+                              <div className="flex flex-col">
+                                {(template.discountPrice || appliedCoupon) && (
+                                  <span className="text-xs text-gray-400 line-through">
+                                    ₹
+                                    {template.discountPrice && !appliedCoupon
+                                      ? template.price
+                                      : currentPrice}
+                                  </span>
+                                )}
+                                <span className="text-xl font-bold text-gray-900 flex items-center gap-2">
+                                  ₹{finalPrice}
+                                  {appliedCoupon && (
+                                    <span className="text-[10px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full font-bold">
+                                      -{appliedCoupon.percentage}%
+                                    </span>
+                                  )}
+                                </span>
+                              </div>
+                            );
+                          })()}
+                          {template.advancePayment &&
+                            template.advancePayment !== "0" &&
+                            template.advancePayment !== 0 && (
+                              <span className="block text-xs font-semibold text-orange-600 mt-1">
+                                Advance: ₹{template.advancePayment}
+                              </span>
+                            )}
+                          <div className="flex items-center gap-1.5 mt-1.5">
+                            <span className="relative flex h-2 w-2">
+                              <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                              <span className="relative inline-flex rounded-full h-2 w-2 bg-green-500"></span>
                             </span>
-                            <span className="text-xl font-bold text-gray-900">
-                              ₹{template.discountPrice}
+                            <span className="text-[10px] font-semibold text-green-600">
+                              {onlineUsersCount}+ people are online
                             </span>
                           </div>
-                        ) : (
-                          <span className="text-xl font-bold text-gray-900">
-                            ₹{template.price}
-                          </span>
-                        )}
-                        {template.advancePayment &&
-                          template.advancePayment !== "0" &&
-                          template.advancePayment !== 0 && (
-                            <span className="block text-xs font-semibold text-orange-600 mt-1">
-                              Advance: ₹{template.advancePayment}
-                            </span>
-                          )}
-                      </div>
+                        </div>
 
-                      <button
-                        onClick={() => {
-                          if (!user) {
-                            toast.error(
-                              "Please login first to order templates.",
-                            );
-                            navigate("/login", {
-                              state: { redirectTo: `/checkout/${template.id}` },
-                            });
-                          } else {
-                            navigate(`/checkout/${template.id}`, {
-                              state: { template },
-                            });
-                          }
-                        }}
-                        className="px-6 py-2 bg-gray-900 hover:bg-brand-purple text-white font-medium rounded-xl transition-colors shadow-md shadow-gray-900/10 hover:shadow-brand-purple/20"
-                      >
-                        Customize & Order
-                      </button>
+                        <button
+                          onClick={() => {
+                            if (!user) {
+                              toast.error(
+                                "Please login first to order templates.",
+                              );
+                              navigate("/login", {
+                                state: {
+                                  redirectTo: `/checkout/${template.id}`,
+                                },
+                              });
+                            } else {
+                              navigate(`/checkout/${template.id}`, {
+                                state: {
+                                  template,
+                                  appliedCoupon: appliedCoupons[template.id],
+                                },
+                              });
+                            }
+                          }}
+                          className="px-6 py-2 bg-gray-900 hover:bg-brand-purple text-white font-medium rounded-xl transition-colors shadow-md shadow-gray-900/10 hover:shadow-brand-purple/20"
+                        >
+                          Customize & Order
+                        </button>
+                      </div>
                     </div>
                   </div>
                 </div>
