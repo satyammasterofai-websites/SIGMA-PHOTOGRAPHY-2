@@ -3,7 +3,7 @@ import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../store/useAuthStore';
 import { auth, db } from '../lib/firebase';
 import { signOut } from 'firebase/auth';
-import { collection, query, where, getDocs, orderBy } from 'firebase/firestore';
+import { collection, query, where, getDocs, orderBy, onSnapshot } from 'firebase/firestore';
 import { Camera, LayoutDashboard, ShoppingBag, Download, User, LogOut, Menu, X, ExternalLink } from 'lucide-react';
 import toast from 'react-hot-toast';
 
@@ -131,25 +131,26 @@ function DashboardHome() {
 
   useEffect(() => {
      if (!user) return;
-     const fetchOrders = async () => {
-       try {
-         const sn = await getDocs(query(collection(db, 'orders'), where('userId', '==', user.uid)));
-         const orders = sn.docs.map(doc => doc.data());
-         setStats({
-            total: orders.length,
-            pending: orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length,
-            downloads: orders.filter(o => o.downloadUrl).length
-         });
-       } catch (err) { }
-     };
-     fetchOrders();
+     const q = query(collection(db, 'orders'), where('userId', '==', user.uid));
+     const unsubscribe = onSnapshot(q, (sn) => {
+       const orders = sn.docs.map(doc => doc.data());
+       setStats({
+          total: orders.length,
+          pending: orders.filter(o => o.status === 'Pending' || o.status === 'Processing').length,
+          downloads: orders.filter(o => o.downloadUrl).length
+       });
+     }, (err) => {
+       console.error(err);
+     });
+
+     return () => unsubscribe();
   }, [user]);
 
   return (
     <div>
       <h1 className="text-2xl font-bold text-gray-900 mb-6">Welcome back, {user?.displayName || 'User'}!</h1>
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+        <Link to="/dashboard/orders" className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-brand-purple hover:shadow-md transition-all">
            <div className="w-12 h-12 rounded-xl bg-orange-50 flex items-center justify-center">
              <LayoutDashboard className="w-6 h-6 text-orange-500" />
            </div>
@@ -157,8 +158,8 @@ function DashboardHome() {
              <p className="text-sm text-gray-500 font-medium">Pending Orders</p>
              <p className="text-2xl font-bold text-gray-900">{stats.pending}</p>
            </div>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+        </Link>
+        <Link to="/dashboard/orders" className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-brand-purple hover:shadow-md transition-all">
            <div className="w-12 h-12 rounded-xl bg-brand-purple/10 flex items-center justify-center">
              <ShoppingBag className="w-6 h-6 text-brand-purple" />
            </div>
@@ -166,8 +167,8 @@ function DashboardHome() {
              <p className="text-sm text-gray-500 font-medium">Total Orders</p>
              <p className="text-2xl font-bold text-gray-900">{stats.total}</p>
            </div>
-        </div>
-        <div className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4">
+        </Link>
+        <Link to="/dashboard/downloads" className="bg-white p-6 rounded-2xl border border-gray-100 shadow-sm flex items-center gap-4 hover:border-brand-purple hover:shadow-md transition-all">
            <div className="w-12 h-12 rounded-xl bg-green-50 flex items-center justify-center">
              <Download className="w-6 h-6 text-green-500" />
            </div>
@@ -175,7 +176,7 @@ function DashboardHome() {
              <p className="text-sm text-gray-500 font-medium">Downloads</p>
              <p className="text-2xl font-bold text-gray-900">{stats.downloads}</p>
            </div>
-        </div>
+        </Link>
       </div>
       <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-8 text-center shadow-sm">
          <h2 className="text-lg font-bold text-gray-800 mb-2">Create New Application</h2>
@@ -195,22 +196,19 @@ function MyOrders() {
 
   useEffect(() => {
      if (!user) return;
-     const fetchOrders = async () => {
-       try {
-         // Because I can't filter by userEmail easily without composite index if I use orderBy, I will fetch all orders where customerName matches, wait, where customerEmail matches. Wait! Order doesn't have email. My bad! The Order didn't save email in Checkout. Let's filter client-side for now or by userId if it's there.
-         // Let's modify the query to just get all orders for this user if we added userId.
-         const sn = await getDocs(query(collection(db, 'orders'), where('userId', '==', user.uid)));
-         const list = sn.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
-         // Sort locally
-         list.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-         setOrders(list);
-       } catch (err) {
-         console.error(err);
-       } finally {
-         setLoading(false);
-       }
-     };
-     fetchOrders();
+     const q = query(collection(db, 'orders'), where('userId', '==', user.uid));
+     const unsubscribe = onSnapshot(q, (sn) => {
+       const list = sn.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) }));
+       // Sort locally
+       list.sort((a,b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+       setOrders(list);
+       setLoading(false);
+     }, (err) => {
+       console.error(err);
+       setLoading(false);
+     });
+
+     return () => unsubscribe();
   }, [user]);
 
   if (loading) return <div>Loading...</div>;
@@ -227,39 +225,94 @@ function MyOrders() {
       ) : (
         <div className="space-y-4">
           {orders.map(order => (
-            <div key={order.id} className="bg-white p-6 border border-gray-100 rounded-2xl shadow-sm flex flex-col md:flex-row md:items-center justify-between gap-4">
-               <div>
-                  <h3 className="font-bold text-gray-900 text-lg mb-1">{order.templateName || 'Order'}</h3>
-                  <div className="flex flex-wrap gap-3 text-sm text-gray-500">
-                     <span>Order ID: <span className="font-mono text-xs">{order.id}</span></span>
-                     <span>•</span>
-                     <span>{new Date(order.createdAt).toLocaleDateString()}</span>
-                     <span>•</span>
-                     <span>₹{order.price}</span>
-                     {order.advancePayment !== undefined && order.advancePayment > 0 && (
-                       <>
+            <div key={order.id} className="bg-white border border-gray-100 rounded-2xl shadow-sm flex flex-col">
+              <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
+                 <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
+                   {order.thumbnailBase64 && (
+                     <div className="w-24 h-16 rounded overflow-hidden flex-shrink-0 border border-gray-100 flex items-center justify-center bg-gray-50">
+                       <img src={order.thumbnailBase64} alt="Thumbnail" className="w-full h-full object-contain" />
+                     </div>
+                   )}
+                   <div>
+                      <h3 className="font-bold text-gray-900 text-lg mb-1">{order.templateName || 'Order'}</h3>
+                      <div className="flex flex-wrap gap-3 text-sm text-gray-500">
+                         <span>Order ID: <span className="font-mono text-xs">{order.id}</span></span>
                          <span>•</span>
-                         <span className="text-orange-600 font-medium">Advance: ₹{order.advancePayment} ({order.advancePaymentStatus || 'Pending'})</span>
-                       </>
-                     )}
+                         <span>{new Date(order.createdAt).toLocaleDateString()}</span>
+                         <span>•</span>
+                         <span>₹{order.price}</span>
+                         {order.advancePayment !== undefined && order.advancePayment > 0 && (
+                           <>
+                             <span>•</span>
+                             <span className={`font-medium ${order.advancePaymentStatus === 'Received' ? 'text-green-600' : 'text-orange-600'}`}>
+                               Advance: ₹{order.advancePayment} ({order.advancePaymentStatus || 'Pending'})
+                             </span>
+                           </>
+                         )}
+                      </div>
+                   </div>
+                 </div>
+                 <div className="flex items-center gap-3">
+                    <span className={`px-3 py-1 rounded-full text-xs font-bold ${
+                      order.status === 'Completed' ? 'bg-green-100 text-green-700' :
+                      order.status === 'Processing' ? 'bg-blue-100 text-blue-700' :
+                      order.status === 'Delivered' ? 'bg-purple-100 text-purple-700' :
+                      'bg-yellow-100 text-yellow-700'
+                    }`}>
+                      {order.status || 'Pending'}
+                    </span>
+                    
+                    {order.downloadUrl && (
+                      <a href={order.downloadUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm font-medium text-brand-purple hover:underline bg-brand-purple/5 px-4 py-2 rounded-xl">
+                        <Download className="w-4 h-4" /> Download
+                      </a>
+                    )}
+                 </div>
+              </div>
+
+              {(order.customData && Object.keys(order.customData).length > 0) || order.customerPhone ? (
+                <div className="bg-gray-50/50 p-6 border-t border-gray-100 grid grid-cols-1 md:grid-cols-2 gap-4">
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Order Details</h4>
+                    <div className="space-y-2">
+                       {order.customerPhone && (
+                          <div className="flex">
+                             <span className="w-1/3 text-sm text-gray-500">Phone:</span>
+                             <span className="w-2/3 text-sm font-medium text-gray-900">{order.customerPhone}</span>
+                          </div>
+                       )}
+                       {order.customData && Object.entries(order.customData).map(([k, v]) => {
+                         if (typeof v === 'boolean') v = v ? 'Yes' : 'No';
+                         return (
+                           <div key={k} className="flex">
+                              <span className="w-1/3 text-sm text-gray-500 capitalize">{k.replace(/_/g, ' ')}:</span>
+                              <span className="w-2/3 text-sm font-medium text-gray-900 border-l border-gray-200 pl-2 ml-2">{String(v || 'N/A')}</span>
+                           </div>
+                         );
+                       })}
+                    </div>
                   </div>
-               </div>
-               <div className="flex items-center gap-3">
-                  <span className={`px-3 py-1 rounded-full text-xs font-bold ${
-                    order.status === 'Completed' ? 'bg-green-100 text-green-700' :
-                    order.status === 'Processing' ? 'bg-blue-100 text-blue-700' :
-                    order.status === 'Delivered' ? 'bg-purple-100 text-purple-700' :
-                    'bg-yellow-100 text-yellow-700'
-                  }`}>
-                    {order.status || 'Pending'}
-                  </span>
-                  
-                  {order.downloadUrl && (
-                    <a href={order.downloadUrl} target="_blank" rel="noreferrer" className="flex items-center gap-1 text-sm font-medium text-brand-purple hover:underline bg-brand-purple/5 px-4 py-2 rounded-xl">
-                      <Download className="w-4 h-4" /> Download
-                    </a>
-                  )}
-               </div>
+                  <div>
+                    <h4 className="text-xs font-bold text-gray-400 uppercase tracking-wider mb-3">Payment Info</h4>
+                    <div className="space-y-2 text-sm">
+                       <div className="flex">
+                          <span className="w-1/3 text-gray-500">Method:</span>
+                          <span className="w-2/3 font-medium text-gray-900">{order.viaMethod || 'WhatsApp'}</span>
+                       </div>
+                       <div className="flex">
+                          <span className="w-1/3 text-gray-500">Status:</span>
+                          <span className="w-2/3 font-medium text-gray-900">{order.paymentStatus || 'Pending'}</span>
+                       </div>
+                       {order.advancePayment !== undefined && order.advancePayment > 0 && (
+                         <div className="flex">
+                            <span className="w-1/3 text-gray-500">Advance:</span>
+                            <span className="w-2/3 font-medium text-gray-900">₹{order.advancePayment} ({order.advancePaymentStatus || 'Pending'})</span>
+                         </div>
+                       )}
+                    </div>
+                  </div>
+                </div>
+              ) : null}
             </div>
           ))}
         </div>
@@ -275,18 +328,17 @@ function Downloads() {
 
   useEffect(() => {
      if (!user) return;
-     const fetchOrders = async () => {
-       try {
-         const sn = await getDocs(query(collection(db, 'orders'), where('userId', '==', user.uid)));
-         const list = sn.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) })).filter((o: any) => o.downloadUrl);
-         setDownloads(list);
-       } catch (err) {
-         console.error(err);
-       } finally {
-         setLoading(false);
-       }
-     };
-     fetchOrders();
+     const q = query(collection(db, 'orders'), where('userId', '==', user.uid));
+     const unsubscribe = onSnapshot(q, (sn) => {
+       const list = sn.docs.map(doc => ({ id: doc.id, ...(doc.data() as any) })).filter((o: any) => o.downloadUrl);
+       setDownloads(list);
+       setLoading(false);
+     }, (err) => {
+       console.error(err);
+       setLoading(false);
+     });
+
+     return () => unsubscribe();
   }, [user]);
 
   if (loading) return <div>Loading...</div>;

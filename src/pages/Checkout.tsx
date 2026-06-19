@@ -211,6 +211,7 @@ export default function Checkout() {
           createdAt: new Date().toISOString(),
           templateId: template?.id || '',
           templateName: template?.title || template?.name || 'Template',
+          thumbnailBase64: template?.thumbnailBase64 || '',
           userId: user ? user.uid : null,
           customerName: customerName || '',
           customerPhone: customerPhone || '',

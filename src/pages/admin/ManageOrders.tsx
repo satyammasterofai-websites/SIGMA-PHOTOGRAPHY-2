@@ -151,8 +151,10 @@ export default function ManageOrders() {
                                       <div className="flex text-gray-400 items-center">
                                          <span className="w-1/3">Advance:</span>
                                          <span className="text-orange-400 font-bold">₹{order.advancePayment}</span>
-                                         <span className="ml-2 px-2 py-0.5 rounded text-[10px] bg-gray-800 text-gray-300">{order.advancePaymentStatus || 'Pending'}</span>
-                                         {(order.advancePaymentStatus === 'Pending' || !order.advancePaymentStatus) && (
+                                         <span className={`ml-2 px-2 py-0.5 rounded text-[10px] ${order.advancePaymentStatus === 'Received' ? 'bg-green-500/20 text-green-400' : 'bg-orange-500/20 text-orange-400'}`}>
+                                           {order.advancePaymentStatus || 'Pending'}
+                                         </span>
+                                         {(order.advancePaymentStatus === 'Pending' || !order.advancePaymentStatus) ? (
                                            <button 
                                              onClick={async () => {
                                                try {
@@ -163,6 +165,18 @@ export default function ManageOrders() {
                                              className="ml-2 bg-green-500/20 text-green-400 hover:bg-green-500/30 px-2 py-0.5 rounded text-xs"
                                            >
                                              Confirm Received
+                                           </button>
+                                         ) : (
+                                           <button 
+                                             onClick={async () => {
+                                               try {
+                                                 await updateDoc(doc(db, 'orders', order.id), { advancePaymentStatus: 'Pending' });
+                                                 toast.success('Reverted to pending');
+                                               } catch(e) { toast.error('Failed to update'); }
+                                             }}
+                                             className="ml-2 bg-gray-500/20 text-gray-400 hover:bg-gray-500/30 px-2 py-0.5 rounded text-xs"
+                                           >
+                                             Revert
                                            </button>
                                          )}
                                       </div>
