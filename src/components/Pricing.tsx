@@ -1,7 +1,9 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { Check, Sparkles } from 'lucide-react';
 import { Link } from 'react-router-dom';
+import { doc, getDoc } from 'firebase/firestore';
+import { db } from '../lib/firebase';
 
 const pricingPlans = [
   {
@@ -30,12 +32,48 @@ const pricingPlans = [
 export default function Pricing() {
   const [couponCode, setCouponCode] = useState('');
   const [discount, setDiscount] = useState(0);
+  const [errorMsg, setErrorMsg] = useState('');
+  const [successMsg, setSuccessMsg] = useState('');
+  const [coupons, setCoupons] = useState<any[]>([]);
+
+  useEffect(() => {
+    const fetchCoupons = async () => {
+      try {
+        const snap = await getDoc(doc(db, 'settings', 'config'));
+        if (snap.exists()) {
+          setCoupons(snap.data().coupons || []);
+        }
+      } catch (err) {}
+    };
+    fetchCoupons();
+  }, []);
 
   const handleApplyCoupon = () => {
+    setErrorMsg('');
+    setSuccessMsg('');
+    if (!couponCode.trim()) return;
+
     if (couponCode.toUpperCase() === 'SIGMA20') {
       setDiscount(0.20);
+      setSuccessMsg('20% Discount Applied Successfully!');
+      return;
+    }
+
+    const matched = coupons.find((c: any) => c.code.toUpperCase() === couponCode.trim().toUpperCase());
+    if (matched) {
+       if (matched.expiryDate) {
+         const today = new Date().toISOString().split('T')[0];
+         if (today > matched.expiryDate) {
+            setErrorMsg("This coupon has expired");
+            setDiscount(0);
+            return;
+         }
+       }
+       setDiscount(Number(matched.percentage) / 100);
+       setSuccessMsg(`${matched.percentage}% Discount Applied Successfully!`);
     } else {
-      setDiscount(0);
+       setDiscount(0);
+       setErrorMsg("Invalid code");
     }
   };
 
@@ -66,10 +104,10 @@ export default function Pricing() {
                Apply
              </button>
            </div>
-           {discount > 0 ? (
-             <p className="text-brand-cyan text-sm mt-3 text-center font-medium animate-pulse">20% Discount Applied Successfully!</p>
+           {successMsg ? (
+             <p className="text-brand-cyan text-sm mt-3 text-center font-medium animate-pulse">{successMsg}</p>
            ) : (
-             couponCode && discount === 0 && <p className="text-brand-rose text-sm mt-3 text-center opacity-80">Invalid code</p>
+             errorMsg && <p className="text-brand-rose text-sm mt-3 text-center opacity-80">{errorMsg}</p>
            )}
         </div>
 
