@@ -16,6 +16,7 @@ import VideoModal from "../components/VideoModal";
 import { useSiteContent } from "../hooks/useSiteContent";
 import { useAuthStore } from "../store/useAuthStore";
 import toast from "react-hot-toast";
+import TemplateReviewsModal from "../components/TemplateReviewsModal";
 
 const defaultCategories = [
   "Wedding",
@@ -54,6 +55,7 @@ export default function PremiumGallery() {
   const initialCategory = queryParams.get("category") || "All";
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
+  const [reviewsTemplateId, setReviewsTemplateId] = useState<string | null>(null);
   const navigate = useNavigate();
 
   const [couponInputs, setCouponInputs] = useState<Record<string, string>>({});
@@ -169,6 +171,13 @@ export default function PremiumGallery() {
       {activeVideo && (
         <VideoModal url={activeVideo} onClose={() => setActiveVideo(null)} />
       )}
+      {reviewsTemplateId && (
+        <TemplateReviewsModal 
+          templateId={reviewsTemplateId} 
+          isOpen={true} 
+          onClose={() => setReviewsTemplateId(null)} 
+        />
+      )}
       <Navbar />
 
       <main className="flex-1 pt-24 pb-16">
@@ -283,11 +292,23 @@ export default function PremiumGallery() {
                         {template.title}
                       </h3>
                     </div>
-                    <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-purple bg-brand-purple/5 w-fit px-2.5 py-1 rounded-full mb-3">
-                      <ShoppingBag className="w-3.5 h-3.5" />
-                      {(template.baseOrdersCount ?? 100) +
-                        (template.ordersCount || 0)}{" "}
-                      Orders
+                    <div className="flex items-center gap-2 mb-3 flex-wrap">
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-purple bg-brand-purple/5 w-fit px-2.5 py-1 rounded-full">
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                        {(template.baseOrdersCount ?? 100) +
+                          (template.ordersCount || 0)}{" "}
+                        Orders
+                      </div>
+                      <button 
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          setReviewsTemplateId(template.id);
+                        }}
+                        className="flex items-center gap-1 text-yellow-600 bg-yellow-50 hover:bg-yellow-100 transition px-2.5 py-1 rounded-full text-xs font-bold border border-yellow-200"
+                      >
+                        <Star className="w-3.5 h-3.5 fill-current" />
+                        Reviews
+                      </button>
                     </div>
                     <p className="text-gray-500 text-sm line-clamp-2 mb-4 flex-1">
                       {template.description}

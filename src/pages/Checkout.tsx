@@ -31,9 +31,11 @@ import {
   Plus,
   Trash2,
   Languages,
+  Star,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import VideoModal from "../components/VideoModal";
+import TemplateReviewsModal from "../components/TemplateReviewsModal";
 
 const t = {
   details: { en: "Details", hi: "विवरण" },
@@ -122,6 +124,7 @@ export default function Checkout() {
   const [formConfig, setFormConfig] = useState<any>(null);
   const [loading, setLoading] = useState(true);
   const [showVideo, setShowVideo] = useState(false);
+  const [reviewsTemplateId, setReviewsTemplateId] = useState<string | null>(null);
   const [lang, setLang] = useState<"en" | "hi">("en");
   const { user } = useAuthStore();
   const [onlineUsersCount, setOnlineUsersCount] = useState(50);
@@ -1278,6 +1281,12 @@ export default function Checkout() {
                   (template?.ordersCount || 0)}{" "}
                 Orders
               </span>
+              <button
+                onClick={() => setReviewsTemplateId(template?.id)}
+                className="text-xs font-bold text-yellow-600 bg-yellow-50 hover:bg-yellow-100 px-3 py-1 flex items-center gap-1 rounded-full border border-yellow-200 transition"
+              >
+                <Star className="w-3 h-3 fill-current" /> Reviews
+              </button>
             </div>
           </div>
         </div>
@@ -1373,6 +1382,13 @@ export default function Checkout() {
         <VideoModal
           url={template.videoUrl}
           onClose={() => setShowVideo(false)}
+        />
+      )}
+      {reviewsTemplateId && (
+        <TemplateReviewsModal 
+          templateId={reviewsTemplateId} 
+          isOpen={true} 
+          onClose={() => setReviewsTemplateId(null)} 
         />
       )}
       <Navbar />
