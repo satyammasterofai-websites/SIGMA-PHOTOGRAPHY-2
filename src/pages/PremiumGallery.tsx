@@ -3,7 +3,7 @@ import { collection, getDocs, query, where } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import Navbar from '../components/Navbar';
 import Footer from '../components/Footer';
-import { Search, Play, Star, TrendingUp } from 'lucide-react';
+import { Search, Play, Star, TrendingUp, Users, ShoppingBag } from 'lucide-react';
 import { useNavigate, useLocation } from 'react-router-dom';
 import VideoModal from '../components/VideoModal';
 import { useSiteContent } from '../hooks/useSiteContent';
@@ -13,8 +13,21 @@ import toast from 'react-hot-toast';
 const defaultCategories = ['Wedding', 'Engagement', 'Birthday', 'Anniversary', 'Baby Shower', 'Housewarming', 'Corporate', 'Religious'];
 
 export default function PremiumGallery() {
-  const { categories: cmsCategories } = useSiteContent();
   const { user } = useAuthStore();
+  const [onlineUsersCount, setOnlineUsersCount] = useState(50);
+
+  useEffect(() => {
+    const base = 50 + (user ? 1 : 0);
+    const fluctuation = () => Math.floor(Math.random() * 4);
+    setOnlineUsersCount(base + fluctuation());
+
+    const interval = setInterval(() => {
+      setOnlineUsersCount(base + fluctuation());
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [user]);
+
+  const { categories: cmsCategories } = useSiteContent();
   const [templates, setTemplates] = useState<any[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -73,7 +86,16 @@ export default function PremiumGallery() {
       
       <main className="flex-1 pt-24 pb-16">
         <div className="max-w-7xl mx-auto px-6">
-          <div className="text-center mb-12">
+          <div className="text-center mb-12 relative flex flex-col items-center">
+            <div className="mb-4 inline-flex items-center gap-2 px-4 py-2 bg-white/60 backdrop-blur-md rounded-full shadow-sm border border-brand-rose/20">
+              <span className="relative flex h-3 w-3">
+                <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                <span className="relative inline-flex rounded-full h-3 w-3 bg-green-500"></span>
+              </span>
+              <span className="text-sm font-semibold text-brand-navy">
+                {onlineUsersCount} Users Online Right Now
+              </span>
+            </div>
             <h1 className="text-4xl md:text-5xl font-display font-bold text-gray-900 mb-4">Premium Video Gallery</h1>
             <p className="text-xl text-gray-600 max-w-2xl mx-auto">Discover our collection of cinematic invitations for your special moments.</p>
           </div>
@@ -153,7 +175,13 @@ export default function PremiumGallery() {
                     </div>
                     
                     <div className="p-6 flex flex-col flex-1">
-                      <h3 className="font-display font-bold text-xl text-gray-900 mb-2">{template.title}</h3>
+                      <div className="flex justify-between items-start mb-2">
+                        <h3 className="font-display font-bold text-xl text-gray-900 line-clamp-1 flex-1 pr-2">{template.title}</h3>
+                      </div>
+                      <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-purple bg-brand-purple/5 w-fit px-2.5 py-1 rounded-full mb-3">
+                        <ShoppingBag className="w-3.5 h-3.5" />
+                        {100 + (template.ordersCount || 0)} Orders
+                      </div>
                       <p className="text-gray-500 text-sm line-clamp-2 mb-4 flex-1">{template.description}</p>
                       
                       <div className="flex items-center justify-between mt-auto pt-4 border-t border-gray-100">

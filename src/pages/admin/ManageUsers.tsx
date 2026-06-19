@@ -73,11 +73,14 @@ export default function ManageUsers() {
                 <th className="pb-3 font-medium text-sm">Email</th>
                 <th className="pb-3 font-medium text-sm">Name</th>
                 <th className="pb-3 font-medium text-sm">Role</th>
+                <th className="pb-3 font-medium text-sm">Status</th>
                 <th className="pb-3 font-medium text-sm text-right">Actions</th>
               </tr>
             </thead>
             <tbody>
-              {users.map(u => (
+              {users.map(u => {
+                const isOnline = u.isOnline && u.lastSeen && (new Date().getTime() - u.lastSeen.toDate().getTime() < 2 * 60 * 1000);
+                return (
                 <tr key={u.id} className="border-b border-gray-800/50">
                   <td className="py-4 text-sm">{u.email}</td>
                   <td className="py-4 text-sm">{u.name || 'N/A'}</td>
@@ -85,6 +88,15 @@ export default function ManageUsers() {
                     <span className={`px-2 py-1 rounded text-xs font-medium ${u.role === 'admin' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-gray-800 text-gray-400'}`}>
                       {u.role || 'user'}
                     </span>
+                  </td>
+                  <td className="py-4 text-sm">
+                    {isOnline ? (
+                      <span className="flex items-center gap-1 text-green-400 text-xs">
+                        <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse"></span> Online
+                      </span>
+                    ) : (
+                      <span className="text-gray-500 text-xs">Offline</span>
+                    )}
                   </td>
                   <td className="py-4 text-right">
                     <div className="flex justify-end gap-2">
@@ -97,7 +109,8 @@ export default function ManageUsers() {
                     </div>
                   </td>
                 </tr>
-              ))}
+                );
+              })}
             </tbody>
           </table>
         </div>

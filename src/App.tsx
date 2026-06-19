@@ -34,29 +34,38 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
   return children;
 }
 
+import { usePresence } from './hooks/usePresence';
+
+function AppContent() {
+  usePresence();
+  return (
+    <Router>
+      <Routes>
+        <Route path="/" element={<Home />} />
+        <Route path="/gallery" element={<PremiumGallery />} />
+        <Route path="/checkout/:id" element={<Checkout />} />
+        <Route path="/login" element={<Login />} />
+        <Route path="/signup" element={<Signup />} />
+        <Route path="/dashboard/*" element={
+          <ProtectedRoute>
+            <Dashboard />
+          </ProtectedRoute>
+        } />
+        <Route path="/admin/*" element={
+          <ProtectedRoute adminOnly>
+            <AdminDashboard />
+          </ProtectedRoute>
+        } />
+      </Routes>
+      <Toaster position="top-right" />
+    </Router>
+  );
+}
+
 export default function App() {
   return (
     <AuthProvider>
-      <Router>
-        <Routes>
-          <Route path="/" element={<Home />} />
-          <Route path="/gallery" element={<PremiumGallery />} />
-          <Route path="/checkout/:id" element={<Checkout />} />
-          <Route path="/login" element={<Login />} />
-          <Route path="/signup" element={<Signup />} />
-          <Route path="/dashboard/*" element={
-            <ProtectedRoute>
-              <Dashboard />
-            </ProtectedRoute>
-          } />
-          <Route path="/admin/*" element={
-            <ProtectedRoute adminOnly>
-              <AdminDashboard />
-            </ProtectedRoute>
-          } />
-        </Routes>
-        <Toaster position="top-right" />
-      </Router>
+      <AppContent />
     </AuthProvider>
   );
 }

@@ -3,6 +3,7 @@ import { motion } from 'motion/react';
 import { PlayCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
 import { Link } from 'react-router-dom';
+import { useAuthStore } from '../store/useAuthStore';
 
 const defaultCategories = [
   { name: 'Wedding', price: '2,999', image: 'https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800' },
@@ -23,6 +24,20 @@ export default function TemplateCategories() {
   
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
+
+  const { user } = useAuthStore();
+  const [onlineUsersCount, setOnlineUsersCount] = useState(50);
+
+  useEffect(() => {
+    const base = 50 + (user ? 1 : 0);
+    const fluctuation = () => Math.floor(Math.random() * 4);
+    setOnlineUsersCount(base + fluctuation());
+
+    const interval = setInterval(() => {
+      setOnlineUsersCount(base + fluctuation());
+    }, 15000);
+    return () => clearInterval(interval);
+  }, [user]);
 
   // Auto-scroll functionality
   useEffect(() => {
@@ -67,7 +82,18 @@ export default function TemplateCategories() {
         
         <div className="flex flex-col md:flex-row md:items-end justify-between mb-16 gap-6">
           <div className="max-w-2xl">
-            <span className="text-sm font-bold tracking-widest text-brand-rose uppercase bg-brand-rose/10 px-4 py-1.5 rounded-full border border-brand-rose/20">Masterpieces Collection</span>
+            <div className="flex flex-wrap items-center gap-3">
+              <span className="text-sm font-bold tracking-widest text-brand-rose uppercase bg-brand-rose/10 px-4 py-1.5 rounded-full border border-brand-rose/20">Masterpieces Collection</span>
+              <div className="inline-flex items-center gap-2 px-3 py-1.5 bg-white/60 backdrop-blur-md rounded-full shadow-sm border border-brand-rose/20">
+                <span className="relative flex h-2.5 w-2.5">
+                  <span className="animate-ping absolute inline-flex h-full w-full rounded-full bg-green-400 opacity-75"></span>
+                  <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
+                </span>
+                <span className="text-xs font-semibold text-brand-navy">
+                  {onlineUsersCount} Users Online
+                </span>
+              </div>
+            </div>
             <h2 className="text-4xl md:text-5xl font-display font-bold text-brand-navy mt-6 mb-4">
               Explore Our Signature <br/>Templates
             </h2>
