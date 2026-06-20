@@ -43,8 +43,8 @@ export default function Navbar() {
     <header className="fixed top-0 left-0 right-0 z-50">
       <AnnouncementBar />
       <nav
-        className={`w-full transition-all duration-300 relative ${
-          isScrolled ? "glassmorphism py-3 shadow-sm" : "py-5"
+        className={`w-full transition-all duration-300 relative backdrop-blur-md ${
+          isScrolled ? "py-3 shadow-sm" : "py-5"
         }`}
       >
         <div

@@ -62,7 +62,7 @@ export default function HomeBanners() {
           <div className="w-full relative flex items-center justify-center">
             {/* Invisible placeholder to maintain exact aspect ratio of the current real image */}
             {banners[currentIndex] && (
-              <img src={banners[currentIndex].image} className="w-full h-auto invisible" alt="Placeholder" />
+              <img src={banners[currentIndex].image} referrerPolicy="no-referrer" className="w-full h-auto invisible" alt="Placeholder" />
             )}
             
              <AnimatePresence initial={false} custom={direction}>
@@ -81,6 +81,7 @@ export default function HomeBanners() {
                   }}
                   src={banners[currentIndex]?.image}
                   alt="Promotional Banner"
+                  referrerPolicy="no-referrer"
                   className="absolute inset-0 w-full h-full object-contain object-center"
                 />
              </AnimatePresence>
