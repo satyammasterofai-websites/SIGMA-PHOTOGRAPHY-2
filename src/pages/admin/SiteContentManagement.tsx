@@ -4,6 +4,7 @@ import { db } from '../../lib/firebase';
 import { fileToBase64 } from '../../lib/utils';
 import { ImagePlus, Save, Trash2, Plus, Edit, X } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { useSiteStore } from '../../store/useSiteStore';
 
 export default function SiteContentManagement() {
   const [activeTab, setActiveTab] = useState('logo');
@@ -43,6 +44,14 @@ export default function SiteContentManagement() {
   // Features State
   const [features, setFeatures] = useState<any[]>([]);
 
+  // Navbar State
+  const [navbar, setNavbar] = useState({
+    bgGradient: 'from-pink-700 via-rose-600 to-pink-700',
+    transparency: 80,
+    textColor: 'text-white',
+    logoColor: 'bg-gradient-to-r from-pink-100 via-white to-pink-200 bg-clip-text text-transparent'
+  });
+
   useEffect(() => {
     const fetchContent = async () => {
       setLoading(true);
@@ -61,6 +70,9 @@ export default function SiteContentManagement() {
 
         const featuresDoc = await getDoc(doc(db, 'content', 'features'));
         if (featuresDoc.exists()) setFeatures(featuresDoc.data().items || []);
+
+        const navbarDoc = await getDoc(doc(db, 'content', 'navbar'));
+        if (navbarDoc.exists()) setNavbar({ bgGradient: 'from-pink-700 via-rose-600 to-pink-700', transparency: 80, textColor: 'text-white', logoColor: 'bg-gradient-to-r from-pink-100 via-white to-pink-200 bg-clip-text text-transparent', ...navbarDoc.data() });
       } catch (error) {
         console.error("Error fetching content:", error);
         toast.error("Failed to load content settings");
@@ -139,6 +151,21 @@ export default function SiteContentManagement() {
     }
   };
 
+  const handleNavbarChange = (updates: any) => {
+    const newNavbar = { ...navbar, ...updates };
+    setNavbar(newNavbar);
+    useSiteStore.setState({ navbar: newNavbar });
+  };
+
+  const saveNavbar = async () => {
+    try {
+      await setDoc(doc(db, 'content', 'navbar'), navbar);
+      toast.success("Navbar settings saved");
+    } catch (e) {
+      toast.error("Failed to save navbar settings");
+    }
+  };
+
   const addFeature = () => {
     const newFeature = { id: Date.now().toString(), number: '', title: '', description: '', icon: '' };
     saveFeatures([...features, newFeature]);
@@ -174,7 +201,7 @@ export default function SiteContentManagement() {
       <div className="flex flex-col lg:flex-row gap-6">
         {/* Sidebar Nav */}
         <div className="lg:w-64 flex flex-col gap-2">
-          {['logo', 'hero', 'contact', 'about', 'features'].map(tab => (
+          {['logo', 'hero', 'navbar', 'contact', 'about', 'features'].map(tab => (
             <button
               key={tab}
               onClick={() => setActiveTab(tab)}
@@ -224,6 +251,53 @@ export default function SiteContentManagement() {
                     ) : (
                       <span className="text-gray-600 relative z-10">No logo uploaded</span>
                     )}
+                  </div>
+                </div>
+              </div>
+            </div>
+          )}
+
+          {activeTab === 'navbar' && (
+            <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 shadow-sm">
+              <h2 className="text-xl font-bold text-white mb-6 border-b border-gray-800 pb-4">Navbar Theme Management</h2>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                <div className="space-y-4">
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Background Gradient (Tailwind Classes)</label>
+                    <input type="text" value={navbar.bgGradient} onChange={e => handleNavbarChange({bgGradient: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" placeholder="e.g. from-[#FFF0F5] to-[#FFC0CB]" />
+                    <p className="text-xs text-gray-400 mt-1">Default: from-pink-700 via-rose-600 to-pink-700</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Scroll Transparency (%)</label>
+                    <input type="number" min="0" max="100" value={navbar.transparency} onChange={e => handleNavbarChange({transparency: parseInt(e.target.value) || 80})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" />
+                    <p className="text-xs text-gray-400 mt-1">Example: 80 for 80% opacity when scrolled</p>
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Text Color (Tailwind Class)</label>
+                    <input type="text" value={navbar.textColor} onChange={e => handleNavbarChange({textColor: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" placeholder="e.g. text-brand-navy" />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Logo Text Color (Tailwind Class)</label>
+                    <input type="text" value={navbar.logoColor} onChange={e => handleNavbarChange({logoColor: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" placeholder="e.g. text-brand-navy" />
+                  </div>
+                  <button onClick={saveNavbar} className="w-full flex items-center justify-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white py-3 rounded-xl font-medium transition-colors mt-6">
+                    <Save className="w-4 h-4" /> Save Navbar Settings
+                  </button>
+                </div>
+                <div>
+                  <label className="block text-sm font-medium text-gray-300 mb-2">Live Preview (Scrolled State)</label>
+                  <div className="w-full h-48 rounded-xl border border-gray-800 bg-gray-100 flex p-6 relative overflow-hidden items-start justify-center">
+                    <div 
+                      className={`w-11/12 py-3 px-6 rounded-lg shadow-sm flex justify-between items-center bg-gradient-to-r ${navbar.bgGradient}`}
+                      style={{ opacity: navbar.transparency / 100 }}
+                    >
+                      <span className={`font-bold ${navbar.logoColor}`}>SIGMA</span>
+                      <div className={`hidden md:flex gap-4 text-sm ${navbar.textColor}`}>
+                        <span>Home</span>
+                        <span>Templates</span>
+                        <span>Contact</span>
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>

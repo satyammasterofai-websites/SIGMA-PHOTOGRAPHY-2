@@ -4,6 +4,7 @@ import { db } from '../lib/firebase';
 
 interface SiteContentState {
   logoBase64: string;
+  navbar: any;
   hero: any;
   contact: any;
   about: any;
@@ -21,6 +22,7 @@ interface SiteContentState {
 
 export const useSiteStore = create<SiteContentState>((set, get) => ({
   logoBase64: '',
+  navbar: null,
   hero: null,
   contact: null,
   about: null,
@@ -38,7 +40,7 @@ export const useSiteStore = create<SiteContentState>((set, get) => ({
     set({ initialized: true });
 
     let loadedCount = 0;
-    const TOTAL_SUBSCRIPTIONS = 11;
+    const TOTAL_SUBSCRIPTIONS = 12;
     let initialLoadComplete = false;
 
     const checkLoaded = () => {
@@ -51,6 +53,11 @@ export const useSiteStore = create<SiteContentState>((set, get) => ({
 
     onSnapshot(doc(db, "content", "logo"), (doc) => {
       if (doc.exists()) set({ logoBase64: doc.data().image || "" });
+      checkLoaded();
+    }, () => checkLoaded());
+
+    onSnapshot(doc(db, "content", "navbar"), (doc) => {
+      if (doc.exists()) set({ navbar: doc.data() });
       checkLoaded();
     }, () => checkLoaded());
 

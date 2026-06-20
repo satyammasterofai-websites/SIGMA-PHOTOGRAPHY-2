@@ -9,7 +9,7 @@ import AnnouncementBar from './AnnouncementBar';
 export default function Navbar() {
   const [isScrolled, setIsScrolled] = useState(false);
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
-  const { logoBase64 } = useSiteContent();
+  const { logoBase64, navbar } = useSiteContent();
   const navigate = useNavigate();
   const { user, role } = useAuthStore();
 
@@ -28,15 +28,28 @@ export default function Navbar() {
     { name: 'Contact', href: '/#contact' },
   ];
 
+  // Apply navbar settings with defaults
+  const bgGradient = navbar?.bgGradient || 'from-pink-700 via-rose-600 to-pink-700';
+  const transparency = navbar?.transparency !== undefined ? navbar.transparency : 80;
+  const textColor = navbar?.textColor || 'text-white';
+  const logoColor = navbar?.logoColor || 'bg-gradient-to-r from-pink-100 via-white to-pink-200 bg-clip-text text-transparent';
+  const isLogoTextNavy = logoColor?.includes('text-brand-navy') || false;
+
   return (
     <header className="fixed top-0 left-0 right-0 z-50">
       <AnnouncementBar />
       <nav
         className={`w-full transition-all duration-300 relative ${
-          isScrolled ? 'glassmorphism py-3 shadow-sm bg-white/80' : 'bg-transparent py-5'
+          isScrolled ? `glassmorphism py-3 shadow-sm` : 'bg-transparent py-5'
         }`}
       >
-      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between">
+        {isScrolled && (
+          <div 
+            className={`absolute inset-0 bg-gradient-to-r ${bgGradient}`}
+            style={{ opacity: transparency / 100 }}
+          />
+        )}
+      <div className="max-w-7xl mx-auto px-6 flex items-center justify-between relative z-10">
         {/* Logo */}
         <div className="flex items-center gap-2 cursor-pointer" onClick={() => navigate('/')}>
           {logoBase64 ? (
@@ -47,8 +60,8 @@ export default function Navbar() {
               <div className="absolute inset-0 bg-gradient-to-tr from-transparent via-white/30 to-transparent animate-[spin_3s_linear_infinite]" />
             </div>
           )}
-          <span className="font-display font-bold text-xl tracking-tight">
-            SIGMA<span className="text-brand-purple font-light">PHOTOGRAPHY</span>
+          <span className={`font-display font-bold text-2xl tracking-tighter ${logoColor}`}>
+            SIGMA<span className={isLogoTextNavy ? "text-brand-purple font-light" : "font-light ml-1"}>PHOTOGRAPHY</span>
           </span>
         </div>
 
@@ -58,7 +71,7 @@ export default function Navbar() {
             <a
               key={link.name}
               href={link.href}
-              className="text-sm font-bold text-brand-navy hover:text-brand-purple transition-colors tracking-wide"
+              className={`text-sm font-bold hover:opacity-75 transition-colors tracking-wide ${textColor}`}
             >
               {link.name}
             </a>
