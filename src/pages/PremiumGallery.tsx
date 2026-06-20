@@ -31,7 +31,7 @@ const defaultCategories = [
 
 export default function PremiumGallery() {
   const { user } = useAuthStore();
-  const { categories: cmsCategories, settings } = useSiteContent();
+  const { categories: cmsCategories, settings, loading: cmsLoading } = useSiteContent();
   const [onlineUsersCount, setOnlineUsersCount] = useState(50);
 
   useEffect(() => {
@@ -165,6 +165,14 @@ export default function PremiumGallery() {
 
     setFilteredTemplates(result);
   }, [searchQuery, activeCategory, templates]);
+
+  if (loading || cmsLoading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-gray-50">
+        <div className="w-10 h-10 rounded-full border-4 border-brand-purple border-t-transparent animate-spin"></div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] flex flex-col">

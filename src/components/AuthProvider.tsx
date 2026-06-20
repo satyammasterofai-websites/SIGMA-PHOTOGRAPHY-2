@@ -48,8 +48,8 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
               createdAt: new Date().toISOString()
             });
           }
-        } catch (error) {
-          console.error("Firestore permission error or DB error:", error);
+        } catch (error: any) {
+          console.warn("Firestore access offline/restricted, using fallback role.", error?.message);
           // If we can't access DB (e.g. missing rules), fallback to predefined role
         }
 

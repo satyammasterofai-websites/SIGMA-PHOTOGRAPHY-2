@@ -9,8 +9,8 @@ export default function Hero() {
   const { hero } = useSiteContent();
   const [showVideo, setShowVideo] = useState(false);
 
-  const heading = 'Premium Invitation Video Creation Services';
-  const subheading = 'Create beautiful invitation videos for Weddings, Engagements, Birthdays, Anniversaries, Housewarming Ceremonies, Baby Showers, and Special Events.';
+  const heading = hero?.heading || 'Premium Invitation Video Creation Services';
+  const subheading = hero?.subheading || 'Create beautiful invitation videos for Weddings, Engagements, Birthdays, Anniversaries, Housewarming Ceremonies, Baby Showers, and Special Events.';
   const heroImage = hero?.image || 'https://images.unsplash.com/photo-1544078755-9a6aa877d9c6?auto=format&fit=crop&q=80&w=2000'; // elegant wedding image
   const bgImage = hero?.bgImage;
 
