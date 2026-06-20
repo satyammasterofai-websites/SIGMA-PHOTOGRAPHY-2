@@ -29,11 +29,6 @@ export default function HomeBanners() {
     setCurrentIndex((prev) => (prev === 0 ? banners.length - 1 : prev - 1));
   };
 
-  const setSpecificBanner = (idx: number) => {
-    setDirection(idx > currentIndex ? 1 : -1);
-    setCurrentIndex(idx);
-  };
-
   const variants = {
     enter: (direction: number) => ({
       y: direction > 0 ? 200 : -200,
@@ -101,16 +96,6 @@ export default function HomeBanners() {
               >
                 <ChevronRight className="w-8 h-8 md:w-10 md:h-10 transition-transform group-hover/btn:translate-x-1 drop-shadow-lg" strokeWidth={2.5} />
               </button>
-              
-              <div className="absolute bottom-6 left-1/2 -translate-x-1/2 flex gap-3 z-30 bg-black/30 backdrop-blur-md border border-white/10 px-5 py-2.5 rounded-full shadow-lg">
-                {banners.map((_: any, idx: number) => (
-                  <button
-                    key={idx}
-                    onClick={() => setSpecificBanner(idx)}
-                    className={`h-2 rounded-full transition-all duration-500 ease-out border border-transparent shadow-sm ${idx === currentIndex ? 'bg-white w-8' : 'bg-white/50 hover:bg-white w-2'}`}
-                  />
-                ))}
-              </div>
             </>
           )}
           
