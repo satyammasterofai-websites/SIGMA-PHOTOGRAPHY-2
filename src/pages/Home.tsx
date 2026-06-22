@@ -3,6 +3,7 @@ import Hero from '../components/Hero';
 import HomeBanners from '../components/HomeBanners';
 import TemplateCategories from '../components/TemplateCategories';
 import ContactAndTestimonials from '../components/ContactAndTestimonials';
+import CustomServicesSection from '../components/CustomServicesSection';
 import Footer from '../components/Footer';
 import { useSiteContent } from '../hooks/useSiteContent';
 
@@ -25,6 +26,7 @@ export default function Home() {
         <Hero />
         <TemplateCategories />
         <ContactAndTestimonials />
+        <CustomServicesSection />
       </main>
       <Footer />
     </div>
