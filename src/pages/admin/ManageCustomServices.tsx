@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { doc, getDoc, setDoc, collection, getDocs, deleteDoc } from 'firebase/firestore';
+import { doc, getDoc, setDoc, collection, getDocs, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Plus, Save, Trash2, Edit, X, Globe, Eye, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -20,7 +20,7 @@ export default function ManageCustomServices() {
        title: "Website Development",
        description: "Get a custom built, responsive and modern website designed exclusively for your brand and business growth.",
        buttonText: "Create Now",
-       whatsappNumber: "911234567890",
+       whatsappNumber: "9162478070",
        image: ""
     }] as any[]
   });
@@ -49,14 +49,24 @@ export default function ManageCustomServices() {
       const docRef = await getDoc(doc(db, "content", "custom_services"));
       if (docRef.exists()) {
         const data = docRef.data();
+        if (!data.services || data.services.length === 0) {
+           data.services = [{
+             id: "1",
+             title: "Website Development",
+             description: "Get a custom built, responsive and modern website designed exclusively for your brand and business growth.",
+             buttonText: "Create Now",
+             whatsappNumber: "9162478070",
+             image: ""
+           }];
+        }
         setSettings(prev => ({ ...prev, ...data }));
       } else {
         // Init default data
         await setDoc(doc(db, "content", "custom_services"), settings);
       }
 
-      // Fetch enquiries
-      const enqSnap = await getDocs(collection(db, "service_enquiries"));
+      // Fetch enquiries from orders collection
+      const enqSnap = await getDocs(query(collection(db, "orders"), where("type", "==", "service_enquiry")));
       const enqData = enqSnap.docs.map(d => ({ id: d.id, ...d.data() }));
       enqData.sort((a: any, b: any) => b.createdAt?.toMillis() - a.createdAt?.toMillis());
       setEnquiries(enqData);
@@ -135,7 +145,7 @@ export default function ManageCustomServices() {
   const deleteEnquiry = async (id: string) => {
     if(!confirm("Are you sure you want to delete this enquiry?")) return;
     try {
-      await deleteDoc(doc(db, "service_enquiries", id));
+      await deleteDoc(doc(db, "orders", id));
       setEnquiries(enquiries.filter(e => e.id !== id));
       toast.success("Enquiry deleted");
     } catch(e) {

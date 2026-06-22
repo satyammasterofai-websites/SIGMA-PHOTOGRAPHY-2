@@ -173,7 +173,8 @@ function DashboardHome() {
     const unsubscribe = onSnapshot(
       q,
       (sn) => {
-        const orders = sn.docs.map((doc) => doc.data());
+        const ordersList = sn.docs.map((doc) => doc.data()).filter(o => o.type !== "service_enquiry");
+        const orders = ordersList;
         setStats({
           total: orders.length,
           pending: orders.filter(
@@ -268,7 +269,7 @@ function MyOrders() {
         const list = sn.docs.map((doc) => ({
           id: doc.id,
           ...(doc.data() as any),
-        }));
+        })).filter(o => o.type !== "service_enquiry");
         // Sort locally
         list.sort(
           (a, b) =>

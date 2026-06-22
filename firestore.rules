@@ -102,6 +102,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    match /service_enquiries/{document=**} {
+      allow create: if true;
+      allow read, update, delete: if isAdmin();
+    }
+    
     // Default fallback
     match /{document=**} {
       allow read, write: if false;

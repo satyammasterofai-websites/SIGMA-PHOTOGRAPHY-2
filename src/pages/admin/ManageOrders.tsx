@@ -34,7 +34,7 @@ export default function ManageOrders() {
       q,
       (snapshot) => {
         setOrders(
-          snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })),
+          snapshot.docs.map((doc) => ({ id: doc.id, ...(doc.data() as any) })).filter(o => o.type !== "service_enquiry")
         );
       },
       (error) => {
@@ -46,7 +46,7 @@ export default function ManageOrders() {
             const list = snapshot.docs.map((doc) => ({
               id: doc.id,
               ...(doc.data() as any),
-            }));
+            })).filter(o => o.type !== "service_enquiry");
             list.sort(
               (a, b) =>
                 new Date(b.createdAt || 0).getTime() -

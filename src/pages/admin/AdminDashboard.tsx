@@ -193,7 +193,7 @@ function AdminHome() {
            getDocs(collection(db, 'templates'))
         ]);
         
-        const ordersData: any[] = ordersSnap.docs.map(d=>({ ...d.data(), id: d.id }));
+        const ordersData: any[] = ordersSnap.docs.map(d=>({ ...d.data(), id: d.id })).filter(o => o.type !== "service_enquiry");
         const usersData: any[] = usersSnap.docs.map(d=>({ ...d.data(), id: d.id }));
 
         let revenue = 0;
@@ -226,7 +226,7 @@ function AdminHome() {
 
         setStats({
            users: usersSnap.size,
-           orders: ordersSnap.size,
+           orders: ordersData.length,
            pending,
            completed,
            templates: tmplSnap.size,

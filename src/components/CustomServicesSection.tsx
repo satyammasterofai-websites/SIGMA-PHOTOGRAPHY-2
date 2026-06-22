@@ -29,7 +29,7 @@ export default function CustomServicesSection() {
              title: "Website Development",
              description: "Get a custom built, responsive and modern website designed exclusively for your brand and business growth.",
              buttonText: "Create Now",
-             whatsappNumber: "911234567890",
+             whatsappNumber: "9162478070",
              image: ""
            }];
         }
@@ -45,7 +45,7 @@ export default function CustomServicesSection() {
              title: "Website Development",
              description: "Get a custom built, responsive and modern website designed exclusively for your brand and business growth.",
              buttonText: "Create Now",
-             whatsappNumber: "911234567890",
+             whatsappNumber: "9162478070",
              image: ""
           }]
         });
@@ -178,36 +178,40 @@ function ServiceOrderForm({ service, onClose }: { service: any, onClose: () => v
     setIsSubmitting(true);
     
     try {
-      await addDoc(collection(db, "service_enquiries"), {
+      await addDoc(collection(db, "orders"), {
         ...formData,
         serviceTitle: service.title,
+        type: "service_enquiry",
         createdAt: new Date(),
         status: "Pending"
       });
 
       const actualType = formData.websiteType === "Other" ? formData.otherWebsiteType : formData.websiteType;
-      const message = `*NEW ${service.title.toUpperCase()} ENQUIRY* 🚀%0A%0A` +
-        `*Customer Details*%0A` +
-        `👤 Name: ${formData.fullName}%0A` +
-        `📱 Phone: ${formData.phone}%0A` +
-        `💬 WhatsApp: ${formData.whatsapp}%0A` +
-        `📧 Email: ${formData.email}%0A%0A` +
-        `*Project Details*%0A` +
-        `🏢 Business: ${formData.businessName}%0A` +
-        `🌐 Type: ${actualType}%0A` +
-        `📝 Description: ${formData.description}%0A` +
-        `✨ Features: ${formData.features}%0A` +
-        `💰 Budget: ${formData.budget}%0A` +
-        `📅 Timeline: ${formData.completionDate}%0A` +
-        `📌 Notes: ${formData.notes || 'None'}`;
+      const message = `*NEW ${service.title.toUpperCase()} ENQUIRY* 🚀
 
-      const phoneNum = service.whatsappNumber?.replace(/[^0-9]/g, '') || "919011985955"; 
-      const whatsappUrl = `https://wa.me/${phoneNum}?text=${message}`;
+*Customer Details*
+👤 Name: ${formData.fullName}
+📱 Phone: ${formData.phone}
+💬 WhatsApp: ${formData.whatsapp}
+📧 Email: ${formData.email}
+
+*Project Details*
+🏢 Business: ${formData.businessName}
+🌐 Type: ${actualType}
+📝 Description: ${formData.description}
+✨ Features: ${formData.features}
+💰 Budget: ${formData.budget}
+📅 Timeline: ${formData.completionDate}
+📌 Notes: ${formData.notes || 'None'}`;
+
+      const phoneNum = service.whatsappNumber?.replace(/[^0-9]/g, '') || "9162478070"; 
+      const whatsappUrl = `https://wa.me/${phoneNum}?text=${encodeURIComponent(message)}`;
 
       window.open(whatsappUrl, '_blank');
       toast.success("Enquiry submitted! Redirecting to WhatsApp...");
       onClose();
     } catch (err) {
+      console.error("Submission error:", err);
       toast.error("Failed to submit form. Please try again.");
     } finally {
       setIsSubmitting(false);
