@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { MessageCircle, MapPin, Phone, Mail, Instagram, ArrowRight, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
+import CustomServicesSection from './CustomServicesSection';
 
 const defaultFaqs = [
   { question: "How long does it take to receive the final video?", answer: "Most of our standard templates are delivered within 24 hours. Highly customized 4K videos might take up to 48 hours depending on the complexity of the revisions." },
@@ -138,6 +139,8 @@ export default function ContactAndTestimonials() {
           </motion.div>
         )}
       </AnimatePresence>
+
+      <CustomServicesSection />
 
       {/* FAQ */}
       <section className="py-24 relative bg-red-50/50">

@@ -22,7 +22,18 @@ export default function CustomServicesSection() {
     const fetchSettings = async () => {
       const docRef = await getDoc(doc(db, "content", "custom_services"));
       if (docRef.exists()) {
-        setSettings(docRef.data());
+        const data = docRef.data();
+        if (!data.services || data.services.length === 0) {
+           data.services = [{
+             id: "1",
+             title: "Website Development",
+             description: "Get a custom built, responsive and modern website designed exclusively for your brand and business growth.",
+             buttonText: "Create Now",
+             whatsappNumber: "911234567890",
+             image: ""
+           }];
+        }
+        setSettings(data);
       } else {
         setSettings({
           enabled: true,
@@ -73,7 +84,7 @@ export default function CustomServicesSection() {
              whileInView={{ opacity: 1, y: 0 }}
              viewport={{ once: true }}
              transition={{ delay: 0.1 }}
-             className="text-4xl md:text-5xl lg:text-6xl font-display font-black tracking-tight text-transparent bg-clip-text bg-gradient-to-r from-red-600 via-pink-600 to-rose-600 mb-6 drop-shadow-sm"
+             className="text-4xl md:text-5xl lg:text-6xl font-black tracking-tight text-black font-serif mb-6 drop-shadow-sm"
            >
              {settings.title || "NEW SERVICE – Website Development"}
            </motion.h2>

@@ -15,7 +15,14 @@ export default function ManageCustomServices() {
     title: "NEW SERVICE – Website Development",
     description: "Premium high-converting digital solutions tailored for your business success.",
     badgeLine: "Premium Services",
-    services: [] as any[]
+    services: [{
+       id: "1",
+       title: "Website Development",
+       description: "Get a custom built, responsive and modern website designed exclusively for your brand and business growth.",
+       buttonText: "Create Now",
+       whatsappNumber: "911234567890",
+       image: ""
+    }] as any[]
   });
   const [loading, setLoading] = useState(true);
 
