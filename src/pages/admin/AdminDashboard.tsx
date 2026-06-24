@@ -22,6 +22,7 @@ import ManageSettings from './ManageSettings';
 import ManageForms from './ManageForms';
 import ManageCategories from './ManageCategories';
 import ManageCustomServices from './ManageCustomServices';
+import ManageSplashVideo from './ManageSplashVideo';
 
 export default function AdminDashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -46,6 +47,7 @@ export default function AdminDashboardLayout() {
     { name: 'Templates', path: '/admin/templates', icon: FileEdit },
     { name: 'Forms', path: '/admin/forms', icon: FileEdit },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
+    { name: 'Splash Video', path: '/admin/splash-video', icon: Images },
     { name: 'Services', path: '/admin/services', icon: LayoutDashboard },
     { name: 'Banners', path: '/admin/banners', icon: Images },
     { name: 'Testimonials', path: '/admin/testimonials', icon: MessageSquare },
@@ -149,6 +151,7 @@ export default function AdminDashboardLayout() {
               <Route path="/categories" element={<ManageCategories />} />
               <Route path="/templates" element={<TemplateManagement />} />
               <Route path="/forms" element={<ManageForms />} />
+              <Route path="/splash-video" element={<ManageSplashVideo />} />
               <Route path="/services" element={<ManageCustomServices />} />
               <Route path="/settings" element={<ManageSettings />} />
               <Route path="/banners" element={<ManageBanners />} />
@@ -193,7 +196,7 @@ function AdminHome() {
            getDocs(collection(db, 'templates'))
         ]);
         
-        const ordersData: any[] = ordersSnap.docs.map(d=>({ ...d.data(), id: d.id })).filter(o => o.type !== "service_enquiry");
+        const ordersData: any[] = ordersSnap.docs.map(d=>({ ...d.data(), id: d.id })).filter((o: any) => o.type !== "service_enquiry");
         const usersData: any[] = usersSnap.docs.map(d=>({ ...d.data(), id: d.id }));
 
         let revenue = 0;

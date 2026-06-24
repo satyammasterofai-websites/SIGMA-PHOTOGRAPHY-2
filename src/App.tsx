@@ -36,10 +36,13 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
 
 import { usePresence } from './hooks/usePresence';
 
+import SplashVideo from './components/SplashVideo';
+
 function AppContent() {
   usePresence();
   return (
     <Router>
+      <SplashVideo />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/gallery" element={<PremiumGallery />} />

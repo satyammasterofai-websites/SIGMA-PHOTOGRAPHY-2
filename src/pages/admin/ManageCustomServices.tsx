@@ -333,7 +333,7 @@ export default function ManageCustomServices() {
                     </div>
                     <div>
                       <label className="block text-sm font-medium text-gray-400 mb-1">Form Dropdown Options (Comma separated)</label>
-                      <input type="text" value={currentService.options || ""} onChange={e => setCurrentService({...currentService, options: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" placeholder="e.g. E-commerce, Portfolio, App" />
+                      <input type="text" value={(currentService as any).options || ""} onChange={e => setCurrentService({...currentService, options: e.target.value} as any)} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" placeholder="e.g. E-commerce, Portfolio, App" />
                     </div>
                     <div className="md:col-span-2">
                       <label className="block text-sm font-medium text-gray-400 mb-1">Service Icon/Image (Optional)</label>
