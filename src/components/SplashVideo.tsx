@@ -3,7 +3,7 @@ import React, { useEffect, useState, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import ReactPlayer from 'react-player';
-import { X } from 'lucide-react';
+import { X, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
 export default function SplashVideo() {
@@ -11,6 +11,7 @@ export default function SplashVideo() {
   const [visible, setVisible] = useState(false);
   const [videoUrl, setVideoUrl] = useState('');
   const [loading, setLoading] = useState(true);
+  const [hasInteracted, setHasInteracted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
 
   useEffect(() => {
@@ -70,12 +71,29 @@ export default function SplashVideo() {
           animate={{ opacity: visible ? 1 : 0 }}
         >
           <div className="relative w-full max-w-5xl aspect-video bg-black rounded-lg overflow-hidden shadow-2xl">
+            {!hasInteracted && (
+              <div 
+                className="absolute inset-0 z-50 flex flex-col items-center justify-center bg-black/60 cursor-pointer group backdrop-blur-sm transition-all"
+                onClick={() => {
+                  setHasInteracted(true);
+                  if (videoRef.current) {
+                    videoRef.current.play().catch(console.error);
+                  }
+                }}
+              >
+                <div className="bg-white/20 p-6 rounded-full group-hover:bg-white/30 transition-all transform group-hover:scale-110 mb-4">
+                  <Play className="w-12 h-12 text-white ml-2" />
+                </div>
+                <p className="text-white font-medium text-lg tracking-wider drop-shadow-md">Tap to Play Splash Video</p>
+              </div>
+            )}
+
             <div className="relative w-full h-full bg-black flex items-center justify-center">
               {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') || videoUrl.includes('vimeo.com') ? (
                 /* @ts-ignore */
                 <ReactPlayer
                   url={videoUrl}
-                  playing={true}
+                  playing={hasInteracted}
                   muted={false}
                   controls={false}
                   width="100%"
@@ -91,7 +109,7 @@ export default function SplashVideo() {
                       playerVars: { showinfo: 0, rel: 0, autoplay: 1, muted: 0, playsinline: 1, controls: 0 }
                     },
                     vimeo: {
-                      playerOptions: { title: 0, byline: 0, portrait: 0, dnt: 1, autopause: 0 }
+                      playerOptions: { title: 0, byline: 0, portrait: 0, dnt: 1, autopause: 0, playsinline: true, muted: false, autoplay: true }
                     }
                   }}
                 />
@@ -99,7 +117,6 @@ export default function SplashVideo() {
                 <video
                   ref={videoRef}
                   src={videoUrl}
-                  autoPlay
                   playsInline
                   onEnded={closeSplash}
                   onError={(e) => console.error("Native video player error:", e)}
