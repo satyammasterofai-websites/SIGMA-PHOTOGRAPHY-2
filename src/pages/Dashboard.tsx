@@ -308,11 +308,11 @@ function MyOrders() {
               <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
                 <div className="flex flex-col md:flex-row items-start md:items-center gap-4">
                   {order.thumbnailBase64 && (
-                    <div className="w-24 h-16 rounded overflow-hidden flex-shrink-0 border border-gray-100 flex items-center justify-center bg-gray-50">
+                    <div className="w-24 max-h-32 rounded overflow-hidden flex-shrink-0 border border-gray-100 flex items-center justify-center bg-gray-50">
                       <img
                         src={order.thumbnailBase64}
                         alt="Thumbnail"
-                        className="w-full h-full object-contain"
+                        className="w-full h-auto object-contain"
                       />
                     </div>
                   )}
