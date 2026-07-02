@@ -32,6 +32,7 @@ export default function TemplateManagement() {
   const [categories, setCategories] = useState<any[]>([]);
   const [formId, setFormId] = useState('');
   const [availableForms, setAvailableForms] = useState<any[]>([]);
+  const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   const fetchTemplates = async () => {
     setLoading(true);
@@ -190,9 +191,13 @@ export default function TemplateManagement() {
         await addDoc(collection(db, 'templates'), data);
       }
       
-      window.alert('Template saved successfully!');
       setIsModalOpen(false);
+      setShowSuccessPopup(true);
       fetchTemplates();
+      
+      setTimeout(() => {
+        setShowSuccessPopup(false);
+      }, 3000);
     } catch (error) {
       console.error(error);
       toast.error("Failed to save template");
@@ -205,7 +210,7 @@ export default function TemplateManagement() {
     if (!deleteTemplateId) return;
     try {
       await deleteDoc(doc(db, 'templates', deleteTemplateId));
-      window.alert("Template deleted successfully!");
+      toast.success("Template deleted successfully!");
       fetchTemplates();
       setDeleteTemplateId(null);
     } catch (error) {
@@ -217,6 +222,25 @@ export default function TemplateManagement() {
 
   return (
     <div className="w-full">
+      {showSuccessPopup && (
+        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/60 px-4 backdrop-blur-sm animate-in fade-in duration-300">
+          <div className="bg-gray-900 border border-green-500/30 rounded-2xl p-8 w-full max-w-sm text-center shadow-2xl shadow-green-900/20 transform scale-100 animate-in zoom-in-95 duration-300">
+            <div className="w-16 h-16 bg-green-500/20 text-green-500 rounded-full flex items-center justify-center mx-auto mb-4">
+              <svg className="w-8 h-8" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+              </svg>
+            </div>
+            <h3 className="text-2xl font-bold text-white mb-2">Success!</h3>
+            <p className="text-gray-300 mb-6">Template has been saved successfully and is now available in your templates list.</p>
+            <button 
+              onClick={() => setShowSuccessPopup(false)}
+              className="w-full px-4 py-3 bg-indigo-500 text-white rounded-xl hover:bg-indigo-600 font-medium transition-colors"
+            >
+              Back to Templates
+            </button>
+          </div>
+        </div>
+      )}
       {deleteTemplateId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
@@ -529,4 +553,3 @@ export default function TemplateManagement() {
     </div>
   );
 }
-
