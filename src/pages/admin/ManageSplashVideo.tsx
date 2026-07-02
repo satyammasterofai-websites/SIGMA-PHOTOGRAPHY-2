@@ -298,10 +298,10 @@ export default function ManageSplashVideo() {
                 playsinline={true}
                 config={{
                   youtube: {
-                    playerVars: { showinfo: 0, rel: 0, autoplay: 1, muted: 0, playsinline: 1 }
+                    playerVars: { showinfo: 0, rel: 0, autoplay: 1, muted: 0, playsinline: 1 } as any
                   },
                   vimeo: {
-                    playerOptions: { title: 0, byline: 0, portrait: 0 }
+                    playerOptions: { title: 0, byline: 0, portrait: 0 } as any
                   }
                 }}
               />
