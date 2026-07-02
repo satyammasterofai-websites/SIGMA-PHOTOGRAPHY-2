@@ -5,6 +5,21 @@ import TemplateCategories from '../components/TemplateCategories';
 import ContactAndTestimonials from '../components/ContactAndTestimonials';
 import Footer from '../components/Footer';
 import { useSiteContent } from '../hooks/useSiteContent';
+import { motion } from 'motion/react';
+import React from 'react';
+
+const FadeInSection = ({ children }: { children: React.ReactNode }) => {
+  return (
+    <motion.div
+      initial={{ opacity: 0, y: 30 }}
+      whileInView={{ opacity: 1, y: 0 }}
+      viewport={{ once: true, margin: "-100px" }}
+      transition={{ duration: 0.6, ease: "easeOut" }}
+    >
+      {children}
+    </motion.div>
+  );
+};
 
 export default function Home() {
   const { loading } = useSiteContent();
@@ -21,10 +36,18 @@ export default function Home() {
     <div className="min-h-screen font-sans overflow-x-hidden selection:bg-brand-purple/30 selection:text-brand-purple text-brand-navy">
       <Navbar />
       <main className="bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB]">
-        <HomeBanners />
-        <Hero />
-        <TemplateCategories />
-        <ContactAndTestimonials />
+        <FadeInSection>
+          <HomeBanners />
+        </FadeInSection>
+        <FadeInSection>
+          <Hero />
+        </FadeInSection>
+        <FadeInSection>
+          <TemplateCategories />
+        </FadeInSection>
+        <FadeInSection>
+          <ContactAndTestimonials />
+        </FadeInSection>
       </main>
       <Footer />
     </div>
