@@ -251,15 +251,15 @@ export default function PremiumGallery() {
                   key={template.id}
                   className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all border border-gray-100 group flex flex-col"
                 >
-                  <div className="relative aspect-video overflow-hidden bg-gray-100 md:aspect-[4/3] lg:aspect-video">
+                  <div className="relative overflow-hidden bg-gray-100 flex items-center justify-center">
                     {template.thumbnailBase64 || template.image ? (
                       <img
                         src={template.thumbnailBase64 || template.image}
                         alt={template.title}
-                        className="w-full h-full object-contain bg-white"
+                        className="w-full h-auto object-contain bg-white"
                       />
                     ) : (
-                      <div className="w-full h-full flex items-center justify-center text-gray-400">
+                      <div className="w-full aspect-video flex items-center justify-center text-gray-400">
                         No Preview
                       </div>
                     )}
@@ -457,3 +457,4 @@ export default function PremiumGallery() {
     </div>
   );
 }
+
