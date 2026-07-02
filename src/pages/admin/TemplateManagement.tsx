@@ -72,13 +72,43 @@ export default function TemplateManagement() {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
-      try {
-        const base64 = await fileToBase64(e.target.files[0]);
-        setThumbnailBase64(base64);
-        toast.success("Image converted to Base64");
-      } catch (error: any) {
-        toast.error(error.message);
-      }
+      const file = e.target.files[0];
+      
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          
+          const MAX_WIDTH = 1200;
+          const MAX_HEIGHT = 1200;
+          
+          if (width > height) {
+            if (width > MAX_WIDTH) {
+              height *= MAX_WIDTH / width;
+              width = MAX_WIDTH;
+            }
+          } else {
+            if (height > MAX_HEIGHT) {
+              width *= MAX_HEIGHT / height;
+              height = MAX_HEIGHT;
+            }
+          }
+          
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.8);
+          setThumbnailBase64(compressedBase64);
+          toast.success("Image compressed and loaded");
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
     }
   };
 
@@ -156,11 +186,11 @@ export default function TemplateManagement() {
       
       if (editingId) {
         await updateDoc(doc(db, 'templates', editingId), data);
-        toast.success('Template updated!');
       } else {
         await addDoc(collection(db, 'templates'), data);
-        toast.success('Template created!');
       }
+      
+      window.alert('Template saved successfully!');
       setIsModalOpen(false);
       fetchTemplates();
     } catch (error) {
@@ -175,7 +205,7 @@ export default function TemplateManagement() {
     if (!deleteTemplateId) return;
     try {
       await deleteDoc(doc(db, 'templates', deleteTemplateId));
-      toast.success("Template deleted");
+      window.alert("Template deleted successfully!");
       fetchTemplates();
       setDeleteTemplateId(null);
     } catch (error) {
@@ -306,10 +336,10 @@ export default function TemplateManagement() {
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="flex flex-col items-start gap-2 mb-4">
                    <label className="text-sm font-medium text-gray-300">Thumbnail Image (Base64, max 600KB)</label>
-                   <div className="relative w-full h-48 md:w-64 rounded-xl border-2 border-dashed border-gray-700 bg-gray-800 flex items-center justify-center overflow-hidden hover:border-indigo-500 transition-colors group cursor-pointer">
+                   <div className="relative w-full min-h-[12rem] rounded-xl border-2 border-dashed border-gray-700 bg-gray-800 flex items-center justify-center overflow-hidden hover:border-indigo-500 transition-colors group cursor-pointer">
                       {thumbnailBase64 ? (
                         <>
-                          <img src={thumbnailBase64} alt="Preview" className="w-full h-full object-contain bg-white" />
+                          <img src={thumbnailBase64} alt="Preview" className="w-full h-auto object-contain bg-white" />
                           <div className="absolute inset-0 bg-black/50 opacity-0 group-hover:opacity-100 flex items-center justify-center transition-opacity text-white text-sm">
                             Change Image
                           </div>
