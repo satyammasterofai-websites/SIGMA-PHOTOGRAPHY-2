@@ -1237,14 +1237,14 @@ export default function Checkout() {
 
         <div className="flex flex-col sm:flex-row gap-6 mb-10 bg-gray-50 p-6 rounded-2xl border border-gray-100 sm:items-center">
           <div
-            className="w-full sm:w-48 aspect-video rounded-xl bg-white overflow-hidden flex-shrink-0 relative cursor-pointer shadow border border-gray-100"
+            className="w-full sm:w-48 rounded-xl bg-white overflow-hidden flex-shrink-0 relative cursor-pointer shadow border border-gray-100"
             onClick={() => template?.videoUrl && setShowVideo(true)}
           >
             {template?.thumbnailBase64 && (
               <img
                 src={template.thumbnailBase64}
                 alt="Thumb"
-                className="w-full h-full object-contain"
+                className="w-full h-auto object-contain"
               />
             )}
             {template?.videoUrl && (
@@ -1548,3 +1548,4 @@ export default function Checkout() {
     </div>
   );
 }
+
