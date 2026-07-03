@@ -23,6 +23,7 @@ import ManageForms from './ManageForms';
 import ManageCategories from './ManageCategories';
 import ManageCustomServices from './ManageCustomServices';
 import ManageSplashVideo from './ManageSplashVideo';
+import CleanupDuplicates from '../../components/CleanupDuplicates';
 
 export default function AdminDashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -59,6 +60,7 @@ export default function AdminDashboardLayout() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] flex font-sans text-brand-navy">
+      <CleanupDuplicates />
       {/* Mobile Sidebar Overlay */}
       {sidebarOpen && (
         <div 

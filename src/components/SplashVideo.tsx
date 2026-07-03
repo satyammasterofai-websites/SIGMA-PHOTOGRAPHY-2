@@ -55,6 +55,9 @@ export default function SplashVideo() {
   const closeSplash = () => {
     setVisible(false);
     document.body.style.overflow = 'auto';
+    if (videoRef.current) {
+      videoRef.current.pause();
+    }
     setTimeout(() => {
       setShow(false);
     }, 500); // Wait for fade out to complete before unmounting
@@ -77,7 +80,14 @@ export default function SplashVideo() {
                 onClick={() => {
                   setHasInteracted(true);
                   if (videoRef.current) {
-                    videoRef.current.play().catch(console.error);
+                    const playPromise = videoRef.current.play();
+                    if (playPromise !== undefined) {
+                      playPromise.catch(error => {
+                        if (error.name !== 'AbortError') {
+                          console.error("Native video play error:", error);
+                        }
+                      });
+                    }
                   }
                 }}
               >
@@ -93,7 +103,7 @@ export default function SplashVideo() {
                 /* @ts-ignore */
                 <ReactPlayer
                   url={videoUrl}
-                  playing={hasInteracted}
+                  playing={hasInteracted && visible}
                   muted={false}
                   controls={false}
                   width="100%"

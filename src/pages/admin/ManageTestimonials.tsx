@@ -4,6 +4,7 @@ import { db } from '../../lib/firebase';
 import { fileToBase64 } from '../../lib/utils';
 import { Trash2, Plus, Edit, ImagePlus, Eye, EyeOff, ArrowUp, ArrowDown } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 
 export default function ManageTestimonials() {
   const [testimonials, setTestimonials] = useState<any[]>([]);
@@ -24,10 +25,17 @@ export default function ManageTestimonials() {
 
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const isDuplicate = await isFileNameDuplicate(file.name);
+      if (isDuplicate) {
+        toast.error(`A file named "${file.name}" has already been uploaded.`);
+        return;
+      }
       setLoadingFile(true);
       try {
-        const base64 = await fileToBase64(e.target.files[0]);
+        const base64 = await fileToBase64(file);
         setFormData({ ...formData, imageUrl: base64 });
+        await registerFileName(file.name);
         toast.success("Screenshot uploaded");
       } catch (error: any) {
         toast.error(error.message);

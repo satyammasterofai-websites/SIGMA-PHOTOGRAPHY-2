@@ -10,6 +10,7 @@ import { db } from "../../lib/firebase";
 import { fileToBase64HD } from "../../lib/utils";
 import { Trash2, Plus, Image as ImageIcon, Link } from "lucide-react";
 import toast from "react-hot-toast";
+import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 
 export default function ManageBanners() {
   const [banners, setBanners] = useState<any[]>([]);
@@ -31,6 +32,13 @@ export default function ManageBanners() {
   const addBannerFile = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      const isDuplicate = await isFileNameDuplicate(file.name);
+      if (isDuplicate) {
+        toast.error(`A file named "${file.name}" has already been uploaded.`);
+        return;
+      }
+
       const toastId = toast.loading("Processing and uploading HD banner...");
       try {
         const base64Url = await fileToBase64HD(file);
@@ -41,6 +49,7 @@ export default function ManageBanners() {
             return;
         }
 
+        await registerFileName(file.name);
         const id = Date.now().toString();
         await setDoc(doc(db, "banners", id), { image: base64Url, active: true });
         toast.success("HD Banner added successfully", { id: toastId });

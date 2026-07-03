@@ -4,6 +4,7 @@ import { db } from '../../lib/firebase';
 import { fileToBase64 } from '../../lib/utils';
 import { Plus, Edit, Trash2, ImagePlus } from 'lucide-react';
 import toast from 'react-hot-toast';
+import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 
 export default function TemplateManagement() {
   const [templates, setTemplates] = useState<any[]>([]);
@@ -74,6 +75,13 @@ export default function TemplateManagement() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      const isDuplicate = await isFileNameDuplicate(file.name);
+      if (isDuplicate) {
+        toast.error(`A file named "${file.name}" has already been uploaded.`);
+        return;
+      }
+      await registerFileName(file.name);
       
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -170,6 +178,16 @@ export default function TemplateManagement() {
     e.preventDefault();
     if (!thumbnailBase64) {
       toast.error('Please upload a thumbnail image');
+      return;
+    }
+    
+    // Check for duplicate template name/title
+    const isDuplicate = templates.some(
+      t => t.id !== editingId && t.title.toLowerCase().trim() === title.toLowerCase().trim()
+    );
+    
+    if (isDuplicate) {
+      toast.error("A template with this exact title already exists.");
       return;
     }
     

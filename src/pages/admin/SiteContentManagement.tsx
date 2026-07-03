@@ -6,6 +6,7 @@ import { fileToBase64 } from "../../lib/utils";
 import { ImagePlus, Save, Trash2, Plus, Edit, X } from "lucide-react";
 import toast from "react-hot-toast";
 import { useSiteStore } from "../../store/useSiteStore";
+import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 
 export default function SiteContentManagement() {
   const [activeTab, setActiveTab] = useState("logo");
@@ -123,9 +124,17 @@ export default function SiteContentManagement() {
     setter: (base64: string) => void,
   ) => {
     if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const isDuplicate = await isFileNameDuplicate(file.name);
+      if (isDuplicate) {
+        toast.error(`A file named "${file.name}" has already been uploaded.`);
+        return;
+      }
+
       try {
-        const base64 = await fileToBase64(e.target.files[0]);
+        const base64 = await fileToBase64(file);
         setter(base64);
+        await registerFileName(file.name);
         toast.success("Image added to preview");
       } catch (error: any) {
         toast.error(error.message);
@@ -139,12 +148,19 @@ export default function SiteContentManagement() {
   ) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      const isDuplicate = await isFileNameDuplicate(file.name);
+      if (isDuplicate) {
+        toast.error(`A file named "${file.name}" has already been uploaded.`);
+        return;
+      }
+
       const toastId = toast.loading("Uploading HD image...");
       try {
         const storageRef = ref(storage, `hero/${Date.now()}_${file.name}`);
         const snapshot = await uploadBytes(storageRef, file);
         const url = await getDownloadURL(snapshot.ref);
         setter(url);
+        await registerFileName(file.name);
         toast.success("HD Image uploaded successfully", { id: toastId });
       } catch (error: any) {
         toast.error("Upload failed: " + error.message, { id: toastId });

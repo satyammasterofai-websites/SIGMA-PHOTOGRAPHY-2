@@ -5,6 +5,7 @@ import { db, storage } from '../../lib/firebase';
 import { Save, Video, Upload, FileVideo, Settings } from 'lucide-react';
 import toast from 'react-hot-toast';
 import ReactPlayer from 'react-player';
+import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 
 export default function ManageSplashVideo() {
   const [enabled, setEnabled] = useState(false);
@@ -76,6 +77,12 @@ export default function ManageSplashVideo() {
       return;
     }
 
+    const isDuplicate = await isFileNameDuplicate(file.name);
+    if (isDuplicate) {
+      toast.error(`A file named "${file.name}" has already been uploaded.`);
+      return;
+    }
+
     setUploading(true);
     const toastId = toast.loading("Uploading video...");
 
@@ -130,6 +137,7 @@ export default function ManageSplashVideo() {
         setVideoUrl(url);
         toast.success("Video uploaded to Firebase successfully", { id: toastId });
       }
+      await registerFileName(file.name);
     } catch (error: any) {
       console.error("Error uploading video:", error);
       toast.error(error.message || "Failed to upload video", { id: toastId });

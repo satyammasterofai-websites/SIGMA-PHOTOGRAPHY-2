@@ -19,11 +19,26 @@ export default function ManageFAQ() {
   }, []);
 
   const saveFaq = async () => {
+    if (!formData.question.trim() || !formData.answer.trim()) {
+      toast.error("Question and answer are required");
+      return;
+    }
+    
+    // Check for duplicate FAQ question
+    const isDuplicate = faqs.some(
+      faq => faq.id !== formData.id && faq.question.toLowerCase().trim() === formData.question.toLowerCase().trim()
+    );
+    
+    if (isDuplicate) {
+      toast.error("An FAQ with this exact question already exists.");
+      return;
+    }
+
     try {
       const id = formData.id || Date.now().toString();
       await setDoc(doc(db, 'faqs', id), {
-        question: formData.question,
-        answer: formData.answer
+        question: formData.question.trim(),
+        answer: formData.answer.trim()
       });
       toast.success("Saved successfully");
       setShowModal(false);

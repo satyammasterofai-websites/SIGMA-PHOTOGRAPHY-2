@@ -4,6 +4,7 @@ import { db } from '../../lib/firebase';
 import { Trash2, Plus, Image as ImageIcon } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fileToBase64 } from '../../lib/utils';
+import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 
 export default function ManageCategories() {
   const [categories, setCategories] = useState<any[]>([]);
@@ -28,6 +29,13 @@ export default function ManageCategories() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
+      
+      const isDuplicate = await isFileNameDuplicate(file.name);
+      if (isDuplicate) {
+        toast.error(`A file named "${file.name}" has already been uploaded.`);
+        return;
+      }
+      await registerFileName(file.name);
       
       const reader = new FileReader();
       reader.onload = (event) => {
@@ -73,6 +81,17 @@ export default function ManageCategories() {
       toast.error("Category name required");
       return;
     }
+    
+    // Check for duplicate category name
+    const isDuplicate = categories.some(
+      (cat: any) => cat.name.toLowerCase() === newCatName.toLowerCase().trim()
+    );
+    
+    if (isDuplicate) {
+      toast.error("A category with this exact name already exists.");
+      return;
+    }
+
     try {
       const id = Date.now().toString(); // Or use a slug
       const newCat = {

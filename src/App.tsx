@@ -37,12 +37,14 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
 import { usePresence } from './hooks/usePresence';
 
 import SplashVideo from './components/SplashVideo';
+import WhatsAppButton from './components/WhatsAppButton';
 
 function AppContent() {
   usePresence();
   return (
     <Router>
       <SplashVideo />
+      <WhatsAppButton />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/gallery" element={<PremiumGallery />} />
