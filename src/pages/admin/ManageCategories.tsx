@@ -172,7 +172,7 @@ export default function ManageCategories() {
             <label className="block text-sm text-gray-400 mb-1">Thumbnail Preview</label>
             <div className="relative h-10 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center overflow-hidden w-40 cursor-pointer">
               {newCatImage ? (
-                <img src={newCatImage} alt="Preview" className="w-full h-full object-cover" />
+                <img src={newCatImage} alt="Preview" className="max-w-full max-h-full object-contain" />
               ) : (
                 <span className="text-xs text-gray-500">Upload Image</span>
               )}
@@ -199,7 +199,7 @@ export default function ManageCategories() {
             </div>
             <div className="h-40 w-full mb-3 bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center relative">
               {cat.image ? (
-                <img src={cat.image} alt={cat.name} className="w-full h-full object-cover" />
+                <img src={cat.image} alt={cat.name} className="max-w-full max-h-full object-contain" />
               ) : (
                 <ImageIcon className="w-8 h-8 text-gray-500" />
               )}
