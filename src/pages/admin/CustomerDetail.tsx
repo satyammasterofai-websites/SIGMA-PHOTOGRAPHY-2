@@ -20,11 +20,16 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
     if (!user) return;
     const q = query(
       collection(db, "chats"),
-      where("userId", "==", user.id),
-      orderBy("timestamp", "asc")
+      where("userId", "==", user.id)
     );
     const unsub = onSnapshot(q, (snapshot) => {
-      setMessages(snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() })));
+      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      data.sort((a: any, b: any) => {
+        const timeA = a.timestamp ? (typeof a.timestamp.toMillis === 'function' ? a.timestamp.toMillis() : new Date(a.timestamp).getTime()) : Date.now();
+        const timeB = b.timestamp ? (typeof b.timestamp.toMillis === 'function' ? b.timestamp.toMillis() : new Date(b.timestamp).getTime()) : Date.now();
+        return timeA - timeB;
+      });
+      setMessages(data);
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
     });
 
