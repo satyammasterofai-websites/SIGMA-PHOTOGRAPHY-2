@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import confetti from "canvas-confetti";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   doc,
@@ -270,6 +271,7 @@ export default function Checkout() {
 
     if (couponCode.trim().toUpperCase() === "SIGMA20") {
       setAppliedCoupon({ code: "SIGMA20", percentage: "20" });
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
       toast.success(`Coupon Applied! 20% OFF`);
       return;
     }
@@ -292,6 +294,7 @@ export default function Checkout() {
         }
       }
       setAppliedCoupon(matched);
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
       toast.success(`Coupon Applied! ${matched.percentage}% OFF`);
     } else {
       toast.error("Invalid coupon code");

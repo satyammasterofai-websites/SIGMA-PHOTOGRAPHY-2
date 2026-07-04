@@ -28,8 +28,11 @@ import {
   X,
   ExternalLink,
   CheckCircle,
+  MessageSquare,
 } from "lucide-react";
 import toast from "react-hot-toast";
+
+import SupportChat from "./user/SupportChat";
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
@@ -51,6 +54,7 @@ export default function DashboardLayout() {
     { name: "Dashboard", path: "/dashboard", icon: LayoutDashboard },
     { name: "My Orders", path: "/dashboard/orders", icon: ShoppingBag },
     { name: "Downloads", path: "/dashboard/downloads", icon: Download },
+    { name: "Support Chat", path: "/dashboard/chat", icon: MessageSquare },
     { name: "Profile", path: "/dashboard/profile", icon: User },
   ];
 
@@ -154,6 +158,7 @@ export default function DashboardLayout() {
               <Route path="/" element={<DashboardHome />} />
               <Route path="/orders" element={<MyOrders />} />
               <Route path="/downloads" element={<Downloads />} />
+              <Route path="/chat" element={<SupportChat />} />
               <Route path="/profile" element={<Profile />} />
             </Routes>
           </div>

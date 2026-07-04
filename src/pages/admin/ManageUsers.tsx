@@ -1,11 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Trash2, Edit } from 'lucide-react';
+import { Trash2, Edit, MessageSquare } from 'lucide-react';
 import toast from 'react-hot-toast';
+import CustomerDetail from './CustomerDetail';
 
 export default function ManageUsers() {
   const [users, setUsers] = useState<any[]>([]);
+  const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
 
@@ -42,6 +44,10 @@ export default function ManageUsers() {
 
   return (
     <div className="w-full">
+      {selectedUser ? (
+        <CustomerDetail user={selectedUser} onBack={() => setSelectedUser(null)} />
+      ) : (
+        <>
       {deleteUserId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
@@ -64,7 +70,7 @@ export default function ManageUsers() {
           </div>
         </div>
       )}
-      <h1 className="text-2xl font-bold text-brand-navy mb-6">User Management</h1>
+      <h1 className="text-2xl font-bold text-brand-navy mb-6">Customers Management</h1>
       <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-gray-300">
@@ -100,6 +106,9 @@ export default function ManageUsers() {
                   </td>
                   <td className="py-4 text-right">
                     <div className="flex justify-end gap-2">
+                       <button onClick={() => setSelectedUser(u)} className="p-2 text-indigo-400 hover:bg-indigo-400/10 rounded-lg" title="Chat / Orders">
+                         <MessageSquare className="w-4 h-4" />
+                       </button>
                        <button onClick={() => changeRole(u.id, u.role)} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-white rounded text-xs">
                          Toggle Role
                        </button>
@@ -115,6 +124,8 @@ export default function ManageUsers() {
           </table>
         </div>
       </div>
+      </>
+      )}
     </div>
   );
 }

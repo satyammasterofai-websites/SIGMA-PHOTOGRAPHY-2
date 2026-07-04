@@ -26,7 +26,7 @@ export default function ContactAndTestimonials() {
     if (!displayTestimonials || displayTestimonials.length <= 1) return;
     const interval = setInterval(() => {
       setCurrentTestimonialIndex((prev) => (prev + 1) % displayTestimonials.length);
-    }, 5000);
+    }, 2500);
     return () => clearInterval(interval);
   }, [displayTestimonials.length]);
 
@@ -61,7 +61,7 @@ export default function ContactAndTestimonials() {
                       initial={{ opacity: 0, scale: 1.02, filter: "blur(4px)" }}
                       animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
                       exit={{ opacity: 0, scale: 0.98, filter: "blur(4px)" }}
-                      transition={{ duration: 0.6, ease: "easeOut" }}
+                      transition={{ duration: 0.3, ease: "easeOut" }}
                       src={displayTestimonials[currentTestimonialIndex]?.imageUrl || displayTestimonials[currentTestimonialIndex]?.image}
                       alt="Client Testimonial Screenshot"
                       className="w-full h-auto object-contain max-h-[80vh]"
@@ -73,13 +73,13 @@ export default function ContactAndTestimonials() {
                 <>
                   <button 
                     onClick={(e) => { e.stopPropagation(); prevTestimonial(); }}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur text-brand-purple p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform hover:bg-white hover:scale-110 z-20"
+                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur text-brand-purple p-3 rounded-full shadow-lg opacity-100 transition-opacity transform hover:bg-white hover:scale-110 z-20"
                   >
                     <ChevronLeft className="w-6 h-6" />
                   </button>
                   <button 
                     onClick={(e) => { e.stopPropagation(); nextTestimonial(); }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur text-brand-purple p-3 rounded-full shadow-lg opacity-0 group-hover:opacity-100 transition-opacity transform hover:bg-white hover:scale-110 z-20"
+                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur text-brand-purple p-3 rounded-full shadow-lg opacity-100 transition-opacity transform hover:bg-white hover:scale-110 z-20"
                   >
                     <ChevronRight className="w-6 h-6" />
                   </button>

@@ -24,7 +24,11 @@ export default function TemplateReviewsModal({ templateId, isOpen, onClose }: { 
     try {
       const q = query(collection(db, 'template_reviews'), where('templateId', '==', templateId));
       const snap = await getDocs(q);
-      const data = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => (b.createdAt?.toMillis() || 0) - (a.createdAt?.toMillis() || 0));
+      const data = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort((a: any, b: any) => {
+        const timeA = typeof a.createdAt?.toMillis === 'function' ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime();
+        const timeB = typeof b.createdAt?.toMillis === 'function' ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
       setReviews(data);
     } catch (e: any) {
       console.error(e);
@@ -151,7 +155,7 @@ export default function TemplateReviewsModal({ templateId, isOpen, onClose }: { 
                     </div>
                     {review.createdAt && (
                        <span className="text-xs text-gray-400 font-medium whitespace-nowrap">
-                         {new Date(review.createdAt.toMillis()).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
+                         {new Date(typeof review.createdAt?.toMillis === 'function' ? review.createdAt.toMillis() : review.createdAt).toLocaleDateString(undefined, { year: 'numeric', month: 'short', day: 'numeric' })}
                        </span>
                     )}
                   </div>

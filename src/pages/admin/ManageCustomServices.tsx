@@ -68,7 +68,11 @@ export default function ManageCustomServices() {
       // Fetch enquiries from orders collection
       const enqSnap = await getDocs(query(collection(db, "orders"), where("type", "==", "service_enquiry")));
       const enqData = enqSnap.docs.map(d => ({ id: d.id, ...d.data() }));
-      enqData.sort((a: any, b: any) => b.createdAt?.toMillis() - a.createdAt?.toMillis());
+      enqData.sort((a: any, b: any) => {
+        const timeA = typeof a.createdAt?.toMillis === 'function' ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime();
+        const timeB = typeof b.createdAt?.toMillis === 'function' ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime();
+        return timeB - timeA;
+      });
       setEnquiries(enqData);
     } catch(e) {
       toast.error("Failed to load custom services.");
@@ -282,7 +286,7 @@ export default function ManageCustomServices() {
                       {enquiries.map((enq) => (
                         <tr key={enq.id} className="border-b border-gray-800 hover:bg-gray-800/50">
                            <td className="px-6 py-4 whitespace-nowrap">
-                              {enq.createdAt ? format(enq.createdAt.toDate(), 'PPP p') : 'Unknown'}
+                              {enq.createdAt ? format(typeof enq.createdAt?.toDate === 'function' ? enq.createdAt.toDate() : new Date(enq.createdAt), 'PPP p') : 'Unknown'}
                            </td>
                            <td className="px-6 py-4">
                               <div className="text-white font-medium">{enq.fullName}</div>

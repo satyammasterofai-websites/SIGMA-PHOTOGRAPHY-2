@@ -1,4 +1,5 @@
 import React, { useState, useEffect } from "react";
+import confetti from "canvas-confetti";
 import { collection, getDocs, query, where } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import Navbar from "../components/Navbar";
@@ -70,6 +71,7 @@ export default function PremiumGallery() {
         ...prev,
         [templateId]: { code: "SIGMA20", percentage: "20" },
       }));
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
       toast.success(`Coupon Applied! 20% OFF`);
       return;
     }
@@ -95,6 +97,7 @@ export default function PremiumGallery() {
         ...prev,
         [templateId]: matched,
       }));
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
       toast.success(`Coupon Applied! ${matched.percentage}% OFF`);
     } else {
       toast.error("Invalid coupon code");

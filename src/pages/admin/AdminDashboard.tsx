@@ -54,7 +54,7 @@ export default function AdminDashboardLayout() {
     { name: 'Testimonials', path: '/admin/testimonials', icon: MessageSquare },
     { name: 'FAQ', path: '/admin/faq', icon: HelpCircle },
     { name: 'Announcements', path: '/admin/notifications', icon: Bell },
-    { name: 'Users', path: '/admin/users', icon: Users },
+    { name: 'Customers', path: '/admin/users', icon: Users },
     { name: 'Site Content', path: '/admin/content', icon: Settings },
   ];
 
