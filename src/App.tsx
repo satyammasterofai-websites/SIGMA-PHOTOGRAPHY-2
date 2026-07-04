@@ -38,6 +38,7 @@ import { usePresence } from './hooks/usePresence';
 
 import SplashVideo from './components/SplashVideo';
 import WhatsAppButton from './components/WhatsAppButton';
+import SupportChatButton from './components/SupportChatButton';
 
 function AppContent() {
   usePresence();
@@ -45,6 +46,7 @@ function AppContent() {
     <Router>
       <SplashVideo />
       <WhatsAppButton />
+      <SupportChatButton />
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/gallery" element={<PremiumGallery />} />

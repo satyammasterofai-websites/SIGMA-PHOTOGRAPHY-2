@@ -14,7 +14,8 @@ export default function Login() {
   const [loading, setLoading] = useState(false);
   const navigate = useNavigate();
   const location = useLocation();
-  const redirectTo = location.state?.redirectTo;
+  const searchParams = new URLSearchParams(location.search);
+  const redirectTo = location.state?.redirectTo || searchParams.get('redirect');
   const template = location.state?.template;
 
   const handleCustomRedirect = async (user: any) => {
