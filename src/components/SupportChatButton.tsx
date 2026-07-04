@@ -6,12 +6,7 @@ import { useAuthStore } from '../store/useAuthStore';
 
 export default function SupportChatButton() {
   const navigate = useNavigate();
-  const { user, role } = useAuthStore();
-
-  // Don't show the button for admins, as they have the admin panel
-  if (role === 'admin') {
-    return null;
-  }
+  const { user } = useAuthStore();
 
   const handleClick = () => {
     if (user) {
@@ -40,7 +35,7 @@ export default function SupportChatButton() {
           <span className="relative inline-flex rounded-full h-4 w-4 bg-brand-rose border-2 border-white"></span>
         </span>
       </motion.button>
-      <span className="text-[10px] text-gray-500 font-medium mt-1 drop-shadow-md">Live Chat</span>
+      <span className="text-[10px] text-gray-500 font-medium mt-1 drop-shadow-md">Chat now</span>
     </div>
   );
 }
