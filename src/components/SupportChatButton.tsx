@@ -11,13 +11,11 @@ export default function SupportChatButton() {
   const constraintsRef = useRef(null);
   const { unreadCount, clearUnread } = useChatStore();
 
-  if (role === 'admin') {
-    return null;
-  }
-
   const handleClick = () => {
     clearUnread();
-    if (user) {
+    if (role === 'admin') {
+      navigate('/admin/users');
+    } else if (user) {
       navigate('/dashboard/chat');
     } else {
       navigate('/login', { state: { redirectTo: '/dashboard/chat' } });
