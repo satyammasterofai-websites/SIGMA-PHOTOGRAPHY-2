@@ -24,14 +24,13 @@ export default function ManageUsers() {
   useEffect(() => {
     const q = query(
       collection(db, 'chats'),
-      where('sender', '==', 'user'),
       where('read', '==', false)
     );
     const unsub = onSnapshot(q, (snapshot) => {
       const counts: Record<string, number> = {};
       snapshot.docs.forEach(doc => {
         const data = doc.data();
-        if (data.userId) {
+        if (data.sender === 'user' && data.userId) {
           counts[data.userId] = (counts[data.userId] || 0) + 1;
         }
       });

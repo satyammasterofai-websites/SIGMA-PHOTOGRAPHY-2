@@ -41,8 +41,11 @@ export function useTypingIndicator(chatUserId: string) {
         [role]: typing,
         lastUpdated: serverTimestamp()
       }, { merge: true });
-    } catch (e) {
-      console.error('Error updating typing status', e);
+    } catch (e: any) {
+      // Silently ignore permission errors for typing indicator to avoid console spam if rules aren't deployed yet
+      if (e.code !== 'permission-denied') {
+        console.error('Error updating typing status', e);
+      }
     }
   };
 
