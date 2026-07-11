@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Trash2, Edit, MessageSquare } from 'lucide-react';
+import { Trash2, Edit, MessageSquare, Mail } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CustomerDetail from './CustomerDetail';
 
@@ -10,12 +10,34 @@ export default function ManageUsers() {
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
+  const [unreadMap, setUnreadMap] = useState<Record<string, number>>({});
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'users'), (snapshot) => {
       setUsers(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (error) => {
       console.error("Error fetching users:", error);
+    });
+    return () => unsub();
+  }, []);
+
+  useEffect(() => {
+    const q = query(
+      collection(db, 'chats'),
+      where('sender', '==', 'user'),
+      where('read', '==', false)
+    );
+    const unsub = onSnapshot(q, (snapshot) => {
+      const counts: Record<string, number> = {};
+      snapshot.docs.forEach(doc => {
+        const data = doc.data();
+        if (data.userId) {
+          counts[data.userId] = (counts[data.userId] || 0) + 1;
+        }
+      });
+      setUnreadMap(counts);
+    }, (error) => {
+      console.error("Error fetching unread chats:", error);
     });
     return () => unsub();
   }, []);
@@ -106,8 +128,16 @@ export default function ManageUsers() {
                   </td>
                   <td className="py-4 text-right">
                     <div className="flex justify-end gap-2">
-                       <button onClick={() => setSelectedUser(u)} className="p-2 text-indigo-400 hover:bg-indigo-400/10 rounded-lg" title="Chat / Orders">
+                       <a href={`mailto:${u.email}`} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg" title="Send Email">
+                         <Mail className="w-4 h-4" />
+                       </a>
+                       <button onClick={() => setSelectedUser(u)} className="relative p-2 text-indigo-400 hover:bg-indigo-400/10 rounded-lg" title="Chat / Orders">
                          <MessageSquare className="w-4 h-4" />
+                         {unreadMap[u.id] > 0 && (
+                           <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
+                             {unreadMap[u.id]}
+                           </span>
+                         )}
                        </button>
                        <button onClick={() => changeRole(u.id, u.role)} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-white rounded text-xs">
                          Toggle Role

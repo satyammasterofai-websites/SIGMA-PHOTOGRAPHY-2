@@ -295,24 +295,23 @@ export default function ManageSplashVideo() {
         {enabled && videoUrl && (
           <div className="mt-4 border rounded-lg overflow-hidden aspect-video relative bg-black flex items-center justify-center">
             {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') || videoUrl.includes('vimeo.com') ? (
-              /* @ts-ignore */
-              <ReactPlayer
-                url={videoUrl}
-                playing={true}
-                muted={false}
-                controls={true}
-                width="100%"
-                height="100%"
-                playsinline={true}
-                config={{
+              React.createElement(ReactPlayer as any, {
+                url: videoUrl,
+                playing: true,
+                muted: false,
+                controls: true,
+                width: "100%",
+                height: "100%",
+                playsinline: true,
+                config: {
                   youtube: {
-                    playerVars: { showinfo: 0, rel: 0, autoplay: 1, muted: 0, playsinline: 1 } as any
+                    playerVars: { showinfo: 0, rel: 0, autoplay: 1, muted: 0, playsinline: 1 }
                   },
                   vimeo: {
-                    playerOptions: { title: 0, byline: 0, portrait: 0 } as any
+                    playerOptions: { title: 0, byline: 0, portrait: 0 }
                   }
-                }}
-              />
+                }
+              })
             ) : (
               <video 
                 src={videoUrl} 

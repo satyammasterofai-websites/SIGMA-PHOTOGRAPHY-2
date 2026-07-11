@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef } from "react";
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { Send, ArrowLeft, Mail } from "lucide-react";
+import { Send, ArrowLeft, Mail, Check, CheckCheck } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTypingIndicator } from "../../hooks/useTypingIndicator";
 
 interface CustomerDetailProps {
   user: any;
@@ -15,6 +16,7 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
   const [newMessage, setNewMessage] = useState("");
   const [orders, setOrders] = useState<any[]>([]);
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  const { isTyping, updateTyping } = useTypingIndicator(user?.id || '');
 
   useEffect(() => {
     if (!user) return;
@@ -23,7 +25,7 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
       where("userId", "==", user.id)
     );
     const unsub = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as any));
       data.sort((a: any, b: any) => {
         const timeA = a.timestamp ? (typeof a.timestamp.toMillis === 'function' ? a.timestamp.toMillis() : new Date(a.timestamp).getTime()) : Date.now();
         const timeB = b.timestamp ? (typeof b.timestamp.toMillis === 'function' ? b.timestamp.toMillis() : new Date(b.timestamp).getTime()) : Date.now();
@@ -31,6 +33,17 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
       });
       setMessages(data);
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+
+      // Mark unread messages from user as read
+      if (activeTab === 'chat') {
+        data.forEach(msg => {
+          if (msg.sender === 'user' && !msg.read) {
+            import('firebase/firestore').then(({ doc, updateDoc }) => {
+              updateDoc(doc(db, 'chats', msg.id), { read: true }).catch(console.error);
+            });
+          }
+        });
+      }
     });
 
     const ordersQ = query(
@@ -39,7 +52,7 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
     );
     getDocs(ordersQ).then((snapshot) => {
       const fetchedOrders = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      fetchedOrders.sort((a, b) => {
+      fetchedOrders.sort((a: any, b: any) => {
         const timeA = typeof a.createdAt?.toMillis === 'function' ? a.createdAt.toMillis() : new Date(a.createdAt || 0).getTime();
         const timeB = typeof b.createdAt?.toMillis === 'function' ? b.createdAt.toMillis() : new Date(b.createdAt || 0).getTime();
         return timeB - timeA;
@@ -49,6 +62,11 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
 
     return () => unsub();
   }, [user]);
+
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    updateTyping(e.target.value.length > 0);
+  };
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -61,8 +79,10 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
         sender: "admin",
         text: newMessage,
         timestamp: serverTimestamp(),
+        read: false
       });
       setNewMessage("");
+      updateTyping(false);
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message");
@@ -119,17 +139,34 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
                     }`}
                   >
                     <p className="text-sm">{msg.text}</p>
-                    <p className="text-[10px] mt-1 opacity-70 text-right">
-                      {(msg.timestamp && typeof msg.timestamp.toDate === 'function') 
-                        ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
-                        : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...')}
-                    </p>
+                    <div className="flex items-center justify-end gap-1 text-[10px] mt-1 opacity-70">
+                      <span>
+                        {(msg.timestamp && typeof msg.timestamp.toDate === 'function') 
+                          ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
+                          : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...')}
+                      </span>
+                      {msg.sender === 'admin' && (
+                        msg.read ? <CheckCheck className="w-3 h-3 text-blue-300" /> : <Check className="w-3 h-3" />
+                      )}
+                    </div>
                   </div>
                 </div>
               ))}
               {messages.length === 0 && (
                 <div className="h-full flex items-center justify-center text-gray-500 text-sm">
                   No messages yet.
+                </div>
+              )}
+              {isTyping && (
+                <div className="flex justify-start">
+                  <div className="bg-gray-800 border border-gray-700 text-gray-400 rounded-2xl rounded-bl-none px-5 py-3 shadow-sm text-sm flex items-center gap-2">
+                    <span className="flex gap-1">
+                      <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce"></span>
+                      <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                      <span className="w-2 h-2 bg-gray-500 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+                    </span>
+                    User is typing...
+                  </div>
                 </div>
               )}
               <div ref={messagesEndRef} />
@@ -139,7 +176,7 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
               <input
                 type="text"
                 value={newMessage}
-                onChange={(e) => setNewMessage(e.target.value)}
+                onChange={handleMessageChange}
                 placeholder="Type your message..."
                 className="flex-1 px-4 py-2 bg-gray-800 border border-gray-700 rounded-xl focus:outline-none focus:ring-1 focus:ring-brand-electric text-white placeholder-gray-500"
               />

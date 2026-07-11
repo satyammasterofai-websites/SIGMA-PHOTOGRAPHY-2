@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Trash2, Plus, Image as ImageIcon } from 'lucide-react';
+import { Trash2, Plus, Image as ImageIcon, Edit2, X } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fileToBase64 } from '../../lib/utils';
 import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
@@ -10,6 +10,10 @@ export default function ManageCategories() {
   const [categories, setCategories] = useState<any[]>([]);
   const [newCatName, setNewCatName] = useState('');
   const [newCatImage, setNewCatImage] = useState('');
+  
+  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  const [editCatName, setEditCatName] = useState('');
+  const [editCatImage, setEditCatImage] = useState('');
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
@@ -83,7 +87,7 @@ export default function ManageCategories() {
     }
     
     // Check for duplicate category name
-    const isDuplicate = categories.some(
+    const isDuplicate = (categories || []).some(
       (cat: any) => cat.name.toLowerCase() === newCatName.toLowerCase().trim()
     );
     
@@ -99,8 +103,9 @@ export default function ManageCategories() {
         name: newCatName.trim(),
         image: newCatImage
       };
+      const existingItems = Array.isArray(categories) ? categories : [];
       await setDoc(doc(db, 'content', 'categories'), {
-        items: [...categories, newCat]
+        items: [...existingItems, newCat]
       });
       toast.success("Sub Template Category added");
       setNewCatName('');
@@ -114,7 +119,7 @@ export default function ManageCategories() {
   const confirmDelete = async () => {
     if(!deleteId) return;
     try {
-      const newCategories = categories.filter((c: any) => c.id !== deleteId);
+      const newCategories = (categories || []).filter((c: any) => c.id !== deleteId);
       await setDoc(doc(db, 'content', 'categories'), {
         items: newCategories
       });
@@ -123,6 +128,69 @@ export default function ManageCategories() {
     } catch (e) {
       toast.error("Failed to delete category");
       setDeleteId(null);
+    }
+  };
+
+  const startEdit = (cat: any) => {
+    setEditingCatId(cat.id);
+    setEditCatName(cat.name);
+    setEditCatImage(cat.image || '');
+  };
+
+  const cancelEdit = () => {
+    setEditingCatId(null);
+    setEditCatName('');
+    setEditCatImage('');
+  };
+
+  const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_WIDTH = 400;
+          const MAX_HEIGHT = 400;
+          if (width > height) {
+            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+          } else {
+            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+          }
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          setEditCatImage(canvas.toDataURL('image/jpeg', 0.6));
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const saveEdit = async () => {
+    if (!editCatName.trim() || !editingCatId) return;
+    
+    const isDuplicate = (categories || []).some(
+      (cat: any) => cat.id !== editingCatId && cat.name.toLowerCase() === editCatName.toLowerCase().trim()
+    );
+    if (isDuplicate) {
+      toast.error("Another category with this name already exists.");
+      return;
+    }
+
+    try {
+      const newCategories = (categories || []).map(cat => 
+        cat.id === editingCatId ? { ...cat, name: editCatName.trim(), image: editCatImage } : cat
+      );
+      await setDoc(doc(db, 'content', 'categories'), { items: newCategories });
+      toast.success("Category updated");
+      cancelEdit();
+    } catch (e: any) {
+      toast.error(e.message || "Failed to update category");
     }
   };
 
@@ -186,9 +254,16 @@ export default function ManageCategories() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {categories.map(cat => (
+        {(categories || []).map(cat => (
           <div key={cat.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4 relative group">
-            <div className="absolute top-6 right-6 z-10">
+            <div className="absolute top-4 right-4 z-10 flex gap-2">
+              <button 
+                onClick={() => startEdit(cat)} 
+                className="bg-indigo-500/90 backdrop-blur hover:bg-indigo-600 text-white p-2 rounded-lg shadow-lg relative z-20" 
+                title="Edit Category"
+              >
+                <Edit2 className="w-4 h-4" />
+              </button>
               <button 
                 onClick={() => setDeleteId(cat.id)} 
                 className="bg-red-500/90 backdrop-blur hover:bg-red-600 text-white p-2 rounded-lg shadow-lg relative z-20" 
@@ -197,17 +272,45 @@ export default function ManageCategories() {
                 <Trash2 className="w-4 h-4" />
               </button>
             </div>
-            <div className="h-40 w-full mb-3 bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center relative">
-              {cat.image ? (
-                <img src={cat.image} alt={cat.name} className="max-w-full max-h-full object-contain" />
-              ) : (
-                <ImageIcon className="w-8 h-8 text-gray-500" />
-              )}
-            </div>
-            <h3 className="text-white font-medium text-lg text-center">{cat.name}</h3>
+
+            {editingCatId === cat.id ? (
+              <div className="flex flex-col gap-3 mt-8 relative z-30">
+                <input 
+                  type="text" 
+                  value={editCatName} 
+                  onChange={e => setEditCatName(e.target.value)} 
+                  className="w-full bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-lg text-sm"
+                />
+                <div className="flex items-center gap-3">
+                   <div className="relative h-10 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center overflow-hidden w-20 cursor-pointer">
+                    {editCatImage ? (
+                      <img src={editCatImage} alt="Preview" className="max-w-full max-h-full object-contain" />
+                    ) : (
+                      <span className="text-[10px] text-gray-500">Image</span>
+                    )}
+                    <input type="file" accept="image/*" onChange={handleEditImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+                  </div>
+                  <div className="flex gap-2 flex-1">
+                    <button onClick={saveEdit} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-sm flex-1">Save</button>
+                    <button onClick={cancelEdit} className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded text-sm"><X className="w-4 h-4"/></button>
+                  </div>
+                </div>
+              </div>
+            ) : (
+              <>
+                <div className="h-40 w-full mb-3 bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center relative mt-2">
+                  {cat.image ? (
+                    <img src={cat.image} alt={cat.name} className="max-w-full max-h-full object-contain" />
+                  ) : (
+                    <ImageIcon className="w-8 h-8 text-gray-500" />
+                  )}
+                </div>
+                <h3 className="text-white font-medium text-lg text-center">{cat.name}</h3>
+              </>
+            )}
           </div>
         ))}
-        {categories.length === 0 && <p className="text-gray-500 col-span-3 text-center py-8">No categories added yet.</p>}
+        {(!categories || categories.length === 0) && <p className="text-gray-500 col-span-3 text-center py-8">No categories added yet.</p>}
       </div>
     </div>
   );

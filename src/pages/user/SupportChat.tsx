@@ -1,15 +1,18 @@
 import React, { useState, useEffect, useRef } from "react";
-import { collection, query, where, orderBy, onSnapshot, addDoc, serverTimestamp } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuthStore } from "../../store/useAuthStore";
-import { Send } from "lucide-react";
+import { Send, Check, CheckCheck } from "lucide-react";
 import toast from "react-hot-toast";
+import { useTypingIndicator } from "../../hooks/useTypingIndicator";
 
 export default function SupportChat() {
   const { user } = useAuthStore();
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
+  
+  const { isTyping, updateTyping } = useTypingIndicator(user?.uid || '');
 
   useEffect(() => {
     if (!user) return;
@@ -18,7 +21,7 @@ export default function SupportChat() {
       where("userId", "==", user.uid)
     );
     const unsub = onSnapshot(q, (snapshot) => {
-      const data = snapshot.docs.map((doc) => ({ id: doc.id, ...doc.data() }));
+      const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as any));
       data.sort((a: any, b: any) => {
         const timeA = a.timestamp ? (typeof a.timestamp.toMillis === 'function' ? a.timestamp.toMillis() : new Date(a.timestamp).getTime()) : Date.now();
         const timeB = b.timestamp ? (typeof b.timestamp.toMillis === 'function' ? b.timestamp.toMillis() : new Date(b.timestamp).getTime()) : Date.now();
@@ -26,14 +29,25 @@ export default function SupportChat() {
       });
       setMessages(data);
       setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+
+      // Mark unread messages from admin as read
+      data.forEach(msg => {
+        if (msg.sender === 'admin' && !msg.read) {
+          updateDoc(doc(db, 'chats', msg.id), { read: true }).catch(console.error);
+        }
+      });
     });
     return () => unsub();
   }, [user]);
 
+  const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    setNewMessage(e.target.value);
+    updateTyping(e.target.value.length > 0);
+  };
+
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
-
     try {
       await addDoc(collection(db, "chats"), {
         userId: user.uid,
@@ -41,8 +55,10 @@ export default function SupportChat() {
         sender: "user",
         text: newMessage,
         timestamp: serverTimestamp(),
+        read: false
       });
       setNewMessage("");
+      updateTyping(false);
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message");
@@ -70,17 +86,34 @@ export default function SupportChat() {
               }`}
             >
               <p>{msg.text}</p>
-              <p className={`text-[10px] mt-1 text-right ${msg.sender === 'user' ? 'text-white/70' : 'text-gray-400'}`}>
-                {(msg.timestamp && typeof msg.timestamp.toDate === 'function') 
+              <div className={`flex items-center justify-end gap-1 text-[10px] mt-1 ${msg.sender === 'user' ? 'text-white/70' : 'text-gray-400'}`}>
+                <span>
+                  {(msg.timestamp && typeof msg.timestamp.toDate === 'function') 
                   ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
                   : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...')}
-              </p>
+                </span>
+                {msg.sender === 'user' && (
+                  msg.read ? <CheckCheck className="w-3 h-3 text-blue-300" /> : <Check className="w-3 h-3 opacity-70" />
+                )}
+              </div>
             </div>
           </div>
         ))}
         {messages.length === 0 && (
           <div className="h-full flex items-center justify-center text-gray-400">
             No messages yet. Start a conversation!
+          </div>
+        )}
+        {isTyping && (
+          <div className="flex justify-start">
+            <div className="bg-white border border-gray-200 text-gray-500 rounded-2xl rounded-bl-none px-5 py-3 shadow-sm text-sm flex items-center gap-2">
+              <span className="flex gap-1">
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce"></span>
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.2s' }}></span>
+                <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce" style={{ animationDelay: '0.4s' }}></span>
+              </span>
+              Support is typing...
+            </div>
           </div>
         )}
         <div ref={messagesEndRef} />
@@ -90,7 +123,7 @@ export default function SupportChat() {
         <input
           type="text"
           value={newMessage}
-          onChange={(e) => setNewMessage(e.target.value)}
+          onChange={handleMessageChange}
           placeholder="Type your message..."
           className="flex-1 px-4 py-3 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:ring-2 focus:ring-brand-purple/50 focus:border-brand-purple text-gray-900"
         />
