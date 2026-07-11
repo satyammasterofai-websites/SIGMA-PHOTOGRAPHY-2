@@ -1,69 +1,60 @@
-import { useEffect, useState } from 'react';
-import { collection, query, where, onSnapshot, orderBy, limit } from 'firebase/firestore';
+import { useChatStore } from '../store/useChatStore';
+import { useEffect, useRef } from 'react';
+import { collection, query, where, onSnapshot } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { useAuthStore } from '../store/useAuthStore';
 import toast from 'react-hot-toast';
 
 export function useChatNotifications() {
   const { user, role } = useAuthStore();
-  const [unreadCount, setUnreadCount] = useState(0);
+  const { setUnreadCount } = useChatStore();
+  const isInitialLoad = useRef(true);
 
   useEffect(() => {
     if (!user) return;
-
-    let q;
+    isInitialLoad.current = true;
     
-    // For admin, listen to all messages from users
-    if (role === 'admin') {
-      q = query(
-        collection(db, 'chats'),
-        where('sender', '==', 'user'),
-        orderBy('timestamp', 'desc'),
-        limit(10)
-      );
-    } else {
-      // For user, listen to messages from admin to this user
-      q = query(
-        collection(db, 'chats'),
-        where('userId', '==', user.uid),
-        where('sender', '==', 'admin'),
-        orderBy('timestamp', 'desc'),
-        limit(10)
-      );
-    }
+    let unsubFb = () => {};
+
+    // We use a simple query to avoid composite index requirements
+    const q = role === 'admin' 
+      ? query(collection(db, 'chats'), where('sender', '==', 'user'))
+      : query(collection(db, 'chats'), where('userId', '==', user.uid));
 
     const unsub = onSnapshot(q, (snapshot) => {
-      // Show toast for new messages
-      snapshot.docChanges().forEach((change) => {
-        if (change.type === 'added') {
-          const msg = change.doc.data();
-          const now = Date.now();
-          const msgTime = msg.timestamp ? 
-            (typeof msg.timestamp.toMillis === 'function' ? msg.timestamp.toMillis() : new Date(msg.timestamp).getTime()) 
-            : now;
-          
-          if (now - msgTime < 10000) {
-            toast(`New message from ${role === 'admin' ? msg.userEmail || 'User' : 'Support'}:\n${msg.text}`, {
-              icon: '💬',
-              duration: 5000,
-            });
-          }
-        }
+      const unreadDocs = snapshot.docs.filter(d => {
+        const data = d.data();
+        return data.read === false && data.sender === (role === 'admin' ? 'user' : 'admin');
       });
       
-      // Calculate actual unread count if we're a user
-      if (role !== 'admin') {
-        const unread = snapshot.docs.filter(doc => doc.data().read === false).length;
-        setUnreadCount(unread);
+      setUnreadCount(unreadDocs.length);
+      
+      if (!isInitialLoad.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const msg = change.doc.data();
+            if (msg.read === false && msg.sender === (role === 'admin' ? 'user' : 'admin')) {
+              toast(`New message from ${role === 'admin' ? msg.userEmail || 'User' : 'Support'}:\n${msg.text}`, {
+                icon: '💬',
+                duration: 5000,
+              });
+            }
+          }
+        });
       } else {
-        // Admin logic can stay the same or use global context if needed
+        isInitialLoad.current = false;
       }
+    }, (error) => {
+      console.error('Chat notification error:', error);
     });
 
-    return () => unsub();
+    return () => {
+      unsub();
+      unsubFb();
+    };
   }, [user, role]);
 
-  const clearUnread = () => setUnreadCount(0);
+  const { clearUnread } = useChatStore();
 
-  return { unreadCount, clearUnread };
+  return null;
 }

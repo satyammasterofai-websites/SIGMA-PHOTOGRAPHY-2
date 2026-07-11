@@ -3,13 +3,13 @@ import { motion } from 'motion/react';
 import { useNavigate } from 'react-router-dom';
 import { MessageCircle } from 'lucide-react';
 import { useAuthStore } from '../store/useAuthStore';
-import { useChatNotifications } from '../hooks/useChatNotifications';
+import { useChatStore } from '../store/useChatStore';
 
 export default function SupportChatButton() {
   const navigate = useNavigate();
   const { user, role } = useAuthStore();
   const constraintsRef = useRef(null);
-  const { unreadCount, clearUnread } = useChatNotifications();
+  const { unreadCount, clearUnread } = useChatStore();
 
   if (role === 'admin') {
     return null;

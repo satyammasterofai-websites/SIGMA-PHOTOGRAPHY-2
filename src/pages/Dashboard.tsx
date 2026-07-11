@@ -33,12 +33,14 @@ import {
 import toast from "react-hot-toast";
 
 import SupportChat from "./user/SupportChat";
+import { useChatStore } from '../store/useChatStore';
 
 export default function DashboardLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const { user, role } = useAuthStore();
   const navigate = useNavigate();
   const location = useLocation();
+  const { unreadCount } = useChatStore();
 
   const handleLogout = async () => {
     try {
@@ -108,6 +110,11 @@ export default function DashboardLayout() {
                     className={`w-5 h-5 ${active ? "text-brand-purple" : "text-gray-400"}`}
                   />
                   {item.name}
+                  {item.name === 'Support Chat' && unreadCount > 0 && (
+                    <span className="ml-auto bg-brand-rose text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
+                      {unreadCount}
+                    </span>
+                  )}
                 </Link>
               );
             })}
