@@ -18,6 +18,9 @@ export default function ManageSettings() {
   // General State
   const [baseOnlineUsers, setBaseOnlineUsers] = useState(50);
 
+  // Chat State
+  const [welcomeMessage, setWelcomeMessage] = useState("Hello! How can we help you today?");
+
   // WhatsApp State
   const [waNumber, setWaNumber] = useState("9162478070");
   const [waMessageFormat, setWaMessageFormat] = useState(
@@ -55,6 +58,9 @@ export default function ManageSettings() {
             );
             setWaOrderingEnabled(data.whatsapp.enabled !== false);
           }
+          if (data.welcomeMessage) {
+            setWelcomeMessage(data.welcomeMessage);
+          }
           if (data.checkoutFormNote) {
             setCheckoutFormNote(data.checkoutFormNote);
           }
@@ -80,6 +86,7 @@ export default function ManageSettings() {
             messageFormat: waMessageFormat,
             enabled: waOrderingEnabled,
           },
+          welcomeMessage,
           checkoutFormNote,
           coupons: finalCoupons,
         },
@@ -142,7 +149,7 @@ export default function ManageSettings() {
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 md:p-8">
         {activeTab === "general" && (
           <div className="space-y-6 max-w-2xl">
-            <div className="pb-6 border-b border-gray-800">
+                        <div className="pb-6 border-b border-gray-800">
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Base Online Users (Default is 50)
               </label>
@@ -152,6 +159,23 @@ export default function ManageSettings() {
                 onChange={(e) => setBaseOnlineUsers(Number(e.target.value))}
                 className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3"
               />
+            </div>
+
+            <div className="pb-6 border-b border-gray-800">
+              <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
+                <MessageSquare className="w-4 h-4 text-brand-electric" />
+                Live Chat Welcome Message
+              </label>
+              <textarea
+                value={welcomeMessage}
+                onChange={(e) => setWelcomeMessage(e.target.value)}
+                rows={3}
+                placeholder="Hello! How can we help you today?"
+                className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3"
+              />
+              <p className="text-xs text-gray-500 mt-2">
+                This message will be shown to users when they open the live chat.
+              </p>
             </div>
             <div>
               <label className="flex items-center gap-3 cursor-pointer">

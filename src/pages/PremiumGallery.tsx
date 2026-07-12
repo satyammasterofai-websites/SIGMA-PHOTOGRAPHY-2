@@ -459,54 +459,14 @@ export default function PremiumGallery() {
               <div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin"></div>
             </div>
           ) : (
-            (() => {
-              const hindiTemplates = filteredTemplates.filter(t => t.language === 'Hindi');
-              const englishTemplates = filteredTemplates.filter(t => t.language === 'English');
-              const otherTemplates = filteredTemplates.filter(t => t.language !== 'Hindi' && t.language !== 'English');
-              const showColumns = hindiTemplates.length > 0 || englishTemplates.length > 0;
-
-              return (
-                <div className="space-y-12 w-full">
-                  {showColumns && (
-                    <div className="flex flex-col lg:flex-row gap-8 w-full">
-                      {hindiTemplates.length > 0 && (
-                        <div className="flex-1 min-w-0">
-                          <h2 className="text-2xl font-bold mb-6 text-brand-navy flex items-center gap-2">
-                            <span className="w-8 h-1 bg-brand-rose rounded-full"></span>
-                            Hindi Templates
-                          </h2>
-                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {hindiTemplates.map(template => renderTemplateCard(template))}
-                          </div>
-                        </div>
-                      )}
-                      
-                      {englishTemplates.length > 0 && (
-                        <div className="flex-1 min-w-0">
-                          <h2 className="text-2xl font-bold mb-6 text-brand-navy flex items-center gap-2">
-                            <span className="w-8 h-1 bg-brand-purple rounded-full"></span>
-                            English Templates
-                          </h2>
-                          <div className="grid grid-cols-1 xl:grid-cols-2 gap-6">
-                            {englishTemplates.map(template => renderTemplateCard(template))}
-                          </div>
-                        </div>
-                      )}
-                    </div>
-                  )}
-                  {otherTemplates.length > 0 && (
-                    <div className="w-full">
-                      {showColumns && <h2 className="text-2xl font-bold mb-6 text-brand-navy flex items-center gap-2"><span className="w-8 h-1 bg-gray-400 rounded-full"></span>Other Templates</h2>}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                        {otherTemplates.map(template => renderTemplateCard(template))}
-                      </div>
-                    </div>
-                  )}
-
-
-                  
-
-                  {filteredTemplates.length === 0 && (
+            
+              <div className="space-y-12 w-full">
+                {filteredTemplates.length > 0 && (
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                    {filteredTemplates.map(template => renderTemplateCard(template))}
+                  </div>
+                )}
+                {filteredTemplates.length === 0 && (
                     <div className="col-span-full py-20 text-center w-full bg-white rounded-2xl border border-gray-100">
                       <p className="text-gray-500 text-lg">
                         No templates found matching your criteria.
@@ -524,8 +484,6 @@ export default function PremiumGallery() {
                     </div>
                   )}
                 </div>
-              );
-            })()
           )}
         </div>
       </main>

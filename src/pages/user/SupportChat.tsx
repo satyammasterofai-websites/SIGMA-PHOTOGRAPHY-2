@@ -6,8 +6,11 @@ import { Send, Check, CheckCheck } from "lucide-react";
 import toast from "react-hot-toast";
 import { useTypingIndicator } from "../../hooks/useTypingIndicator";
 
+import { useSiteStore } from "../../store/useSiteStore";
 export default function SupportChat() {
   const { user } = useAuthStore();
+  const { settings } = useSiteStore();
+  const welcomeMessage = settings?.welcomeMessage || "Hello! How can we help you today?";
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const messagesEndRef = useRef<HTMLDivElement>(null);
@@ -73,6 +76,11 @@ export default function SupportChat() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
+        <div className="flex justify-start">
+          <div className="max-w-[70%] rounded-2xl px-5 py-3 bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm">
+            <p className="whitespace-pre-wrap">{welcomeMessage}</p>
+          </div>
+        </div>
         {messages.map((msg) => (
           <div
             key={msg.id}
@@ -99,11 +107,7 @@ export default function SupportChat() {
             </div>
           </div>
         ))}
-        {messages.length === 0 && (
-          <div className="h-full flex items-center justify-center text-gray-400">
-            No messages yet. Start a conversation!
-          </div>
-        )}
+        
         {isTyping && (
           <div className="flex justify-start">
             <div className="bg-white border border-gray-200 text-gray-500 rounded-2xl rounded-bl-none px-5 py-3 shadow-sm text-sm flex items-center gap-2">
