@@ -244,7 +244,7 @@ export default function PremiumGallery() {
   const initialCategory = queryParams.get("category") || "All";
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [activeLanguage, setActiveLanguage] = useState("All");
-  const languages = ["All", "Hindi", "English", "Other"];
+  const languages = ["All", "English", "Hindi"];
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [reviewsTemplateId, setReviewsTemplateId] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -341,9 +341,7 @@ export default function PremiumGallery() {
     }
     if (activeLanguage !== "All") {
       result = result.filter(t => {
-        if (activeLanguage === "Other") {
-            return t.language !== "Hindi" && t.language !== "English";
-        }
+        
         return t.language === activeLanguage;
       });
     }
@@ -447,7 +445,7 @@ export default function PremiumGallery() {
                   onClick={() => setActiveLanguage(lang)}
                   className={`px-6 py-4 rounded-xl font-medium whitespace-nowrap transition-all ${activeLanguage === lang ? "bg-brand-rose text-white shadow-md" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
                 >
-                  {lang === "All" ? "All Languages" : lang}
+                  {lang === "All" ? "All" : lang + " Templates"}
                 </button>
               ))}
             </div>
@@ -464,7 +462,6 @@ export default function PremiumGallery() {
             (() => {
               const hindiTemplates = filteredTemplates.filter(t => t.language === 'Hindi');
               const englishTemplates = filteredTemplates.filter(t => t.language === 'English');
-              const otherTemplates = filteredTemplates.filter(t => t.language !== 'Hindi' && t.language !== 'English');
               const showColumns = hindiTemplates.length > 0 || englishTemplates.length > 0;
 
               return (
@@ -497,14 +494,7 @@ export default function PremiumGallery() {
                     </div>
                   )}
 
-                  {otherTemplates.length > 0 && (
-                    <div className="w-full">
-                      {showColumns && <h2 className="text-2xl font-bold mb-6 text-brand-navy flex items-center gap-2"><span className="w-8 h-1 bg-gray-400 rounded-full"></span>Other Templates</h2>}
-                      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
-                        {otherTemplates.map(template => renderTemplateCard(template))}
-                      </div>
-                    </div>
-                  )}
+                  
 
                   {filteredTemplates.length === 0 && (
                     <div className="col-span-full py-20 text-center w-full bg-white rounded-2xl border border-gray-100">
