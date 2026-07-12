@@ -22,6 +22,7 @@ import {
   LayoutDashboard,
   ShoppingBag,
   Download,
+  Play,
   User,
   LogOut,
   Menu,
@@ -271,6 +272,7 @@ function MyOrders() {
   const { user } = useAuthStore();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -486,6 +488,7 @@ function Downloads() {
   const { user } = useAuthStore();
   const [downloads, setDownloads] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
@@ -540,14 +543,22 @@ function Downloads() {
                 {new Date(d.createdAt).toLocaleDateString()} • Order #
                 {d.id.slice(-6)}
               </p>
-              <a
-                href={d.downloadUrl}
-                target="_blank"
-                rel="noreferrer"
-                className="w-full py-2 bg-brand-purple hover:bg-purple-700 text-white rounded-xl text-sm font-bold transition-colors"
-              >
-                Download Video
-              </a>
+              <div className="flex flex-col gap-2">
+                <button
+                  onClick={() => setPreviewVideoUrl(d.downloadUrl)}
+                  className="w-full flex justify-center items-center gap-2 py-2 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 rounded-xl text-sm font-bold transition-colors"
+                >
+                  <Play className="w-4 h-4" /> Preview Video
+                </button>
+                <a
+                  href={d.downloadUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                  className="w-full flex justify-center items-center gap-2 py-2 bg-brand-purple hover:bg-purple-700 text-white rounded-xl text-sm font-bold transition-colors"
+                >
+                  <Download className="w-4 h-4" /> Download Original
+                </a>
+              </div>
             </div>
           ))}
         </div>

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, deleteDoc, updateDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { fileToBase64 } from '../../lib/utils';
-import { Plus, Edit, Trash2, ImagePlus, Eye, Star, TrendingUp, Play, ShoppingBag, X } from 'lucide-react';
+import { Plus, Edit, Trash2, ImagePlus, Eye, Star, TrendingUp, Play, ShoppingBag, X, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 
@@ -30,6 +30,7 @@ export default function TemplateManagement() {
   const [baseOrdersCount, setBaseOrdersCount] = useState<number>(100);
   const [language, setLanguage] = useState('None');
   const [activeTab, setActiveTab] = useState('All');
+  const [searchQuery, setSearchQuery] = useState('');
   
   // Custom Fields
   const [customFields, setCustomFields] = useState<any[]>([]);
@@ -308,6 +309,20 @@ export default function TemplateManagement() {
       ) : (
         <>
 
+            {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search templates by title or category..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
+          />
+        </div>
+      </div>
+      
       {/* Category Tabs */}
       <div className="flex gap-2 overflow-x-auto mb-6 pb-2 scrollbar-thin scrollbar-thumb-gray-800">
         <button
@@ -342,7 +357,14 @@ export default function TemplateManagement() {
                 </tr>
               </thead>
               <tbody className="divide-y divide-gray-800">
-                {templates.filter(t => activeTab === 'All' ? true : t.category === activeTab).map(template => (
+                {templates.filter(t => {
+                  const matchesTab = activeTab === 'All' ? true : t.category === activeTab;
+                  const searchLower = searchQuery.toLowerCase();
+                  const matchesSearch = searchQuery === '' || 
+                    (t.title || '').toLowerCase().includes(searchLower) || 
+                    (t.category || '').toLowerCase().includes(searchLower);
+                  return matchesTab && matchesSearch;
+                }).map(template => (
                   <tr key={template.id} className="hover:bg-gray-800/30 transition-colors">
                     <td className="px-6 py-4">
                        <div className="w-16 h-12 rounded-lg bg-gray-800 overflow-hidden flex items-center justify-center">
@@ -707,7 +729,7 @@ export default function TemplateManagement() {
                           ₹{discountPrice || price || '0'}
                         </span>
                       </div>
-                      {advancePayment && advancePayment !== "0" && advancePayment !== 0 && (
+                      {advancePayment && advancePayment !== "0" && Number(advancePayment) !== 0 && (
                          <span className="block text-xs font-semibold text-orange-600 mt-1">
                            Advance: ₹{advancePayment}
                          </span>

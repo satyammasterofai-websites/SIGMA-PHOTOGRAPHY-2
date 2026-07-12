@@ -1,12 +1,13 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Trash2, Edit, MessageSquare, Mail } from 'lucide-react';
+import { Trash2, Edit, MessageSquare, Mail, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CustomerDetail from './CustomerDetail';
 
 export default function ManageUsers() {
   const [users, setUsers] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [selectedUser, setSelectedUser] = useState<any | null>(null);
 
   const [deleteUserId, setDeleteUserId] = useState<string | null>(null);
@@ -91,7 +92,22 @@ export default function ManageUsers() {
           </div>
         </div>
       )}
-      <h1 className="text-2xl font-bold text-brand-navy mb-6">Customers Management</h1>
+            <h1 className="text-2xl font-bold text-brand-navy mb-6">Customers Management</h1>
+      
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search customers by name, email, or role..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
+          />
+        </div>
+      </div>
+      
       <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
         <div className="overflow-x-auto">
           <table className="w-full text-left text-gray-300">
@@ -105,7 +121,13 @@ export default function ManageUsers() {
               </tr>
             </thead>
             <tbody>
-              {users.map(u => {
+              {users.filter(u => {
+                const searchLower = searchQuery.toLowerCase();
+                return searchQuery === '' || 
+                  (u.name || '').toLowerCase().includes(searchLower) ||
+                  (u.email || '').toLowerCase().includes(searchLower) ||
+                  (u.role || 'user').toLowerCase().includes(searchLower);
+              }).map(u => {
                 const isOnline = u.isOnline && u.lastSeen && (new Date().getTime() - u.lastSeen.toDate().getTime() < 2 * 60 * 1000);
                 return (
                 <tr key={u.id} className="border-b border-gray-800/50">

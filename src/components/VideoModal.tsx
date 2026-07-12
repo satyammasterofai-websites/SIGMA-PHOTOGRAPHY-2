@@ -8,6 +8,7 @@ interface VideoModalProps {
 
 export default function VideoModal({ url, onClose }: VideoModalProps) {
   let embedUrl = url;
+  let isVertical = false;
 
   if (url.includes("vimeo.com")) {
     const match = url.match(/vimeo\.com\/(\d+)/);
@@ -24,11 +25,18 @@ export default function VideoModal({ url, onClose }: VideoModalProps) {
     if (match) {
       embedUrl = `https://www.youtube.com/embed/${match[1]}`;
     }
+  } else if (url.includes("youtube.com/shorts/")) {
+    const match = url.match(/youtube\.com\/shorts\/([^/?]+)/);
+    if (match) {
+      embedUrl = `https://www.youtube.com/embed/${match[1]}`;
+      isVertical = true;
+    }
   } else if (url.includes("instagram.com")) {
     // Handle instagram.com/p/CODE or instagram.com/reel/CODE
     // Instagram embed URL is just the post URL + embed/
     // Ensure it ends with a slash before adding embed/ if it doesn't have one
     const cleanUrl = url.split("?")[0];
+    isVertical = true;
     embedUrl = cleanUrl.endsWith("/")
       ? `${cleanUrl}embed/`
       : `${cleanUrl}/embed/`;
@@ -36,7 +44,10 @@ export default function VideoModal({ url, onClose }: VideoModalProps) {
 
   return (
     <div className="fixed inset-0 z-[100] flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm shadow-2xl">
-      <div className="relative w-full max-w-5xl aspect-video bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/20">
+      <div 
+        className={`relative bg-black rounded-2xl overflow-hidden shadow-2xl border border-white/20 mx-auto w-full flex justify-center`}
+        style={isVertical ? { maxHeight: "90vh", width: "100%", maxWidth: "calc(90vh * 9 / 16)", aspectRatio: "9/16" } : { maxWidth: "64rem", aspectRatio: "16/9" }}
+      >
         <button
           onClick={onClose}
           className="absolute top-4 right-4 z-10 w-10 h-10 bg-black/50 text-white rounded-full flex items-center justify-center hover:bg-white border border-white/20 hover:text-black transition-colors"

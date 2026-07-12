@@ -1,13 +1,14 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Trash2, Plus, Image as ImageIcon, Edit2, X } from 'lucide-react';
+import { Trash2, Plus, Image as ImageIcon, Edit2, X, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fileToBase64 } from '../../lib/utils';
 import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 
 export default function ManageCategories() {
   const [categories, setCategories] = useState<any[]>([]);
+  const [searchQuery, setSearchQuery] = useState("");
   const [newCatName, setNewCatName] = useState('');
   const [newCatImage, setNewCatImage] = useState('');
   
@@ -253,8 +254,22 @@ export default function ManageCategories() {
         </form>
       </div>
 
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search categories..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
+          />
+        </div>
+      </div>
+
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {(categories || []).map(cat => (
+        {(categories || []).filter(cat => searchQuery === '' || cat.name.toLowerCase().includes(searchQuery.toLowerCase())).map(cat => (
           <div key={cat.id} className="bg-gray-900 border border-gray-800 rounded-xl p-4 relative group">
             <div className="absolute top-4 right-4 z-10 flex gap-2">
               <button 

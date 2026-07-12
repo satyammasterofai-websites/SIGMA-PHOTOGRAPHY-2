@@ -16,9 +16,11 @@ import {
   CheckCircle,
   Package,
   Link as LinkIcon,
-  Download,
+  Download, Search,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import VideoModal from "../../components/VideoModal";
+import { Play } from "lucide-react";
 
 export default function ManageOrders() {
   const [orders, setOrders] = useState<any[]>([]);
@@ -27,6 +29,8 @@ export default function ManageOrders() {
 
   const [deleteOrderId, setDeleteOrderId] = useState<string | null>(null);
   const [activeTab, setActiveTab] = useState("All");
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
+  const [searchQuery, setSearchQuery] = useState("");
 
   useEffect(() => {
     // We should show newest first
@@ -99,6 +103,7 @@ export default function ManageOrders() {
 
   return (
     <div className="w-full">
+      {previewVideoUrl && <VideoModal url={previewVideoUrl} onClose={() => setPreviewVideoUrl(null)} />}
       {deleteOrderId && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
           <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
@@ -124,7 +129,21 @@ export default function ManageOrders() {
           </div>
         </div>
       )}
-      <h1 className="text-2xl font-bold text-brand-navy mb-6">Order Management</h1>
+            <h1 className="text-2xl font-bold text-brand-navy mb-6">Order Management</h1>
+      
+      {/* Search Bar */}
+      <div className="mb-6">
+        <div className="relative">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <input
+            type="text"
+            placeholder="Search orders by ID, customer name, email, or phone..."
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+            className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
+          />
+        </div>
+      </div>
       
       {/* Order Tabs */}
       <div className="flex gap-2 overflow-x-auto mb-6 pb-2 scrollbar-thin scrollbar-thumb-gray-800">
@@ -168,6 +187,15 @@ export default function ManageOrders() {
               </thead>
               <tbody className="divide-y divide-gray-800">
                 {orders.filter(o => {
+          const searchLower = searchQuery.toLowerCase();
+          const matchesSearch = searchQuery === '' || 
+            (o.id || '').toLowerCase().includes(searchLower) ||
+            (o.customerInfo?.name || '').toLowerCase().includes(searchLower) ||
+            (o.customerInfo?.email || '').toLowerCase().includes(searchLower) ||
+            (o.customerInfo?.phone || '').toLowerCase().includes(searchLower);
+            
+          if (!matchesSearch) return false;
+          
           if (activeTab === 'All') return true;
           const st = o.status || 'Pending';
           if (activeTab === 'Pending') return st === 'Pending' || st === 'Processing';
@@ -409,7 +437,7 @@ export default function ManageOrders() {
                                 {order.downloadUrl ? (
                                   <div className="text-sm bg-green-500/10 border border-green-500/20 text-green-400 p-3 rounded-xl flex items-start gap-2">
                                     <LinkIcon className="w-4 h-4 mt-0.5" />
-                                    <div>
+                                    <div className="flex-1">
                                       <div className="font-bold mb-1">
                                         Link Sent to Client
                                       </div>
@@ -417,10 +445,16 @@ export default function ManageOrders() {
                                         href={order.downloadUrl}
                                         target="_blank"
                                         rel="noreferrer"
-                                        className="text-blue-400 hover:underline break-all"
+                                        className="text-blue-400 hover:underline break-all block mb-2"
                                       >
                                         {order.downloadUrl}
                                       </a>
+                                      <button
+                                        onClick={() => setPreviewVideoUrl(order.downloadUrl)}
+                                        className="flex items-center gap-1 bg-green-500/20 hover:bg-green-500/30 text-green-300 px-3 py-1 rounded text-xs font-medium"
+                                      >
+                                        <Play className="w-3 h-3" /> Preview Delivery Video
+                                      </button>
                                     </div>
                                   </div>
                                 ) : (
