@@ -243,6 +243,8 @@ export default function PremiumGallery() {
   const queryParams = new URLSearchParams(location.search);
   const initialCategory = queryParams.get("category") || "All";
   const [activeCategory, setActiveCategory] = useState(initialCategory);
+  const [activeLanguage, setActiveLanguage] = useState("All");
+  const languages = ["All", "Hindi", "English", "Other"];
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [reviewsTemplateId, setReviewsTemplateId] = useState<string | null>(null);
   const navigate = useNavigate();
@@ -337,6 +339,15 @@ export default function PremiumGallery() {
             normalizedActive,
       );
     }
+    if (activeLanguage !== "All") {
+      result = result.filter(t => {
+        if (activeLanguage === "Other") {
+            return t.language !== "Hindi" && t.language !== "English";
+        }
+        return t.language === activeLanguage;
+      });
+    }
+
     if (searchQuery) {
       result = result.filter(
         (t) =>
@@ -355,7 +366,7 @@ export default function PremiumGallery() {
     });
 
     setFilteredTemplates(result);
-  }, [searchQuery, activeCategory, templates]);
+  }, [searchQuery, activeCategory, activeLanguage, templates]);
 
   if (loading || cmsLoading) {
     return (
@@ -401,7 +412,8 @@ export default function PremiumGallery() {
           </div>
 
           {/* Search and Filters */}
-          <div className="flex flex-col md:flex-row gap-6 mb-12">
+          <div className="flex flex-col gap-6 mb-12">
+            <div className="flex flex-col md:flex-row gap-6">
             <div className="relative flex-1">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
               <input
@@ -428,6 +440,18 @@ export default function PremiumGallery() {
                 );
               })}
             </div>
+            <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 scrollbar-hide">
+              {languages.map((lang) => (
+                <button
+                  key={lang}
+                  onClick={() => setActiveLanguage(lang)}
+                  className={`px-6 py-4 rounded-xl font-medium whitespace-nowrap transition-all ${activeLanguage === lang ? "bg-brand-rose text-white shadow-md" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
+                >
+                  {lang === "All" ? "All Languages" : lang}
+                </button>
+              ))}
+            </div>
+          </div>
           </div>
 
           {/* Template Grid */}
@@ -491,6 +515,7 @@ export default function PremiumGallery() {
                         onClick={() => {
                           setSearchQuery("");
                           setActiveCategory("All");
+                          setActiveLanguage("All");
                         }}
                         className="mt-4 text-brand-purple font-medium hover:underline"
                       >
