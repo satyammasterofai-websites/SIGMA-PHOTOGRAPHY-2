@@ -244,6 +244,7 @@ export default function PremiumGallery() {
   const initialCategory = queryParams.get("category") || "All";
   const [activeCategory, setActiveCategory] = useState(initialCategory);
   const [activeLanguage, setActiveLanguage] = useState("All");
+  const [sortOrder, setSortOrder] = useState<"priceAsc" | "priceDesc">("priceAsc");
   const languages = ["All", "English", "Hindi"];
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [reviewsTemplateId, setReviewsTemplateId] = useState<string | null>(null);
@@ -358,13 +359,18 @@ export default function PremiumGallery() {
 
     // Sort by orders count
     result.sort((a, b) => {
-      const aOrders = (a.baseOrdersCount ?? 100) + (a.ordersCount || 0);
-      const bOrders = (b.baseOrdersCount ?? 100) + (b.ordersCount || 0);
-      return bOrders - aOrders;
+      const priceA = a.discountPrice ? Number(a.discountPrice) : Number(a.price || 0);
+      const priceB = b.discountPrice ? Number(b.discountPrice) : Number(b.price || 0);
+      
+      if (sortOrder === "priceAsc") {
+        return priceA - priceB;
+      } else {
+        return priceB - priceA;
+      }
     });
 
     setFilteredTemplates(result);
-  }, [searchQuery, activeCategory, activeLanguage, templates]);
+  }, [searchQuery, activeCategory, activeLanguage, sortOrder, templates]);
 
   if (loading || cmsLoading) {
     return (
@@ -422,6 +428,18 @@ export default function PremiumGallery() {
                 className="w-full bg-white border border-gray-200 rounded-xl pl-12 pr-4 py-4 focus:outline-none focus:ring-2 focus:ring-brand-purple shadow-sm"
               />
             </div>
+            
+            <div className="flex-shrink-0">
+              <select
+                value={sortOrder}
+                onChange={(e) => setSortOrder(e.target.value as any)}
+                className="h-full bg-white border border-gray-200 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-brand-purple shadow-sm font-medium text-gray-700"
+              >
+                <option value="priceAsc">Price: Low to High</option>
+                <option value="priceDesc">Price: High to Low</option>
+              </select>
+            </div>
+            
             <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 scrollbar-hide">
               {categories.map((cat) => {
                 const isActive =

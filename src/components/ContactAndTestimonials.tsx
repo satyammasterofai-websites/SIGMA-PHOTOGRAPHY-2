@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { MessageCircle, MapPin, Phone, Mail, Instagram, ArrowRight, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { MessageCircle, MapPin, Phone, Mail, Instagram, ArrowRight } from 'lucide-react';
+import TestimonialsCarousel from './TestimonialsCarousel';
 import { useSiteContent } from '../hooks/useSiteContent';
 import CustomServicesSection from './CustomServicesSection';
 
@@ -12,9 +13,7 @@ const defaultFaqs = [
 
 export default function ContactAndTestimonials() {
   const { testimonials: cmsTestimonials, faqs: cmsFaqs, contact } = useSiteContent();
-  const [selectedImage, setSelectedImage] = useState<string | null>(null);
-  const [currentTestimonialIndex, setCurrentTestimonialIndex] = useState(0);
-
+    
   // Filter visible testimonials and sort by order
   const displayTestimonials = cmsTestimonials
     .filter(t => t.isVisible !== false)
@@ -22,22 +21,13 @@ export default function ContactAndTestimonials() {
 
   const displayFaqs = cmsFaqs.length > 0 ? cmsFaqs : defaultFaqs;
 
-  useEffect(() => {
-    if (!displayTestimonials || displayTestimonials.length <= 1) return;
-    const interval = setInterval(() => {
-      setCurrentTestimonialIndex((prev) => (prev + 1) % displayTestimonials.length);
-    }, 2500);
-    return () => clearInterval(interval);
-  }, [displayTestimonials.length]);
-
-  const nextTestimonial = () => setCurrentTestimonialIndex((prev) => (prev + 1) % displayTestimonials.length);
-  const prevTestimonial = () => setCurrentTestimonialIndex((prev) => (prev === 0 ? displayTestimonials.length - 1 : prev - 1));
 
   return (
     <div className="w-full">
       {/* Testimonials Screenshot Gallery */}
-      <section className="py-24 border-y border-brand-purple/10 relative overflow-hidden">
+            <section className="py-24 border-y border-brand-purple/10 relative overflow-hidden bg-white">
         <div className="absolute top-0 right-0 w-[800px] h-[800px] bg-brand-purple/5 rounded-full blur-[120px] pointer-events-none" />
+        <div className="absolute bottom-0 left-0 w-[600px] h-[600px] bg-brand-electric/5 rounded-full blur-[100px] pointer-events-none" />
         
         <div className="max-w-7xl mx-auto px-4 sm:px-6 relative z-10 w-full">
           <div className="text-center max-w-3xl mx-auto mb-16">
@@ -45,100 +35,13 @@ export default function ContactAndTestimonials() {
               Client <span className="text-gradient-primary">Triumphs</span>
             </h2>
             <p className="text-gray-600 text-lg">
-              Real screenshots from our happy customers. Click to enlarge.
+              Hear what our amazing couples have to say about their cinematic invitations.
             </p>
           </div>
-
-          {displayTestimonials.length > 0 ? (
-            <div className="relative rounded-3xl overflow-hidden shadow-2xl ring-1 ring-black/5 bg-gradient-to-b from-[#FFF0F5] via-[#FFE4E1] to-[#FFC0CB] group">
-              <div 
-                className="w-full relative flex items-center justify-center min-h-[200px] md:min-h-[400px] cursor-pointer"
-                onClick={() => setSelectedImage(displayTestimonials[currentTestimonialIndex]?.imageUrl || displayTestimonials[currentTestimonialIndex]?.image)}
-              >
-                 <AnimatePresence mode="wait">
-                    <motion.img
-                      key={currentTestimonialIndex}
-                      initial={{ opacity: 0, scale: 1.02, filter: "blur(4px)" }}
-                      animate={{ opacity: 1, scale: 1, filter: "blur(0px)" }}
-                      exit={{ opacity: 0, scale: 0.98, filter: "blur(4px)" }}
-                      transition={{ duration: 0.3, ease: "easeOut" }}
-                      src={displayTestimonials[currentTestimonialIndex]?.imageUrl || displayTestimonials[currentTestimonialIndex]?.image}
-                      alt="Client Testimonial Screenshot"
-                      className="w-full h-auto object-contain max-h-[80vh]"
-                    />
-                 </AnimatePresence>
-              </div>
-
-              {displayTestimonials.length > 1 && (
-                <>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); prevTestimonial(); }}
-                    className="absolute left-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur text-brand-purple p-3 rounded-full shadow-lg opacity-100 transition-opacity transform hover:bg-white hover:scale-110 z-20"
-                  >
-                    <ChevronLeft className="w-6 h-6" />
-                  </button>
-                  <button 
-                    onClick={(e) => { e.stopPropagation(); nextTestimonial(); }}
-                    className="absolute right-4 top-1/2 -translate-y-1/2 bg-white/80 backdrop-blur text-brand-purple p-3 rounded-full shadow-lg opacity-100 transition-opacity transform hover:bg-white hover:scale-110 z-20"
-                  >
-                    <ChevronRight className="w-6 h-6" />
-                  </button>
-                  
-                  <div className="absolute bottom-4 left-1/2 -translate-x-1/2 flex gap-2 z-10">
-                    {displayTestimonials.map((_, idx) => (
-                      <button
-                        key={idx}
-                        onClick={(e) => { e.stopPropagation(); setCurrentTestimonialIndex(idx); }}
-                        className={`w-2.5 h-2.5 rounded-full transition-all ${idx === currentTestimonialIndex ? 'bg-brand-purple w-8' : 'bg-gray-300 hover:bg-gray-400'}`}
-                      />
-                    ))}
-                  </div>
-                </>
-              )}
-              
-              <div className="absolute inset-0 ring-1 ring-inset ring-black/10 rounded-3xl pointer-events-none"></div>
-            </div>
-          ) : (
-             <div className="text-center py-12 text-gray-500 bg-white rounded-3xl border border-gray-100 shadow-sm">
-                More client triumphs coming soon!
-             </div>
-          )}
+          
+          <TestimonialsCarousel testimonials={displayTestimonials} />
         </div>
       </section>
-
-      {/* Lightbox Modal */}
-      <AnimatePresence>
-        {selectedImage && (
-          <motion.div 
-            initial={{ opacity: 0 }}
-            animate={{ opacity: 1 }}
-            exit={{ opacity: 0 }}
-            className="fixed inset-0 z-[100] flex items-center justify-center bg-black/90 p-4 drop-shadow-2xl backdrop-blur-sm"
-            onClick={() => setSelectedImage(null)}
-          >
-            <button 
-              className="absolute top-6 right-6 text-white/70 hover:text-white p-2 bg-white/10 hover:bg-white/20 rounded-full transition-colors z-10"
-              onClick={() => setSelectedImage(null)}
-            >
-              <X className="w-6 h-6" />
-            </button>
-            <motion.div
-              initial={{ scale: 0.9, opacity: 0 }}
-              animate={{ scale: 1, opacity: 1 }}
-              exit={{ scale: 0.9, opacity: 0 }}
-              transition={{ type: "spring", damping: 25, stiffness: 300 }}
-              className="relative w-full max-w-4xl max-h-[90vh] flex items-center justify-center"
-              onClick={(e) => e.stopPropagation()} // Prevent clicks inside from closing
-            >
-               <img 
-                 src={selectedImage} 
-                 alt="Enlarged Testimonial" 
-                 className="max-w-full max-h-[90vh] object-contain rounded-xl shadow-2xl"
-               />
-            </motion.div>
-          </motion.div>
-        )}
-      </AnimatePresence>
 
       <CustomServicesSection />
 

@@ -29,6 +29,8 @@ export function useTypingIndicator(chatUserId: string) {
           setIsTyping(data.admin || false);
         }
       }
+    }, (err) => {
+      console.error("Typing indicator error", err);
     });
 
     return () => unsub();

@@ -56,7 +56,7 @@ export default function Login() {
       toast.success('Successfully logged in');
       await handleCustomRedirect(userCred.user);
     } catch (error: any) {
-      toast.error('Password or Email Incorrect');
+      toast.error(error.message || 'Password or Email Incorrect');
     } finally {
       setLoading(false);
     }

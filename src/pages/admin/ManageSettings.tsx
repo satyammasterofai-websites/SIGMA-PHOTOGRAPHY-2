@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import { doc, onSnapshot, setDoc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
+import { useSiteStore } from "../../store/useSiteStore";
 import {
   Plus,
   Trash2,
@@ -14,6 +15,7 @@ import toast from "react-hot-toast";
 
 export default function ManageSettings() {
   const [activeTab, setActiveTab] = useState<"general" | "coupons">("general");
+  const { templates } = useSiteStore();
 
   // General State
   const [baseOnlineUsers, setBaseOnlineUsers] = useState(50);
@@ -27,6 +29,7 @@ export default function ManageSettings() {
     "*Booking Request*\n\nTemplate: {template}\nTemplate ID: {templateId}\nOrder ID: {orderId}\n\n*Customer Details*\nName: {name}\nPhone: {phone}\n\n{details}",
   );
   const [waOrderingEnabled, setWaOrderingEnabled] = useState(true);
+  const [paymentQRBase64, setPaymentQRBase64] = useState("");
 
   // Checkout State
   const [checkoutFormNote, setCheckoutFormNote] = useState(
@@ -35,10 +38,18 @@ export default function ManageSettings() {
 
   // Coupons State
   const [coupons, setCoupons] = useState<any[]>([]);
-  const [newCoupon, setNewCoupon] = useState({
+  const [newCoupon, setNewCoupon] = useState<{
+    code: string;
+    percentage: string;
+    expiryDate: string;
+    maxPriceThreshold: string;
+    excludedTemplates: string[];
+  }>({
     code: "",
     percentage: "",
     expiryDate: "",
+    maxPriceThreshold: "",
+    excludedTemplates: [],
   });
 
   useEffect(() => {
@@ -89,6 +100,7 @@ export default function ManageSettings() {
           welcomeMessage,
           checkoutFormNote,
           coupons: finalCoupons,
+          paymentQRBase64,
         },
         { merge: true },
       );
@@ -98,11 +110,22 @@ export default function ManageSettings() {
     }
   };
 
+  const handleQRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (ev) => {
+        setPaymentQRBase64(ev.target?.result as string);
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
   const addCoupon = async () => {
     if (!newCoupon.code || !newCoupon.percentage) return;
     const updated = [...coupons, { id: Date.now().toString(), ...newCoupon }];
     setCoupons(updated);
-    setNewCoupon({ code: "", percentage: "", expiryDate: "" });
+    setNewCoupon({ code: "", percentage: "", expiryDate: "", maxPriceThreshold: "", excludedTemplates: [] });
     await saveSettings(updated);
   };
 
@@ -222,6 +245,23 @@ export default function ManageSettings() {
                 className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 resize-none font-mono text-sm"
               />
             </div>
+
+            <div className="pb-6 mb-6 border-b border-gray-800">
+              <label className="block text-sm font-medium text-gray-300 mb-2">
+                Advance Payment QR Code
+              </label>
+              <div className="flex items-center gap-4">
+                {paymentQRBase64 && (
+                  <img src={paymentQRBase64} alt="QR Code" className="w-24 h-24 object-cover rounded-xl border border-gray-700 bg-gray-800" />
+                )}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={handleQRUpload}
+                  className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-purple file:text-white hover:file:bg-purple-700"
+                />
+              </div>
+            </div>
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Checkout Form Note
@@ -238,57 +278,97 @@ export default function ManageSettings() {
 
         {activeTab === "coupons" && (
           <div className="space-y-6">
-            <div className="flex flex-col md:flex-row gap-4 items-end bg-gray-800/50 p-6 rounded-xl border border-gray-800">
-              <div className="flex-1 w-full">
-                <label className="block text-xs font-medium text-gray-400 mb-2">
-                  Coupon Code
-                </label>
-                <input
-                  type="text"
-                  value={newCoupon.code || ""}
-                  onChange={(e) =>
-                    setNewCoupon({
-                      ...newCoupon,
-                      code: e.target.value.toUpperCase(),
-                    })
-                  }
-                  placeholder="SUMMER50"
-                  className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
-                />
+                        <div className="flex flex-col gap-4 bg-gray-800/50 p-6 rounded-xl border border-gray-800">
+              <div className="flex flex-col md:flex-row gap-4 items-end">
+                <div className="flex-1 w-full">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">
+                    Coupon Code
+                  </label>
+                  <input
+                    type="text"
+                    value={newCoupon.code || ""}
+                    onChange={(e) =>
+                      setNewCoupon({
+                        ...newCoupon,
+                        code: e.target.value.toUpperCase(),
+                      })
+                    }
+                    placeholder="SUMMER50"
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
+                  />
+                </div>
+                <div className="w-full md:w-32">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">
+                    Discount (%)
+                  </label>
+                  <input
+                    type="number"
+                    value={newCoupon.percentage || ""}
+                    onChange={(e) =>
+                      setNewCoupon({ ...newCoupon, percentage: e.target.value })
+                    }
+                    placeholder="20"
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
+                  />
+                </div>
+                <div className="w-full md:w-48">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">
+                    Expiry Date (Optional)
+                  </label>
+                  <input
+                    type="date"
+                    value={newCoupon.expiryDate || ""}
+                    onChange={(e) =>
+                      setNewCoupon({ ...newCoupon, expiryDate: e.target.value })
+                    }
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
+                  />
+                </div>
               </div>
-              <div className="w-full md:w-32">
-                <label className="block text-xs font-medium text-gray-400 mb-2">
-                  Discount (%)
-                </label>
-                <input
-                  type="number"
-                  value={newCoupon.percentage || ""}
-                  onChange={(e) =>
-                    setNewCoupon({ ...newCoupon, percentage: e.target.value })
-                  }
-                  placeholder="20"
-                  className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
-                />
+              <div className="flex flex-col md:flex-row gap-4 items-start">
+                <div className="w-full md:w-1/3">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">
+                    Max Price Threshold (Valid if Price &lt;= X)
+                  </label>
+                  <input
+                    type="number"
+                    value={newCoupon.maxPriceThreshold || ""}
+                    onChange={(e) =>
+                      setNewCoupon({ ...newCoupon, maxPriceThreshold: e.target.value })
+                    }
+                    placeholder="e.g. 500"
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
+                  />
+                  <p className="text-[10px] text-gray-500 mt-1">Leave empty to apply to any price.</p>
+                </div>
+                <div className="flex-1 w-full">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">
+                    Exclude Templates (Coupon not valid for these)
+                  </label>
+                  <select
+                    multiple
+                    value={newCoupon.excludedTemplates || []}
+                    onChange={(e) => {
+                      const options = Array.from(e.target.selectedOptions, option => option.value);
+                      setNewCoupon({ ...newCoupon, excludedTemplates: options });
+                    }}
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2 h-24"
+                  >
+                    {templates.map(t => (
+                      <option key={t.id} value={t.id}>{t.title || t.name} (₹{t.price})</option>
+                    ))}
+                  </select>
+                  <p className="text-[10px] text-gray-500 mt-1">Hold Cmd/Ctrl to select multiple. Leave empty to apply to all (unless blocked by price threshold).</p>
+                </div>
+                <div className="w-full md:w-auto mt-6">
+                  <button
+                    onClick={addCoupon}
+                    className="w-full md:w-auto bg-green-500 hover:bg-green-600 text-white px-6 py-2 rounded-xl font-medium flex items-center justify-center gap-2 h-[42px]"
+                  >
+                    <Plus className="w-4 h-4" /> Add
+                  </button>
+                </div>
               </div>
-              <div className="flex-1 w-full">
-                <label className="block text-xs font-medium text-gray-400 mb-2">
-                  Expiry Date (Optional)
-                </label>
-                <input
-                  type="date"
-                  value={newCoupon.expiryDate || ""}
-                  onChange={(e) =>
-                    setNewCoupon({ ...newCoupon, expiryDate: e.target.value })
-                  }
-                  className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
-                />
-              </div>
-              <button
-                onClick={addCoupon}
-                className="w-full md:w-auto bg-gray-700 hover:bg-gray-600 text-white px-6 py-2 rounded-xl text-sm font-medium h-[42px]"
-              >
-                Add Coupon
-              </button>
             </div>
 
             <div className="overflow-hidden rounded-xl border border-gray-800">
@@ -306,6 +386,12 @@ export default function ManageSettings() {
                     <tr key={c.id}>
                       <td className="px-4 py-3 font-bold text-white">
                         {c.code}
+                        {(c.maxPriceThreshold || (c.excludedTemplates && c.excludedTemplates.length > 0)) && (
+                          <div className="text-[10px] font-normal text-gray-500 mt-1">
+                            {c.maxPriceThreshold && <span>Max Price: ₹{c.maxPriceThreshold} </span>}
+                            {c.excludedTemplates && c.excludedTemplates.length > 0 && <span>Excluded: {c.excludedTemplates.length} templates</span>}
+                          </div>
+                        )}
                       </td>
                       <td className="px-4 py-3 text-green-400">
                         {c.percentage}% OFF

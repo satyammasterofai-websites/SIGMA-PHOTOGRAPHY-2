@@ -1,9 +1,20 @@
 const fs = require('fs');
-let content = fs.readFileSync('src/hooks/useTypingIndicator.ts', 'utf-8');
+let code = fs.readFileSync('src/hooks/useTypingIndicator.ts', 'utf-8');
 
-const search = `    } catch (e) {\n      console.error('Error updating typing status', e);\n    }`;
+code = code.replace(
+  `        }
+      }
+    });
 
-const replace = `    } catch (e: any) {\n      // Silently ignore permission errors for typing indicator to avoid console spam if rules aren't deployed yet\n      if (e.code !== 'permission-denied') {\n        console.error('Error updating typing status', e);\n      }\n    }`;
+    return () => unsub();`,
+  `        }
+      }
+    }, (err) => {
+      console.error("Typing indicator error", err);
+    });
 
-content = content.replace(search, replace);
-fs.writeFileSync('src/hooks/useTypingIndicator.ts', content);
+    return () => unsub();`
+);
+
+fs.writeFileSync('src/hooks/useTypingIndicator.ts', code);
+console.log("Patched useTypingIndicator.ts");

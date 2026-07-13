@@ -199,11 +199,23 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
               orders.map((order) => (
                 <div key={order.id} className="bg-gray-800 rounded-xl p-4 border border-gray-700">
                   <div className="flex justify-between items-start mb-4">
-                    <div>
-                      <h3 className="text-white font-medium">Order #{order.id.slice(0, 8)}</h3>
-                      <p className="text-sm text-gray-400">
-                        {typeof order.createdAt?.toDate === 'function' ? order.createdAt.toDate().toLocaleDateString() : new Date(order.createdAt || 0).toLocaleDateString()}
-                      </p>
+                    <div className="flex items-center gap-3">
+                      {order.thumbnailBase64 && (
+                        <img src={order.thumbnailBase64} alt={order.templateName} className="w-12 h-12 object-cover rounded-md border border-gray-700 bg-gray-900" />
+                      )}
+                      <div>
+                        <h3 className="text-white font-medium">Order #{order.id.slice(0, 8)} {order.templateName && `(${order.templateName})`}</h3>
+                        <div className="flex items-center gap-2">
+                          <p className="text-sm text-gray-400">
+                            {typeof order.createdAt?.toDate === 'function' ? order.createdAt.toDate().toLocaleDateString() : new Date(order.createdAt || 0).toLocaleDateString()}
+                          </p>
+                          {order.videoUrl && (
+                            <a href={order.videoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-electric hover:underline flex items-center gap-1">
+                              Live Preview
+                            </a>
+                          )}
+                        </div>
+                      </div>
                     </div>
                     <span className="px-2 py-1 bg-gray-700 text-gray-300 text-xs rounded-md">
                       {order.status || "Pending"}

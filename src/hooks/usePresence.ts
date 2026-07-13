@@ -29,7 +29,7 @@ export function usePresence() {
         updateDoc(doc(db, 'users', user.uid), {
           isOnline: false,
           lastSeen: serverTimestamp()
-        });
+        }).catch(() => {});
       } catch (e) {}
     };
 

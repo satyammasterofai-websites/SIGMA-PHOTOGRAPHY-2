@@ -9,7 +9,7 @@ import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 export default function ManageTestimonials() {
   const [testimonials, setTestimonials] = useState<any[]>([]);
   const [showModal, setShowModal] = useState(false);
-  const [formData, setFormData] = useState({ id: '', imageUrl: '', isVisible: true, order: 0 });
+  const [formData, setFormData] = useState({ id: '', imageUrl: '', name: '', feedback: '', rating: 5, isVisible: true, order: 0 });
   const [loadingFile, setLoadingFile] = useState(false);
 
   useEffect(() => {
@@ -46,20 +46,23 @@ export default function ManageTestimonials() {
   };
 
   const saveTestimonial = async () => {
-    if (!formData.imageUrl) {
-       toast.error("Please upload a screenshot");
+    if (!formData.imageUrl && !formData.feedback) {
+       toast.error("Please upload an image or provide text feedback");
        return;
     }
     try {
       const id = formData.id || Date.now().toString();
-      await setDoc(doc(db, 'testimonials', id), {
+            await setDoc(doc(db, 'testimonials', id), {
         imageUrl: formData.imageUrl,
+        name: formData.name || '',
+        feedback: formData.feedback || '',
+        rating: formData.rating || 5,
         isVisible: formData.isVisible,
-        order: formData.id ? formData.order : testimonials.length
+        order: formData.order || testimonials.length
       });
       toast.success("Saved successfully");
       setShowModal(false);
-      setFormData({ id: '', imageUrl: '', isVisible: true, order: 0 });
+      setFormData({ id: '', imageUrl: '', name: '', feedback: '', rating: 5, isVisible: true, order: 0 });
     } catch (e) {
       toast.error("Failed to save");
     }
@@ -141,10 +144,10 @@ export default function ManageTestimonials() {
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-brand-navy">Testimonials Gallery</h1>
         <button 
-          onClick={() => { setFormData({ id: '', imageUrl: '', isVisible: true, order: testimonials.length }); setShowModal(true); }}
+          onClick={() => { setFormData({ id: '', imageUrl: '', name: '', feedback: '', rating: 5, isVisible: true, order: testimonials.length }); setShowModal(true); }}
           className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2"
         >
-          <Plus className="w-4 h-4" /> Add Screenshot
+          <Plus className="w-4 h-4" /> Add Testimonial
         </button>
       </div>
 
@@ -152,7 +155,14 @@ export default function ManageTestimonials() {
         {testimonials.map((t, index) => (
           <div key={t.id} className={`bg-gray-900 border border-gray-800 rounded-xl overflow-hidden flex flex-col ${!t.isVisible ? 'opacity-60' : ''}`}>
             <div className="w-full h-48 bg-gray-800 relative">
-               <img src={t.imageUrl || t.image} alt="Testimonial" className="w-full h-full object-contain" />
+               {t.imageUrl || t.image ? (
+                 <img src={t.imageUrl || t.image} alt="Testimonial" className="w-full h-full object-contain" />
+               ) : (
+                 <div className="w-full h-full flex flex-col items-center justify-center p-4 text-center">
+                   <p className="text-white font-bold">{t.name || 'Anonymous'}</p>
+                   <p className="text-gray-400 text-sm line-clamp-3 mt-2">{t.feedback}</p>
+                 </div>
+               )}
                {!t.isVisible && (
                  <div className="absolute inset-0 bg-black/50 flex items-center justify-center">
                     <span className="bg-red-500 text-white px-3 py-1 rounded-full text-xs font-bold">HIDDEN</span>
@@ -173,7 +183,7 @@ export default function ManageTestimonials() {
                     <button onClick={() => toggleVisibility(t)} className={`p-2 rounded-lg ${t.isVisible ? 'text-green-400 hover:bg-green-400/10' : 'text-gray-400 hover:bg-gray-400/10'}`}>
                       {t.isVisible ? <Eye className="w-4 h-4" /> : <EyeOff className="w-4 h-4" />}
                     </button>
-                    <button onClick={() => { setFormData(t); setShowModal(true); }} className="text-indigo-400 p-2 hover:bg-indigo-400/10 rounded-lg">
+                    <button onClick={() => { setFormData({ ...t, name: t.name || '', feedback: t.feedback || '', rating: t.rating || 5 }); setShowModal(true); }} className="text-indigo-400 p-2 hover:bg-indigo-400/10 rounded-lg">
                       <Edit className="w-4 h-4" />
                     </button>
                     <button onClick={() => setDeleteId(t.id)} className="text-red-400 p-2 hover:bg-red-400/10 rounded-lg">
@@ -186,7 +196,7 @@ export default function ManageTestimonials() {
         ))}
         {testimonials.length === 0 && (
           <div className="col-span-full py-12 text-center text-gray-500 bg-gray-900/50 rounded-xl border border-gray-800">
-             No screenshots uploaded yet.
+             No testimonials added yet.
           </div>
         )}
       </div>
@@ -194,7 +204,7 @@ export default function ManageTestimonials() {
       {showModal && (
         <div className="fixed inset-0 bg-black/60 flex items-center justify-center p-4 z-50">
           <div className="bg-gray-900 p-6 rounded-2xl w-full max-w-md border border-gray-800">
-             <h2 className="text-xl font-bold text-white mb-4">{formData.id ? 'Edit' : 'Add'} Screenshot Testimonial</h2>
+             <h2 className="text-xl font-bold text-white mb-4">{formData.id ? 'Edit' : 'Add'} Testimonial</h2>
              
              <div className="mb-6">
                 <label className="text-sm font-medium text-gray-300 mb-2 block">Upload Screenshot</label>
@@ -223,6 +233,18 @@ export default function ManageTestimonials() {
                 </div>
              </div>
 
+                          <div className="mb-4">
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Client Name (Optional)</label>
+                <input type="text" value={formData.name || ''} onChange={e => setFormData({...formData, name: e.target.value})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" placeholder="e.g. Rahul & Priya" />
+             </div>
+             <div className="mb-4">
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Feedback (Optional)</label>
+                <textarea value={formData.feedback || ''} onChange={e => setFormData({...formData, feedback: e.target.value})} rows={3} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" placeholder="Write the review here..." />
+             </div>
+             <div className="mb-6">
+                <label className="text-sm font-medium text-gray-300 mb-2 block">Rating (1-5)</label>
+                <input type="number" min="1" max="5" value={formData.rating || 5} onChange={e => setFormData({...formData, rating: Number(e.target.value)})} className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2" />
+             </div>
              <div className="flex items-center gap-2 mb-6">
                  <input type="checkbox" id="isVisible" checked={formData.isVisible} onChange={e => setFormData({...formData, isVisible: e.target.checked})} className="rounded border-gray-700 w-4 h-4" />
                  <label htmlFor="isVisible" className="text-gray-300">Visible on website</label>

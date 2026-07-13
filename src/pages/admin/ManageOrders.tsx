@@ -88,6 +88,17 @@ export default function ManageOrders() {
     }
   };
 
+  const updateOrderStatus = async (id: string, newStatus: string) => {
+    try {
+      await updateDoc(doc(db, "orders", id), {
+        status: newStatus
+      });
+      toast.success(`Order status updated to ${newStatus}`);
+    } catch (e) {
+      toast.error("Failed to update status");
+    }
+  };
+
   const saveDownloadUrl = async (id: string) => {
     try {
       await updateDoc(doc(db, "orders", id), {
@@ -220,8 +231,21 @@ export default function ManageOrders() {
                           {order.customerPhone}
                         </div>
                       </td>
-                      <td className="py-4 text-sm font-medium">
-                        {order.templateName || "Custom"}
+                      <td className="py-4 text-sm">
+                        <div className="flex items-center gap-3">
+                          {order.thumbnailBase64 && (
+                            <img src={order.thumbnailBase64} alt={order.templateName} className="w-12 h-12 object-cover rounded-md border border-gray-700 bg-gray-800" />
+                          )}
+                          <div className="flex flex-col gap-1">
+                            <span className="font-medium">{order.templateName || "Custom"}</span>
+                            {order.videoUrl && (
+                              <a href={order.videoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-electric hover:underline flex items-center gap-1">
+                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                                Live Preview
+                              </a>
+                            )}
+                          </div>
+                        </div>
                       </td>
                       <td className="py-4 text-sm font-medium text-emerald-400">
                         ₹{order.price || order.amount || 0}
@@ -434,6 +458,21 @@ export default function ManageOrders() {
                                 <CheckCircle className="w-4 h-4" /> Delivery
                               </h4>
                               <div className="space-y-4">
+                                <div className="flex gap-2 items-center mb-4">
+                                  <span className="text-gray-400 text-sm">Status:</span>
+                                  <select 
+                                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none"
+                                    value={order.status || "Pending"}
+                                    onChange={(e) => updateOrderStatus(order.id, e.target.value)}
+                                  >
+                                    <option value="Pending">Pending</option>
+                                    <option value="Processing">Processing</option>
+                                    <option value="Completed">Completed</option>
+                                    <option value="Delivered">Delivered</option>
+                                    <option value="Cancelled">Cancelled</option>
+                                  </select>
+                                </div>
+
                                 {order.downloadUrl ? (
                                   <div className="text-sm bg-green-500/10 border border-green-500/20 text-green-400 p-3 rounded-xl flex items-start gap-2">
                                     <LinkIcon className="w-4 h-4 mt-0.5" />

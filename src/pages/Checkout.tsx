@@ -16,7 +16,7 @@ import Footer from "../components/Footer";
 import {
   Upload,
   X,
-  File,
+  File, FileText,
   ShieldCheck,
   CheckCircle2,
   MessageSquare,
@@ -186,6 +186,7 @@ export default function Checkout() {
     show: boolean;
     msg: string;
   }>({ show: false, msg: "" });
+  const [showQRPopup, setShowQRPopup] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(1);
 
@@ -266,17 +267,21 @@ export default function Checkout() {
     setFiles(newFiles);
   };
 
+  const basePrice = Number(template?.price) || 0;
+  const initialPrice = template?.discountPrice
+    ? Number(template.discountPrice)
+    : basePrice;
+
   const applyCoupon = () => {
     if (!couponCode.trim()) return;
 
-    if (couponCode.trim().toUpperCase() === "SIGMA20") {
-      setAppliedCoupon({ code: "SIGMA20", percentage: "20" });
-      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-      toast.success(`Coupon Applied! 20% OFF`);
-      return;
-    }
-
     if (!settings?.coupons || settings.coupons.length === 0) {
+      if (couponCode.trim().toUpperCase() === "SIGMA20") {
+        setAppliedCoupon({ code: "SIGMA20", percentage: "20" });
+        confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+        toast.success(`Coupon Applied! 20% OFF`);
+        return;
+      }
       toast.error("Invalid coupon code");
       return;
     }
@@ -293,18 +298,32 @@ export default function Checkout() {
           return;
         }
       }
+      
+      const priceThreshold = Number(matched.maxPriceThreshold);
+      if (priceThreshold > 0 && initialPrice > priceThreshold) {
+        toast.error(`This coupon is only valid for templates priced at or below ₹${priceThreshold}`);
+        return;
+      }
+      
+      if (matched.excludedTemplates && matched.excludedTemplates.includes(template?.id)) {
+        toast.error("This coupon is not valid for this template");
+        return;
+      }
+
       setAppliedCoupon(matched);
       confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
       toast.success(`Coupon Applied! ${matched.percentage}% OFF`);
+    } else if (couponCode.trim().toUpperCase() === "SIGMA20") {
+      setAppliedCoupon({ code: "SIGMA20", percentage: "20" });
+      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
+      toast.success(`Coupon Applied! 20% OFF`);
+      return;
     } else {
       toast.error("Invalid coupon code");
     }
   };
 
-  const basePrice = Number(template?.price) || 0;
-  const initialPrice = template?.discountPrice
-    ? Number(template.discountPrice)
-    : basePrice;
+
   const discountAmount = appliedCoupon
     ? initialPrice * (Number(appliedCoupon.percentage) / 100)
     : 0;
@@ -323,6 +342,7 @@ export default function Checkout() {
           templateId: template?.id || "",
           templateName: template?.title || template?.name || "Template",
           thumbnailBase64: template?.thumbnailBase64 || "",
+          videoUrl: template?.videoUrl || "",
           userId: user ? user.uid : null,
           customerName: customerName || "",
           customerPhone: customerPhone || "",
@@ -456,24 +476,47 @@ export default function Checkout() {
     });
   };
 
-  const initiatePayment = async () => {
-    // Mock Online payment
-    setPaymentSuccessPopup({
-      show: true,
-      msg: "Initializing secure payment gateway...",
-    });
-    setTimeout(async () => {
-      const orderId = await createOrderRecord("Paid Online", "Online Payment");
-      const advanceMsg = template?.advancePayment
-        ? ` Note: An advance payment of ₹${template.advancePayment} is required.`
-        : "";
+    const initiatePayment = async () => {
+    if (!settings?.paymentQRBase64 && !template?.advancePayment) {
+      // Fallback to old flow if no QR and no advance
       setPaymentSuccessPopup({
         show: true,
-        msg: `Payment successful! Redirecting to WhatsApp to send assets.${advanceMsg}`,
+        msg: "Initializing secure payment gateway...",
       });
-      const url = getWaUrl(orderId);
-      setWaUrlToOpen(url);
-    }, 2000);
+      setTimeout(async () => {
+        const orderId = await createOrderRecord("Paid Online", "Online Payment");
+        const advanceMsg = template?.advancePayment
+          ? ` Note: An advance payment of ₹${template.advancePayment} is required.`
+          : "";
+        setPaymentSuccessPopup({
+          show: true,
+          msg: `Payment successful! Redirecting to WhatsApp to send assets.${advanceMsg}`,
+        });
+        const url = getWaUrl(orderId);
+        setWaUrlToOpen(url);
+      }, 2000);
+      return;
+    }
+    
+    setShowQRPopup(true);
+  };
+
+  const handleQRConfirmed = async () => {
+    setShowQRPopup(false);
+    setPaymentSuccessPopup({
+      show: true,
+      msg: "Saving order details...",
+    });
+    const orderId = await createOrderRecord("Paid Online", "Online Payment");
+    const advanceMsg = template?.advancePayment
+      ? ` Note: An advance payment of ₹${template.advancePayment} is required.`
+      : "";
+    setPaymentSuccessPopup({
+      show: true,
+      msg: `Order saved! Please send us the payment screenshot on WhatsApp.${advanceMsg}`,
+    });
+    const url = getWaUrl(orderId);
+    setWaUrlToOpen(url);
   };
 
   // --- Dynamic Form Steps Logic ---
@@ -1306,6 +1349,25 @@ export default function Checkout() {
             <strong>WhatsApp:</strong> {customerPhone}
           </p>
         </div>
+        <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 mb-10">
+          <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
+            <FileText className="w-4 h-4 text-brand-purple" /> Form Details
+          </h3>
+          <div className="space-y-3">
+             {Object.entries(formConfig ? formData : legacyFormData).map(([key, value]) => {
+                if (key === 'terms' || key === 'whatsapp_consent' || value === undefined || value === null || value === '') return null;
+                const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
+                const displayValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
+                return (
+                  <div key={key} className="text-sm grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 border-b border-gray-200 pb-2 last:border-0 last:pb-0">
+                    <span className="text-gray-500 font-medium sm:col-span-1">{displayKey}</span>
+                    <span className="text-gray-900 font-semibold sm:col-span-2 whitespace-pre-wrap">{displayValue}</span>
+                  </div>
+                );
+             })}
+          </div>
+        </div>
+
 
         <hr className="border-gray-200 mb-8" />
 
@@ -1511,6 +1573,42 @@ export default function Checkout() {
       </main>
 
       {/* Popups */}
+      
+      {/* QR Popup */}
+      {showQRPopup && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl animate-fade-in-up relative">
+            <button
+              onClick={() => setShowQRPopup(false)}
+              className="absolute top-4 right-4 text-gray-400 hover:text-gray-700"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <h3 className="text-xl font-bold text-gray-900 mb-2">Pay Advance</h3>
+            <p className="text-gray-600 mb-6">
+              Please pay the advance amount of <span className="font-bold text-gray-900">₹{template?.advancePayment || 0}</span> to proceed.
+            </p>
+            {settings?.paymentQRBase64 ? (
+              <img
+                src={settings.paymentQRBase64}
+                alt="Payment QR Code"
+                className="w-48 h-48 mx-auto object-contain rounded-xl border border-gray-200 mb-6"
+              />
+            ) : (
+              <div className="w-48 h-48 mx-auto bg-gray-100 rounded-xl flex items-center justify-center text-gray-400 mb-6 border border-gray-200">
+                <CreditCard className="w-12 h-12" />
+              </div>
+            )}
+            <button
+              onClick={handleQRConfirmed}
+              className="w-full py-3 bg-brand-purple text-white font-bold rounded-xl hover:bg-purple-700 transition shadow-lg"
+            >
+              I have Paid, Send screenshot on WhatsApp
+            </button>
+          </div>
+        </div>
+      )}
+
       {paymentSuccessPopup.show && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
           <div className="bg-white rounded-3xl p-8 max-w-sm w-full text-center shadow-2xl animate-fade-in-up">

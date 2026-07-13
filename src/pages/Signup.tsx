@@ -66,7 +66,7 @@ export default function Signup() {
       if (error.code === 'auth/email-already-in-use') {
         toast.error('User already exists. Sign in?');
       } else {
-        toast.error('Failed to create account');
+        toast.error(error.message || 'Failed to create account');
       }
     } finally {
       setLoading(false);
