@@ -319,6 +319,13 @@ export default function Checkout() {
         return;
       }
 
+      if (matched.isTemplateSpecific) {
+        if (!matched.templateDiscounts || !matched.templateDiscounts[template?.id] || Number(matched.templateDiscounts[template?.id]) <= 0) {
+          toast.error("This coupon is not valid for this template");
+          return;
+        }
+      }
+
       if (user) {
         try {
           const q = query(
@@ -338,15 +345,15 @@ export default function Checkout() {
 
       setAppliedCoupon(matched);
       confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-      toast.success(`Coupon Applied! ${matched.percentage}% OFF`);
+      const perc = matched.isTemplateSpecific ? (matched.templateDiscounts?.[template?.id] || 0) : matched.percentage;
+      toast.success(`Coupon Applied! ${perc}% OFF`);
     } else {
       toast.error("Invalid coupon code");
     }
   };
 
-
   const discountAmount = appliedCoupon
-    ? initialPrice * (Number(appliedCoupon.percentage) / 100)
+    ? initialPrice * (Number(appliedCoupon.isTemplateSpecific ? (appliedCoupon.templateDiscounts?.[template?.id] || 0) : appliedCoupon.percentage) / 100)
     : 0;
   const finalPrice = Math.round(initialPrice - discountAmount);
 
@@ -505,7 +512,7 @@ export default function Checkout() {
         msg: "Initializing secure payment gateway...",
       });
       setTimeout(async () => {
-        const orderId = await createOrderRecord("Paid Online", "Online Payment");
+        const orderId = await createOrderRecord("Pending Verification", "Online Payment");
         const advanceMsg = template?.advancePayment
           ? ` Note: An advance payment of ₹${template.advancePayment} is required.`
           : "";
@@ -528,7 +535,7 @@ export default function Checkout() {
       show: true,
       msg: "Saving order details...",
     });
-    const orderId = await createOrderRecord("Paid Online", "Online Payment");
+    const orderId = await createOrderRecord("Pending Verification", "Online Payment");
     const advanceMsg = template?.advancePayment
       ? ` Note: An advance payment of ₹${template.advancePayment} is required.`
       : "";

@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { Send, ArrowLeft, Mail, Check, CheckCheck } from "lucide-react";
+import VideoModal from "../../components/VideoModal";
 import toast from "react-hot-toast";
 import { useTypingIndicator } from "../../hooks/useTypingIndicator";
 
@@ -15,6 +16,7 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
   const [messages, setMessages] = useState<any[]>([]);
   const [newMessage, setNewMessage] = useState("");
   const [orders, setOrders] = useState<any[]>([]);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { isTyping, updateTyping } = useTypingIndicator(user?.id || '');
 
@@ -210,9 +212,10 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
                             {typeof order.createdAt?.toDate === 'function' ? order.createdAt.toDate().toLocaleDateString() : new Date(order.createdAt || 0).toLocaleDateString()}
                           </p>
                           {order.videoUrl && (
-                            <a href={order.videoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-electric hover:underline flex items-center gap-1">
+                            <button onClick={() => setPreviewVideoUrl(order.videoUrl)} className="text-xs text-brand-electric hover:underline flex items-center gap-1 text-left">
+                              <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
                               Live Preview
-                            </a>
+                            </button>
                           )}
                         </div>
                       </div>

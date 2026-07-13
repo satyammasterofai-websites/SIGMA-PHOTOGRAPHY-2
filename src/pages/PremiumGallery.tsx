@@ -429,7 +429,16 @@ export default function PremiumGallery() {
               />
             </div>
             
-            <div className="flex-shrink-0">
+            <div className="flex-shrink-0 flex gap-2">
+              <select
+                value={activeLanguage}
+                onChange={(e) => setActiveLanguage(e.target.value)}
+                className="h-full bg-white border border-gray-200 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-brand-purple shadow-sm font-medium text-gray-700"
+              >
+                <option value="All">All Languages</option>
+                <option value="English">English Templates</option>
+                <option value="Hindi">Hindi Templates</option>
+              </select>
               <select
                 value={sortOrder}
                 onChange={(e) => setSortOrder(e.target.value as any)}
@@ -456,17 +465,7 @@ export default function PremiumGallery() {
                 );
               })}
             </div>
-            <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 scrollbar-hide">
-              {languages.map((lang) => (
-                <button
-                  key={lang}
-                  onClick={() => setActiveLanguage(lang)}
-                  className={`px-6 py-4 rounded-xl font-medium whitespace-nowrap transition-all ${activeLanguage === lang ? "bg-brand-rose text-white shadow-md" : "bg-white text-gray-600 border border-gray-200 hover:bg-gray-50"}`}
-                >
-                  {lang === "All" ? "All" : lang + " Templates"}
-                </button>
-              ))}
-            </div>
+
           </div>
           </div>
 

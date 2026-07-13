@@ -34,6 +34,7 @@ import {
 import toast from "react-hot-toast";
 
 import SupportChat from "./user/SupportChat";
+import UserNotifications from "../components/UserNotifications";
 import { useChatStore } from '../store/useChatStore';
 
 export default function DashboardLayout() {
@@ -182,14 +183,20 @@ const [prevOrders, setPrevOrders] = useState<Record<string, string>>({});
               SIGMAPRO
             </span>
           </div>
-          <button
-            onClick={() => setSidebarOpen(true)}
-            className="p-2 -mr-2 text-gray-600 rounded-md"
-          >
-            <Menu className="w-6 h-6" />
-          </button>
+          <div className="flex items-center gap-2">
+            <UserNotifications />
+            <button
+              onClick={() => setSidebarOpen(true)}
+              className="p-2 -mr-2 text-gray-600 rounded-md"
+            >
+              <Menu className="w-6 h-6" />
+            </button>
+          </div>
         </div>
 
+        <div className="hidden lg:flex justify-end p-4 border-b border-gray-200 bg-white/50 sticky top-0 z-10">
+          <UserNotifications />
+        </div>
         <main className="flex-1 overflow-y-auto w-full">
           <div className="p-6 md:p-8 max-w-7xl mx-auto w-full">
             <Routes>

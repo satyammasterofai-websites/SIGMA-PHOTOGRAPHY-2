@@ -14,7 +14,8 @@ import {
 import toast from "react-hot-toast";
 
 export default function ManageSettings() {
-  const [activeTab, setActiveTab] = useState<"general" | "coupons">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "coupons" | "templateCoupons">("general");
+  const [templateDiscounts, setTemplateDiscounts] = useState<Record<string, string>>({});
   const { templates, init } = useSiteStore();
   useEffect(() => {
     init();
@@ -200,7 +201,13 @@ export default function ManageSettings() {
           onClick={() => setActiveTab("coupons")}
           className={`px-4 py-3 font-medium text-sm flex items-center gap-2 border-b-2 transition-all ${activeTab === "coupons" ? "border-brand-electric text-white" : "border-transparent text-gray-500 hover:text-gray-300"}`}
         >
-          <Tag className="w-4 h-4" /> Discount Coupons
+          <Tag className="w-4 h-4" /> Global Coupons
+        </button>
+        <button
+          onClick={() => setActiveTab("templateCoupons")}
+          className={`px-4 py-3 font-medium text-sm flex items-center gap-2 border-b-2 transition-all ${activeTab === "templateCoupons" ? "border-brand-electric text-white" : "border-transparent text-gray-500 hover:text-gray-300"}`}
+        >
+          <Tag className="w-4 h-4" /> Template Specific Coupons
         </button>
       </div>
 
@@ -418,7 +425,7 @@ export default function ManageSettings() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800">
-                  {coupons.map((c) => (
+                  {coupons.filter(c => !c.isTemplateSpecific).map((c) => (
                     <tr key={c.id}>
                       <td className="px-4 py-3 font-bold text-white">
                         {c.code}
@@ -445,13 +452,131 @@ export default function ManageSettings() {
                       </td>
                     </tr>
                   ))}
-                  {coupons.length === 0 && (
+                  {coupons.filter(c => !c.isTemplateSpecific).length === 0 && (
                     <tr>
                       <td
                         colSpan={4}
                         className="px-4 py-6 text-center text-gray-500"
                       >
                         No coupons active.
+                      </td>
+                    </tr>
+                  )}
+                </tbody>
+              </table>
+            </div>
+          </div>
+        )}
+
+        {activeTab === "templateCoupons" && (
+          <div className="space-y-6">
+            <div className="flex flex-col gap-4 bg-gray-800/50 p-6 rounded-xl border border-gray-800">
+              <h2 className="text-lg font-bold text-white mb-2">Create Universal Coupon (Template Specific)</h2>
+              <div className="flex flex-col md:flex-row gap-4 items-end">
+                <div className="flex-1 w-full md:w-1/3">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">
+                    Coupon Code
+                  </label>
+                  <input
+                    type="text"
+                    value={newCoupon.code || ""}
+                    onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                    placeholder="e.g. ALLFESTIVAL"
+                    className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-2"
+                  />
+                </div>
+                <div className="flex-1 w-full md:w-1/3">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">
+                    Expiry Date
+                  </label>
+                  <input
+                    type="date"
+                    value={newCoupon.expiryDate || ""}
+                    onChange={(e) => setNewCoupon({ ...newCoupon, expiryDate: e.target.value })}
+                    className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-2"
+                  />
+                </div>
+              </div>
+              
+              <div className="mt-4">
+                <label className="block text-xs font-medium text-gray-400 mb-4">
+                  Set Percentage Discount (%) for Each Template
+                </label>
+                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
+                  {templates.map(t => (
+                    <div key={t.id} className="flex items-center justify-between bg-gray-900 p-3 rounded-lg border border-gray-700">
+                      <span className="text-sm text-gray-300 truncate mr-2" title={t.title || t.name}>{t.title || t.name}</span>
+                      <div className="flex items-center gap-2 w-24 shrink-0">
+                        <input
+                          type="number"
+                          placeholder="0"
+                          value={templateDiscounts[t.id] || ""}
+                          onChange={(e) => setTemplateDiscounts({...templateDiscounts, [t.id]: e.target.value})}
+                          className="w-full bg-gray-800 border border-gray-600 text-white rounded-md px-2 py-1 text-sm text-right"
+                        />
+                        <span className="text-gray-400 text-sm">%</span>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+
+              <div className="flex justify-end mt-4">
+                <button
+                  onClick={async () => {
+                    if (!newCoupon.code) return;
+                    const updated = [...coupons, { 
+                      id: Date.now().toString(), 
+                      code: newCoupon.code,
+                      expiryDate: newCoupon.expiryDate,
+                      isTemplateSpecific: true,
+                      templateDiscounts
+                    }];
+                    setCoupons(updated);
+                    setNewCoupon({ code: "", percentage: "", expiryDate: "", maxPriceThreshold: "", excludedTemplates: [] });
+                    setTemplateDiscounts({});
+                    await saveSettings(updated);
+                  }}
+                  className="bg-brand-electric hover:bg-indigo-600 text-white px-6 py-2 rounded-xl text-sm font-medium transition-colors"
+                >
+                  Create Universal Coupon
+                </button>
+              </div>
+            </div>
+
+            {/* List existing template specific coupons */}
+            <div className="bg-gray-800/30 rounded-xl border border-gray-800 overflow-hidden">
+              <table className="w-full text-left text-sm text-gray-300">
+                <thead className="bg-gray-800">
+                  <tr>
+                    <th className="px-4 py-3">Code</th>
+                    <th className="px-4 py-3">Type</th>
+                    <th className="px-4 py-3">Expiry</th>
+                    <th className="px-4 py-3 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-gray-800">
+                  {coupons.filter(c => c.isTemplateSpecific).map((c) => (
+                    <tr key={c.id}>
+                      <td className="px-4 py-3 font-bold text-white">
+                        {c.code}
+                      </td>
+                      <td className="px-4 py-3 text-emerald-400">Template Specific</td>
+                      <td className="px-4 py-3 text-gray-400">{c.expiryDate || "Never"}</td>
+                      <td className="px-4 py-3 text-right">
+                        <button
+                          onClick={() => removeCoupon(c.id)}
+                          className="text-red-400 p-2 hover:bg-red-400/10 rounded-lg"
+                        >
+                          <Trash2 className="w-4 h-4" />
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                  {coupons.filter(c => c.isTemplateSpecific).length === 0 && (
+                    <tr>
+                      <td colSpan={4} className="px-4 py-6 text-center text-gray-500">
+                        No template specific coupons active.
                       </td>
                     </tr>
                   )}

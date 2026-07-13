@@ -1,7 +1,5 @@
 import React, { useState, useEffect } from "react";
-import {
-  collection,
-  onSnapshot,
+import { collection, onSnapshot, addDoc,
   doc,
   updateDoc,
   deleteDoc,
@@ -31,6 +29,46 @@ export default function ManageOrders() {
   const [activeTab, setActiveTab] = useState("All");
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
+
+  const toggleSelectOrder = (id: string) => {
+    setSelectedOrders(prev => 
+      prev.includes(id) ? prev.filter(orderId => orderId !== id) : [...prev, id]
+    );
+  };
+
+  const bulkUpdateStatus = async (status: string) => {
+    if (selectedOrders.length === 0) return;
+    try {
+      const promises = selectedOrders.map(async (id) => {
+        const order = orders.find(o => o.id === id);
+        await updateDoc(doc(db, "orders", id), { status });
+        if (order?.userId) {
+          await createNotification(order.userId, "Order Status Updated", `Your order status has been updated to ${status}.`, id);
+        }
+      });
+      await Promise.all(promises);
+      // toast.success(`Bulk update to ${status} successful`);
+      setSelectedOrders([]);
+    } catch (e) {
+      console.error(e);
+      // toast.error("Bulk update failed");
+    }
+  };
+
+  const bulkDeleteOrders = async () => {
+    if (selectedOrders.length === 0) return;
+    if (!window.confirm(`Are you sure you want to delete ${selectedOrders.length} orders?`)) return;
+    try {
+      const promises = selectedOrders.map(id => deleteDoc(doc(db, "orders", id)));
+      await Promise.all(promises);
+      // toast.success(`Bulk delete successful`);
+      setSelectedOrders([]);
+    } catch (e) {
+      console.error(e);
+      // toast.error("Bulk delete failed");
+    }
+  };
 
   useEffect(() => {
     // We should show newest first
@@ -79,6 +117,23 @@ export default function ManageOrders() {
     }
   };
 
+  
+  const createNotification = async (userId: string, title: string, message: string, orderId: string) => {
+    if (!userId) return;
+    try {
+      await addDoc(collection(db, "userNotifications"), {
+        userId,
+        title,
+        message,
+        orderId,
+        read: false,
+        createdAt: new Date().toISOString()
+      });
+    } catch (e) {
+      console.error("Error creating notification", e);
+    }
+  };
+
   const updateStatus = async (id: string, status: string) => {
     try {
       await updateDoc(doc(db, "orders", id), { status });
@@ -88,27 +143,67 @@ export default function ManageOrders() {
     }
   };
 
-  const updateOrderStatus = async (id: string, newStatus: string) => {
+  const updatePaymentStatus = async (id: string, newPaymentStatus: string, userId?: string) => {
+    try {
+      await updateDoc(doc(db, "orders", id), { paymentStatus: newPaymentStatus });
+      toast.success(`Payment status updated to ${newPaymentStatus}`);
+      if (userId) {
+        await createNotification(userId, "Payment Status Updated", `Your order payment status is now ${newPaymentStatus}.`, id);
+      }
+    } catch (e) {
+      toast.error("Failed to update payment status");
+    }
+  };
+
+  const updateOrderStatus = async (id: string, newStatus: string, userId?: string) => {
     try {
       await updateDoc(doc(db, "orders", id), {
         status: newStatus
       });
       toast.success(`Order status updated to ${newStatus}`);
+      if (userId) {
+        await createNotification(userId, "Order Status Updated", `Your order status has been updated to ${newStatus}.`, id);
+      }
     } catch (e) {
       toast.error("Failed to update status");
     }
   };
 
-  const saveDownloadUrl = async (id: string) => {
+  const saveDownloadUrl = async (id: string, userId?: string) => {
     try {
       await updateDoc(doc(db, "orders", id), {
         downloadUrl,
         status: "Delivered",
       });
       toast.success("Download link dispatched & marked Delivered");
+      if (userId) {
+        await createNotification(userId, "Order Delivered", `Your order has been delivered! A download link is now available.`, id);
+      }
       setDownloadUrl("");
     } catch (e) {
       toast.error("Update failed");
+    }
+  };
+  const filteredOrders = orders.filter(o => {
+    const searchLower = searchQuery.toLowerCase();
+    const matchesSearch = searchQuery === '' || 
+        (o.id || '').toLowerCase().includes(searchLower) ||
+      (o.customerInfo?.name || '').toLowerCase().includes(searchLower) ||
+      (o.customerInfo?.email || '').toLowerCase().includes(searchLower) ||
+      (o.customerInfo?.phone || '').toLowerCase().includes(searchLower);
+    if (!matchesSearch) return false;
+    if (activeTab === 'All') return true;
+    const st = o.status || 'Pending';
+    if (activeTab === 'Pending') return st === 'Pending' || st === 'Processing';
+    if (activeTab === 'Completed') return st === 'Completed' || st === 'Delivered';
+    return true;
+  });
+
+  const handleSelectAll = () => {
+    if (selectedOrders.length === filteredOrders.length && filteredOrders.length > 0) {
+      setSelectedOrders([]);
+    } else {
+      setSelectedOrders(filteredOrders.map(o => o.id));
     }
   };
 
@@ -156,8 +251,30 @@ export default function ManageOrders() {
         </div>
       </div>
       
+      {/* Bulk Actions */}
+      {selectedOrders.length > 0 && (
+        <div className="mb-6 p-4 bg-indigo-500/10 border border-indigo-500/30 rounded-xl flex items-center justify-between">
+          <span className="text-indigo-400 font-medium">
+            {selectedOrders.length} order{selectedOrders.length > 1 ? 's' : ''} selected
+          </span>
+          <div className="flex gap-2">
+            <button onClick={() => {
+              toast.promise(bulkUpdateStatus("Processing"), { loading: 'Updating...', success: 'Orders approved (Processing)', error: 'Failed' });
+            }} className="px-3 py-1.5 bg-indigo-500 text-white rounded-lg text-sm font-medium hover:bg-indigo-600 transition-colors">
+              Approve Selected
+            </button>
+            <button onClick={() => {
+              toast.promise(bulkDeleteOrders(), { loading: 'Deleting...', success: 'Orders deleted', error: 'Failed' });
+            }} className="px-3 py-1.5 bg-red-500/20 text-red-400 rounded-lg text-sm font-medium hover:bg-red-500/30 transition-colors">
+              Delete Selected
+            </button>
+          </div>
+        </div>
+      )}
+      
       {/* Order Tabs */}
-      <div className="flex gap-2 overflow-x-auto mb-6 pb-2 scrollbar-thin scrollbar-thumb-gray-800">
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div className="flex gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-thin scrollbar-thumb-gray-800">
         <button
           onClick={() => setActiveTab('All')}
           className={`px-4 py-2 rounded-lg text-sm font-medium whitespace-nowrap transition-colors ${activeTab === 'All' ? 'bg-indigo-500 text-white' : 'bg-gray-800/50 text-gray-400 hover:text-white hover:bg-gray-800'}`}
@@ -176,362 +293,202 @@ export default function ManageOrders() {
         >
           Completed / Delivered
         </button>
+        </div>
+        <div className="flex items-center gap-2">
+          <button
+            onClick={handleSelectAll}
+            className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium transition-colors bg-gray-800/50 text-gray-300 hover:text-white hover:bg-gray-800 border border-gray-700 hover:border-gray-600"
+          >
+            <input 
+              type="checkbox" 
+              checked={selectedOrders.length > 0 && selectedOrders.length === filteredOrders.length}
+              onChange={handleSelectAll}
+              className="w-4 h-4 rounded border-gray-700 bg-gray-900 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-gray-800 pointer-events-none"
+            />
+            Select All
+          </button>
+        </div>
       </div>
 
-      <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
+            <div className="bg-gray-900 rounded-xl p-6 border border-gray-800">
         {orders.length === 0 ? (
           <p className="text-gray-500 text-center py-4">No orders found.</p>
         ) : (
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-gray-300">
-              <thead className="text-gray-400 border-b border-gray-800">
-                <tr>
-                  <th className="pb-3 font-medium text-sm">Order & Date</th>
-                  <th className="pb-3 font-medium text-sm">Customer</th>
-                  <th className="pb-3 font-medium text-sm">Template</th>
-                  <th className="pb-3 font-medium text-sm">Amount</th>
-                  <th className="pb-3 font-medium text-sm">Status</th>
-                  <th className="pb-3 font-medium text-sm text-right">
-                    Actions
-                  </th>
-                </tr>
-              </thead>
-              <tbody className="divide-y divide-gray-800">
-                {orders.filter(o => {
-          const searchLower = searchQuery.toLowerCase();
-          const matchesSearch = searchQuery === '' || 
-            (o.id || '').toLowerCase().includes(searchLower) ||
-            (o.customerInfo?.name || '').toLowerCase().includes(searchLower) ||
-            (o.customerInfo?.email || '').toLowerCase().includes(searchLower) ||
-            (o.customerInfo?.phone || '').toLowerCase().includes(searchLower);
-            
-          if (!matchesSearch) return false;
-          
-          if (activeTab === 'All') return true;
-          const st = o.status || 'Pending';
-          if (activeTab === 'Pending') return st === 'Pending' || st === 'Processing';
-          if (activeTab === 'Completed') return st === 'Completed' || st === 'Delivered';
-          return true;
-        }).map((order) => (
-                  <React.Fragment key={order.id}>
-                    <tr className="border-b border-gray-800/50 hover:bg-gray-800/30">
-                      <td className="py-4">
-                        <div className="text-sm font-mono text-gray-400">
-                          {order.id.slice(-6)}
-                        </div>
-                        <div className="text-xs text-gray-500">
-                          {new Date(order.createdAt).toLocaleDateString()}
-                        </div>
-                      </td>
-                      <td className="py-4 text-sm">
-                        <div className="font-medium text-white">
-                          {order.customerName || order.customerEmail || "N/A"}
-                        </div>
-                        <div className="text-gray-500 text-xs">
-                          {order.customerPhone}
-                        </div>
-                      </td>
-                      <td className="py-4 text-sm">
-                        <div className="flex items-center gap-3">
-                          {order.thumbnailBase64 && (
-                            <img src={order.thumbnailBase64} alt={order.templateName} className="w-12 h-12 object-cover rounded-md border border-gray-700 bg-gray-800" />
-                          )}
-                          <div className="flex flex-col gap-1">
-                            <span className="font-medium">{order.templateName || "Custom"}</span>
-                            {order.videoUrl && (
-                              <a href={order.videoUrl} target="_blank" rel="noopener noreferrer" className="text-xs text-brand-electric hover:underline flex items-center gap-1">
-                                <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
-                                Live Preview
-                              </a>
-                            )}
+          <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
+            {filteredOrders.map((order) => (
+              <div key={order.id} className="bg-gray-800/50 rounded-2xl border border-gray-800 overflow-hidden flex flex-col hover:border-gray-700 transition-colors">
+                <div className="p-5 flex flex-col gap-4">
+                  <div className="flex justify-between items-start">
+                    <div className="flex items-start gap-3">
+                      <input 
+                        type="checkbox"
+                        checked={selectedOrders.includes(order.id)}
+                        onChange={() => toggleSelectOrder(order.id)}
+                        className="mt-1 w-4 h-4 rounded border-gray-700 bg-gray-900 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-gray-800"
+                      />
+                    <div>
+                      <div className="text-xs text-gray-500 font-mono mb-1">#{order.id.slice(-8)}</div>
+                      <div className="font-bold text-white text-lg">{order.customerName || order.customerEmail || "N/A"}</div>
+                      <div className="text-gray-400 text-sm">{order.customerPhone || "No Phone"}</div>
+                    </div>
+                    </div>
+                    <div className="text-right">
+                      <div className="text-xs text-gray-500 mb-1">{new Date(order.createdAt).toLocaleDateString()}</div>
+                      <div className="font-bold text-emerald-400 text-lg">₹{order.price || order.amount || 0}</div>
+                    </div>
+                  </div>
+
+                  <div className="flex items-center gap-4 bg-gray-900/50 p-3 rounded-xl border border-gray-800/50">
+                    {order.thumbnailBase64 && (
+                      <div 
+                        className={`relative w-14 h-14 shrink-0 rounded-lg overflow-hidden border border-gray-700 bg-gray-800 ${order.videoUrl ? 'cursor-pointer group' : ''}`}
+                        onClick={() => order.videoUrl && setPreviewVideoUrl(order.videoUrl)}
+                      >
+                        <img src={order.thumbnailBase64} alt={order.templateName} className="w-full h-full object-cover" />
+                        {order.videoUrl && (
+                          <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
+                            <Play className="w-5 h-5 text-white" fill="white" />
                           </div>
-                        </div>
-                      </td>
-                      <td className="py-4 text-sm font-medium text-emerald-400">
-                        ₹{order.price || order.amount || 0}
-                      </td>
-                      <td className="py-4 text-sm">
-                        <select
-                          value={order.status || "Pending"}
-                          onChange={(e) =>
-                            updateStatus(order.id, e.target.value)
-                          }
-                          className={`bg-gray-800 border-none rounded px-2 py-1 text-xs font-bold font-sans ${order.status === "Delivered" ? "text-purple-400" : order.status === "Completed" ? "text-green-400" : order.status === "Cancelled" ? "text-red-400" : "text-yellow-400"}`}
-                        >
-                          <option>Pending</option>
-                          <option>Processing</option>
-                          <option>Editing</option>
-                          <option>Review</option>
-                          <option>Completed</option>
-                          <option>Delivered</option>
-                          <option>Cancelled</option>
-                        </select>
-                      </td>
-                      <td className="py-4 text-right">
-                        <button
-                          onClick={() =>
-                            setExpandedId(
-                              expandedId === order.id ? null : order.id,
-                            )
-                          }
-                          className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg mr-2"
-                        >
-                          <ChevronDown
-                            className={`w-4 h-4 transform transition-transform ${expandedId === order.id ? "rotate-180" : ""}`}
-                          />
-                        </button>
-                        <button
-                          onClick={() => setDeleteOrderId(order.id)}
-                          className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                    {expandedId === order.id && (
-                      <tr className="bg-gray-800/20">
-                        <td colSpan={6} className="p-6">
-                          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                            <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-                              <h4 className="text-white font-bold mb-3 flex items-center gap-2">
-                                <Package className="w-4 h-4" /> Order Details
-                              </h4>
-                              <div className="space-y-2 text-sm">
-                                <div className="flex text-gray-400">
-                                  <span className="w-1/3">Via Method:</span>
-                                  <span className="text-white">
-                                    {order.viaMethod || "Unknown"}
-                                  </span>
-                                </div>
-                                <div className="flex text-gray-400 items-center">
-                                  <span className="w-1/3">Payment:</span>
-                                  <span
-                                    className={`text-sm font-medium ${order.paymentStatus === "Received" || order.paymentStatus === "Paid Online" ? "text-green-400" : "text-orange-400"}`}
-                                  >
-                                    {order.paymentStatus || "Unknown"}
-                                  </span>
-                                  {order.paymentStatus !== "Received" &&
-                                  order.paymentStatus !== "Paid Online" ? (
-                                    <button
-                                      onClick={async () => {
-                                        try {
-                                          await updateDoc(
-                                            doc(db, "orders", order.id),
-                                            {
-                                              paymentStatus: "Received",
-                                              status: "Processing",
-                                            },
-                                          );
-                                          toast.success(
-                                            "Payment marked as received, status set to Processing",
-                                          );
-                                        } catch (e) {
-                                          toast.error(
-                                            "Failed to update payment status",
-                                          );
-                                        }
-                                      }}
-                                      className="ml-3 bg-blue-500/20 text-blue-400 hover:bg-blue-500/30 px-2 py-0.5 rounded text-xs"
-                                    >
-                                      Mark Received
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={async () => {
-                                        try {
-                                          await updateDoc(
-                                            doc(db, "orders", order.id),
-                                            {
-                                              paymentStatus: "Pending",
-                                              status: "Pending",
-                                            },
-                                          );
-                                          toast.success(
-                                            "Payment reverted to Pending",
-                                          );
-                                        } catch (e) {
-                                          toast.error(
-                                            "Failed to update payment status",
-                                          );
-                                        }
-                                      }}
-                                      className="ml-3 bg-gray-500/20 text-gray-400 hover:bg-gray-500/30 px-2 py-0.5 rounded text-xs"
-                                    >
-                                      Revert
-                                    </button>
-                                  )}
-                                </div>
-                                <div className="flex text-gray-400 items-center">
-                                  <span className="w-1/3">Advance:</span>
-                                  <span className="text-orange-400 font-bold">
-                                    ₹{order.advancePayment || 0}
-                                  </span>
-                                  <span
-                                    className={`ml-2 px-2 py-0.5 rounded text-[10px] ${order.advancePaymentStatus === "Received" ? "bg-green-500/20 text-green-400" : "bg-orange-500/20 text-orange-400"}`}
-                                  >
-                                    {order.advancePaymentStatus || "Pending"}
-                                  </span>
-                                  {order.advancePaymentStatus === "Pending" ||
-                                  !order.advancePaymentStatus ? (
-                                    <button
-                                      onClick={async () => {
-                                        try {
-                                          await updateDoc(
-                                            doc(db, "orders", order.id),
-                                            {
-                                              advancePaymentStatus: "Received",
-                                              status: "Processing",
-                                            },
-                                          );
-                                          toast.success(
-                                            "Marked advance as received & set to processing",
-                                          );
-                                        } catch (e) {
-                                          toast.error("Failed to update");
-                                        }
-                                      }}
-                                      className="ml-2 bg-green-500/20 text-green-400 hover:bg-green-500/30 px-2 py-0.5 rounded text-xs"
-                                    >
-                                      Confirm Received
-                                    </button>
-                                  ) : (
-                                    <button
-                                      onClick={async () => {
-                                        try {
-                                          await updateDoc(
-                                            doc(db, "orders", order.id),
-                                            {
-                                              advancePaymentStatus: "Pending",
-                                              status: "Pending",
-                                            },
-                                          );
-                                          toast.success("Reverted to pending");
-                                        } catch (e) {
-                                          toast.error("Failed to update");
-                                        }
-                                      }}
-                                      className="ml-2 bg-gray-500/20 text-gray-400 hover:bg-gray-500/30 px-2 py-0.5 rounded text-xs"
-                                    >
-                                      Revert
-                                    </button>
-                                  )}
-                                </div>
-                                <div className="flex text-gray-400">
-                                  <span className="w-1/3">Files Uploaded:</span>
-                                  <span className="text-white">
-                                    {order.filesCount || 0}
-                                  </span>
-                                </div>
-                              </div>
-
-                              {order.customData &&
-                                Object.keys(order.customData).length > 0 && (
-                                  <>
-                                    <h4 className="text-white font-bold mt-4 mb-2">
-                                      Customization Data
-                                    </h4>
-                                    <div className="space-y-1 text-sm bg-gray-800 p-3 rounded-lg">
-                                      {Object.entries(order.customData).map(
-                                        ([k, v]) => (
-                                          <div
-                                            key={k}
-                                            className="text-gray-300"
-                                          >
-                                            <span className="text-gray-500">
-                                              {k}:
-                                            </span>
-                                            <pre className="inline-block whitespace-pre-wrap text-xs ml-2 align-top font-sans">
-                                              {typeof v === "object"
-                                                ? JSON.stringify(v, null, 2)
-                                                : String(v)}
-                                            </pre>
-                                          </div>
-                                        ),
-                                      )}
-                                    </div>
-                                  </>
-                                )}
-                            </div>
-
-                            <div className="bg-gray-900 rounded-xl p-4 border border-gray-800">
-                              <h4 className="text-white font-bold mb-3 flex items-center gap-2">
-                                <CheckCircle className="w-4 h-4" /> Delivery
-                              </h4>
-                              <div className="space-y-4">
-                                <div className="flex gap-2 items-center mb-4">
-                                  <span className="text-gray-400 text-sm">Status:</span>
-                                  <select 
-                                    className="bg-gray-800 border border-gray-700 rounded-lg px-3 py-1.5 text-sm text-white focus:outline-none"
-                                    value={order.status || "Pending"}
-                                    onChange={(e) => updateOrderStatus(order.id, e.target.value)}
-                                  >
-                                    <option value="Pending">Pending</option>
-                                    <option value="Processing">Processing</option>
-                                    <option value="Completed">Completed</option>
-                                    <option value="Delivered">Delivered</option>
-                                    <option value="Cancelled">Cancelled</option>
-                                  </select>
-                                </div>
-
-                                {order.downloadUrl ? (
-                                  <div className="text-sm bg-green-500/10 border border-green-500/20 text-green-400 p-3 rounded-xl flex items-start gap-2">
-                                    <LinkIcon className="w-4 h-4 mt-0.5" />
-                                    <div className="flex-1">
-                                      <div className="font-bold mb-1">
-                                        Link Sent to Client
-                                      </div>
-                                      <a
-                                        href={order.downloadUrl}
-                                        target="_blank"
-                                        rel="noreferrer"
-                                        className="text-blue-400 hover:underline break-all block mb-2"
-                                      >
-                                        {order.downloadUrl}
-                                      </a>
-                                      <button
-                                        onClick={() => setPreviewVideoUrl(order.downloadUrl)}
-                                        className="flex items-center gap-1 bg-green-500/20 hover:bg-green-500/30 text-green-300 px-3 py-1 rounded text-xs font-medium"
-                                      >
-                                        <Play className="w-3 h-3" /> Preview Delivery Video
-                                      </button>
-                                    </div>
-                                  </div>
-                                ) : (
-                                  <div className="text-sm text-gray-400">
-                                    No delivery link attached yet. Upload the
-                                    final video to Google Drive/YouTube and
-                                    paste the link below.
-                                  </div>
-                                )}
-
-                                <div className="flex gap-2">
-                                  <input
-                                    type="url"
-                                    placeholder="https://drive.google.com/..."
-                                    value={downloadUrl}
-                                    onChange={(e) =>
-                                      setDownloadUrl(e.target.value)
-                                    }
-                                    className="flex-1 bg-gray-800 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white"
-                                  />
-                                  <button
-                                    onClick={() => saveDownloadUrl(order.id)}
-                                    disabled={!downloadUrl}
-                                    className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
-                                  >
-                                    <Download className="w-4 h-4" /> Send Link
-                                  </button>
-                                </div>
-                              </div>
-                            </div>
-                          </div>
-                        </td>
-                      </tr>
+                        )}
+                      </div>
                     )}
-                  </React.Fragment>
-                ))}
-              </tbody>
-            </table>
+                    <div className="flex flex-col flex-1 min-w-0">
+                      <span className="font-medium text-white truncate text-sm">{order.templateName || "Custom Template"}</span>
+                      {order.videoUrl && (
+                        <button onClick={() => setPreviewVideoUrl(order.videoUrl)} className="text-xs text-brand-electric hover:underline flex items-center gap-1 mt-1 text-left">
+                          <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                          Live Preview
+                        </button>
+                      )}
+                    </div>
+                  </div>
+                  
+                  <div className="flex items-center justify-between mt-2">
+                    <select
+                      value={order.status || "Pending"}
+                      onChange={(e) => updateOrderStatus(order.id, e.target.value, order.userId)}
+                      className={`bg-gray-900 border border-gray-700 rounded-lg px-3 py-1.5 text-sm font-bold focus:outline-none ${order.status === "Delivered" ? "text-purple-400" : order.status === "Completed" ? "text-green-400" : order.status === "Cancelled" ? "text-red-400" : "text-yellow-400"}`}
+                    >
+                      <option value="Pending">Pending</option>
+                      <option value="Processing">Processing</option>
+                      <option value="Editing">Editing</option>
+                      <option value="Review">Review</option>
+                      <option value="Completed">Completed</option>
+                      <option value="Delivered">Delivered</option>
+                      <option value="Cancelled">Cancelled</option>
+                    </select>
+                    
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={() => setExpandedId(expandedId === order.id ? null : order.id)}
+                        className={`px-3 py-1.5 text-sm font-medium rounded-lg transition-colors ${expandedId === order.id ? "bg-indigo-500 text-white" : "bg-gray-800 text-gray-300 hover:bg-gray-700"}`}
+                      >
+                        {expandedId === order.id ? 'Hide Details' : 'View Details'}
+                      </button>
+                      <button
+                        onClick={() => setDeleteOrderId(order.id)}
+                        className="p-1.5 text-gray-500 hover:text-red-400 hover:bg-red-400/10 rounded-lg transition-colors"
+                        title="Delete Order"
+                      >
+                        <Trash2 className="w-4 h-4" />
+                      </button>
+                    </div>
+                  </div>
+                </div>
+
+                {expandedId === order.id && (
+                  <div className="border-t border-gray-800 p-5 bg-gray-900/30 space-y-4 text-sm">
+                    <div className="grid grid-cols-2 gap-4">
+                      <div>
+                        <span className="text-gray-500 block text-xs mb-1">Via Method</span>
+                        <span className="text-white font-medium">{order.viaMethod || "Unknown"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-xs mb-1">Template Preview</span>
+                        {order.videoUrl ? (
+                          <button onClick={() => setPreviewVideoUrl(order.videoUrl)} className="text-sm text-brand-electric hover:underline flex items-center gap-1 text-left font-medium">
+                            <svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
+                            Live Preview
+                          </button>
+                        ) : (
+                          <span className="text-gray-400 text-sm italic">Not available</span>
+                        )}
+                      </div>
+                      <div className="hidden">
+                        <span className="text-gray-500 block text-xs mb-1">Via Method</span>
+                        <span className="text-white font-medium">{order.viaMethod || "Unknown"}</span>
+                      </div>
+                      <div>
+                        <span className="text-gray-500 block text-xs mb-1">Payment Status</span>
+                        <select
+                          value={order.paymentStatus || "Pending"}
+                          onChange={(e) => updatePaymentStatus(order.id, e.target.value, order.userId)}
+                          className={`bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-sm font-medium focus:outline-none ${order.paymentStatus === "Received" || order.paymentStatus === "Paid Online" ? "text-green-400" : order.paymentStatus === "Pending Verification" ? "text-yellow-400" : "text-orange-400"}`}
+                        >
+                          <option value="Pending">Pending</option>
+                          <option value="Pending Verification">Pending Verification</option>
+                          <option value="Received">Received</option>
+                          <option value="Paid Online">Paid Online</option>
+                          <option value="Refunded">Refunded</option>
+                        </select>
+                      </div>
+                    </div>
+
+                    {order.customData && Object.keys(order.customData).length > 0 && (
+                      <div className="mt-4">
+                        <span className="text-gray-500 block text-xs mb-2">Customization Data</span>
+                        <div className="bg-gray-900 rounded-lg p-3 space-y-2 border border-gray-800">
+                          {Object.entries(order.customData).map(([k, v]) => (
+                            <div key={k} className="flex flex-col">
+                              <span className="text-gray-500 text-xs">{k}:</span>
+                              <pre className="whitespace-pre-wrap font-sans text-gray-300 text-sm mt-0.5">
+                                {typeof v === "object" ? JSON.stringify(v, null, 2) : String(v)}
+                              </pre>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    <div className="mt-4 pt-4 border-t border-gray-800">
+                      <span className="text-gray-500 block text-xs mb-3">Delivery Link</span>
+                      {order.downloadUrl ? (
+                        <div className="space-y-3">
+                          <a href={order.downloadUrl} target="_blank" rel="noreferrer" className="text-blue-400 hover:underline break-all block text-sm">
+                            {order.downloadUrl}
+                          </a>
+                          <button
+                            onClick={() => setPreviewVideoUrl(order.downloadUrl)}
+                            className="flex items-center justify-center w-full gap-2 bg-green-500/10 hover:bg-green-500/20 text-green-400 px-4 py-2 rounded-lg text-sm font-medium transition-colors border border-green-500/20"
+                          >
+                            <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg> Preview Video
+                          </button>
+                        </div>
+                      ) : (
+                        <p className="text-gray-500 text-xs italic mb-3">No link attached yet.</p>
+                      )}
+                      
+                      <div className="flex gap-2 mt-3">
+                        <input
+                          type="url"
+                          placeholder="Paste final video URL..."
+                          value={downloadUrl}
+                          onChange={(e) => setDownloadUrl(e.target.value)}
+                          className="flex-1 bg-gray-900 border border-gray-700 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:ring-1 focus:ring-indigo-500"
+                        />
+                        <button
+                          onClick={() => saveDownloadUrl(order.id, order.userId)}
+                          disabled={!downloadUrl}
+                          className="bg-indigo-500 hover:bg-indigo-600 disabled:opacity-50 disabled:cursor-not-allowed text-white px-4 py-2 rounded-lg text-sm font-medium shrink-0 flex items-center gap-1.5"
+                        >
+                          <svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg> Send
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+            ))}
           </div>
         )}
       </div>

@@ -4,8 +4,8 @@ import { useAuthStore } from '../../store/useAuthStore';
 import { auth, db } from '../../lib/firebase';
 import { signOut } from 'firebase/auth';
 import { getDocs, collection } from 'firebase/firestore';
-import { 
-  LayoutDashboard, Users, ShoppingBag, Images, FileEdit, 
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts';
+import { LayoutDashboard, Users, ShoppingBag, Images, FileEdit, 
   MessageSquare, HelpCircle, Bell, Settings, LogOut, Menu, X, ShieldAlert, ArrowLeft 
 } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -24,6 +24,8 @@ import ManageCategories from './ManageCategories';
 import ManageCustomServices from './ManageCustomServices';
 import ManageSplashVideo from './ManageSplashVideo';
 import CleanupDuplicates from '../../components/CleanupDuplicates';
+import VideoModal from "../../components/VideoModal";
+import { Play } from "lucide-react";
 import { useChatStore } from '../../store/useChatStore';
 
 export default function AdminDashboardLayout() {
@@ -188,6 +190,8 @@ function AdminHome() {
 
   const [recentUsers, setRecentUsers] = useState<any[]>([]);
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
+  const [templateStats, setTemplateStats] = useState<{name: string, count: number}[]>([]);
+  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
 
   const formatDate = (val: any) => {
      if (!val) return new Date().toLocaleDateString();
@@ -235,6 +239,20 @@ function AdminHome() {
            const d2 = getMs(b.createdAt || b.joinedAt || b.lastLogin);
            return d2 - d1;
         }).slice(0, 5);
+
+        const templateCounts: Record<string, number> = {};
+        ordersData.forEach(o => {
+          const tName = o.templateName || o.templateTitle;
+          if (tName) {
+            templateCounts[tName] = (templateCounts[tName] || 0) + 1;
+          }
+        });
+
+        const sortedTemplates = Object.entries(templateCounts)
+          .map(([name, count]) => ({ name, count }))
+          .sort((a, b) => b.count - a.count)
+          .slice(0, 5);
+        setTemplateStats(sortedTemplates);
 
         setStats({
            users: usersSnap.size,
@@ -287,7 +305,45 @@ function AdminHome() {
         ))}
       </div>
 
-      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 mb-8">
+         <div className="lg:col-span-2 bg-white/80 backdrop-blur-sm border border-brand-purple/10 rounded-2xl p-6 shadow-sm min-h-[300px]">
+             <h3 className="text-lg font-bold text-brand-navy mb-4">Top Purchased Templates</h3>
+             {templateStats.length > 0 ? (
+               <div className="h-[250px] w-full">
+                 <ResponsiveContainer width="100%" height="100%">
+                   <BarChart data={templateStats} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
+                     <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#E5E7EB" />
+                     <XAxis 
+                       dataKey="name" 
+                       axisLine={false} 
+                       tickLine={false} 
+                       tick={{ fontSize: 12, fill: '#6B7280' }} 
+                       tickFormatter={(value) => value.length > 15 ? value.substring(0, 15) + '...' : value}
+                     />
+                     <YAxis 
+                       axisLine={false} 
+                       tickLine={false} 
+                       tick={{ fontSize: 12, fill: '#6B7280' }} 
+                       allowDecimals={false}
+                     />
+                     <Tooltip 
+                       cursor={{ fill: 'transparent' }}
+                       contentStyle={{ borderRadius: '8px', border: 'none', boxShadow: '0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1)' }}
+                     />
+                     <Bar dataKey="count" radius={[4, 4, 0, 0]} maxBarSize={50}>
+                       {templateStats.map((entry, index) => (
+                         <Cell key={`cell-${index}`} fill={['#8b5cf6', '#a78bfa', '#c4b5fd', '#ddd6fe', '#ede9fe'][index % 5]} />
+                       ))}
+                     </Bar>
+                   </BarChart>
+                 </ResponsiveContainer>
+               </div>
+             ) : (
+                <div className="flex items-center justify-center h-[200px] text-brand-slate text-sm">
+                   No template data available
+                </div>
+             )}
+         </div>
          <div className="bg-white/80 backdrop-blur-sm border border-brand-purple/10 rounded-2xl p-6 shadow-sm min-h-[300px]">
              <h3 className="text-lg font-bold text-brand-navy mb-4">Recent Registrations</h3>
              {recentUsers.length > 0 ? (
@@ -330,9 +386,14 @@ function AdminHome() {
                          <p className="text-xs text-gray-500">{o.customerName || (o.customData && o.customData.customerName) || 'Customer'}</p>
                        </div>
                      </div>
-                     <div className="text-right">
+                     <div className="text-right flex flex-col items-end">
                        <span className="text-[10px] uppercase tracking-wider font-bold text-brand-purple bg-brand-purple/10 px-2 py-1 rounded-full">{o.status || 'Pending'}</span>
-                       <p className="text-xs text-gray-400 mt-2">{formatDate(o.createdAt)}</p>
+                       {o.videoUrl && (
+                         <button onClick={() => setPreviewVideoUrl(o.videoUrl)} className="text-[10px] text-brand-electric hover:underline flex items-center gap-1 mt-2">
+                           <Play className="w-3 h-3" /> Live Preview
+                         </button>
+                       )}
+                       <p className="text-xs text-gray-400 mt-1">{formatDate(o.createdAt)}</p>
                      </div>
                    </div>
                  ))}
