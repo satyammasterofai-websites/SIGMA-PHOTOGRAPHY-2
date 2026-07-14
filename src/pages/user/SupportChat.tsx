@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, doc, updateDoc, getDocs } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { useAuthStore } from "../../store/useAuthStore";
 import { Send, Check, CheckCheck } from "lucide-react";
@@ -16,6 +16,27 @@ export default function SupportChat() {
   const messagesEndRef = useRef<HTMLDivElement>(null);
   
   const { isTyping, updateTyping } = useTypingIndicator(user?.uid || '');
+
+  const [isSupportOnline, setIsSupportOnline] = useState(false);
+
+  useEffect(() => {
+    // Check if any admin is online
+    const q = query(collection(db, "users"), where("role", "==", "admin"));
+    const unsub = onSnapshot(q, (snapshot) => {
+      let online = false;
+      snapshot.forEach(d => {
+        const admin = d.data();
+        if (admin.isOnline && admin.lastSeen) {
+          const lastSeenDate = typeof admin.lastSeen.toMillis === 'function' ? admin.lastSeen.toMillis() : new Date(admin.lastSeen).getTime();
+          if (new Date().getTime() - lastSeenDate < 2 * 60 * 1000) {
+            online = true;
+          }
+        }
+      });
+      setIsSupportOnline(online);
+    });
+    return () => unsub();
+  }, []);
 
   useEffect(() => {
     if (!user) return;
@@ -52,6 +73,7 @@ export default function SupportChat() {
     e.preventDefault();
     if (!newMessage.trim() || !user) return;
     try {
+      const isFirstMessage = messages.length === 0;
       await addDoc(collection(db, "chats"), {
         userId: user.uid,
         userEmail: user.email,
@@ -62,6 +84,23 @@ export default function SupportChat() {
       });
       setNewMessage("");
       updateTyping(false);
+
+      if (isFirstMessage) {
+        setTimeout(async () => {
+          try {
+            await addDoc(collection(db, "chats"), {
+              userId: user.uid,
+              userEmail: user.email,
+              sender: "admin",
+              text: welcomeMessage,
+              timestamp: serverTimestamp(),
+              read: false
+            });
+          } catch (e) {
+            console.error("Failed to send welcome message", e);
+          }
+        }, 1000);
+      }
     } catch (error) {
       console.error("Error sending message:", error);
       toast.error("Failed to send message");
@@ -76,11 +115,7 @@ export default function SupportChat() {
       </div>
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
-        <div className="flex justify-start">
-          <div className="max-w-[70%] rounded-2xl px-5 py-3 bg-white border border-gray-200 text-gray-800 rounded-bl-none shadow-sm">
-            <p className="whitespace-pre-wrap">{welcomeMessage}</p>
-          </div>
-        </div>
+
         {messages.map((msg) => (
           <div
             key={msg.id}

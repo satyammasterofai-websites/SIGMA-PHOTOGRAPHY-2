@@ -65,7 +65,7 @@ export default function PremiumGallery() {
 
       <div className="p-6 flex flex-col flex-1">
         <div className="flex justify-between items-start mb-2">
-          <h3 className="font-display font-bold text-xl text-gray-900 line-clamp-1 flex-1 pr-2">
+          <h3 className="font-display font-bold text-xl text-gray-900  flex-1 pr-2">
             {template.title}
           </h3>
         </div>

@@ -496,7 +496,7 @@ function MyOrders() {
                           </span>
                         </div>
                       )}
-                      <FormatOrderData data={order.customData} theme="light" />
+                      <FormatOrderData data={order.customData} theme="light" templateId={order.templateId} />
                     </div>
                   </div>
                   <div>
@@ -592,7 +592,7 @@ function Downloads() {
               <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-green-500 mb-4">
                 <Download className="w-8 h-8" />
               </div>
-              <h3 className="font-bold text-gray-900 mb-1 line-clamp-1">
+              <h3 className="font-bold text-gray-900 mb-1 ">
                 {d.templateName || "Custom Template"}
               </h3>
               <p className="text-xs text-gray-500 mb-4">

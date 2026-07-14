@@ -1,6 +1,17 @@
 const fs = require('fs');
-let content = fs.readFileSync('src/pages/user/SupportChat.tsx', 'utf-8');
-const search = `              <p>{msg.text}</p>\n              <div className={\`flex items-center justify-end gap-1 text-[10px] mt-1 \${msg.sender === 'user' ? 'text-white/70' : 'text-gray-400'}\`}>\n                {(msg.timestamp && typeof msg.timestamp.toDate === 'function') \n                   ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) \n                   : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...')}\n              </p>\n            </div>`;
-const replace = `              <p>{msg.text}</p>\n              <div className={\`flex items-center justify-end gap-1 text-[10px] mt-1 \${msg.sender === 'user' ? 'text-white/70' : 'text-gray-400'}\`}>\n                <span>\n                  {(msg.timestamp && typeof msg.timestamp.toDate === 'function') \n                     ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) \n                     : (msg.timestamp ? new Date(msg.timestamp).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : 'Sending...')}\n                </span>\n                {msg.sender === 'user' && (\n                  msg.read ? <CheckCheck className="w-3 h-3 text-blue-300" /> : <Check className="w-3 h-3 opacity-70" />\n                )}\n              </div>\n            </div>`;
-content = content.replace(search, replace);
-fs.writeFileSync('src/pages/user/SupportChat.tsx', content);
+let code = fs.readFileSync('src/components/FormatOrderData.tsx', 'utf-8');
+
+const helper = `const formatKey = (k: string) => {
+  if (k.includes('_')) {
+    return k.replace(/_/g, " ").replace(/\\b\\w/g, c => c.toUpperCase());
+  }
+  return k;
+};`;
+
+code = code.replace("const formatValue", helper + "\n\nconst formatValue");
+
+code = code.replace(/className={\`font-medium capitalize/g, "className={`font-medium");
+code = code.replace(/className={\`sm:w-1\/3 shrink-0 font-medium capitalize/g, "className={`sm:w-1/3 shrink-0 font-medium");
+code = code.replace(/\{k\.replace\(\/_\/g, " "\)\}/g, "{formatKey(k)}");
+
+fs.writeFileSync('src/components/FormatOrderData.tsx', code);

@@ -389,7 +389,7 @@ function AdminHome() {
                          <ShoppingBag className="w-5 h-5" />
                        </div>
                        <div>
-                         <div className="flex items-center gap-1.5 truncate max-w-[150px] md:max-w-[200px]">
+                         <div className="flex items-center gap-1.5 max-w-[150px] md:max-w-[200px]">
                             <p className="text-sm font-bold text-gray-900 truncate">{o.templateName || o.templateTitle || 'Order'}</p>
                             {o.templateId && templateMap[o.templateId] && (
                                <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[10px] font-mono shrink-0">#{templateMap[o.templateId]}</span>

@@ -281,23 +281,27 @@ export default function Checkout() {
 
     let targetCode = couponCode.trim().toUpperCase();
     let isSigma = targetCode === "SIGMA20";
+    let matched = null;
 
-    if (!settings?.coupons || settings.coupons.length === 0) {
-      if (isSigma) {
-        targetCode = "SIGMA20";
-      } else {
-        toast.error("Invalid coupon code");
-        return;
-      }
+    // Check template specific coupon first
+    if (template?.couponCode && template.couponCode.trim().toUpperCase() === targetCode) {
+      matched = { code: template.couponCode, percentage: template.couponPercentage || 0 };
     }
 
-    let matched = settings?.coupons?.find(
-      (c: any) =>
-        c.code.replace(/\s+/g, "").toUpperCase() === targetCode.replace(/\s+/g, "").toUpperCase(),
-    );
+    if (!matched && settings?.coupons && settings.coupons.length > 0) {
+      matched = settings.coupons.find(
+        (c: any) =>
+          c.code.replace(/\s+/g, "").toUpperCase() === targetCode.replace(/\s+/g, "").toUpperCase(),
+      );
+    }
 
     if (!matched && isSigma) {
       matched = { code: "SIGMA20", percentage: "20" };
+    }
+
+    if (!matched) {
+      toast.error("Invalid coupon code");
+      return;
     }
 
     if (matched) {
@@ -380,7 +384,7 @@ export default function Checkout() {
           advancePaymentStatus: "Pending",
           paymentStatus: paymentStatus || "Pending",
           status: "Pending",
-          customData: formConfig ? formData : legacyFormData,
+          customData: formConfig ? getLabeledFormData() : legacyFormData,
           filesCount: files.length || 0,
           viaMethod: viaMethod || "Direct",
           couponApplied: appliedCoupon ? appliedCoupon.code : null,
@@ -420,6 +424,39 @@ export default function Checkout() {
     }
   };
 
+
+  const getLabeledFormData = () => {
+    if (!formConfig) return formData;
+    const labeled: any = {
+      bride: {},
+      groom: {},
+      events: formData.events,
+      additional: {}
+    };
+    
+    const getLabel = (fields, id) => {
+      const f = fields?.find(f => f.id === id);
+      return f ? f.name : id;
+    };
+
+    if (formData.bride && typeof formData.bride === 'object') {
+      Object.entries(formData.bride).forEach(([k, v]) => {
+        labeled.bride[getLabel(formConfig.familySettings?.brideFields, k)] = v;
+      });
+    }
+    if (formData.groom && typeof formData.groom === 'object') {
+      Object.entries(formData.groom).forEach(([k, v]) => {
+        labeled.groom[getLabel(formConfig.familySettings?.groomFields, k)] = v;
+      });
+    }
+    if (formData.additional && typeof formData.additional === 'object') {
+      Object.entries(formData.additional).forEach(([k, v]) => {
+        labeled.additional[getLabel(formConfig.additionalFields, k)] = v;
+      });
+    }
+    return labeled;
+  };
+
   const getWaUrl = (orderId: string) => {
     const number = settings?.whatsapp?.number || "9162478070";
     const displayOrderId =
@@ -445,27 +482,28 @@ export default function Checkout() {
           .join(" | ");
       };
 
-      if (formData.bride) {
-        if (typeof formData.bride === 'object') {
-          Object.entries(formData.bride).forEach(
+      const labeledData = getLabeledFormData();
+      if (labeledData.bride) {
+        if (typeof labeledData.bride === 'object') {
+          Object.entries(labeledData.bride).forEach(
             ([k, v]) => (customFieldsText += `*${k.toUpperCase()}*: ${formatWaValue(v)}\n`)
           );
         } else {
-          customFieldsText += `*BRIDE*: ${formData.bride}\n`;
+          customFieldsText += `*BRIDE*: ${labeledData.bride}\n`;
         }
       }
       
-      if (formData.groom) {
-        if (typeof formData.groom === 'object') {
-          Object.entries(formData.groom).forEach(
+      if (labeledData.groom) {
+        if (typeof labeledData.groom === 'object') {
+          Object.entries(labeledData.groom).forEach(
             ([k, v]) => (customFieldsText += `*${k.toUpperCase()}*: ${formatWaValue(v)}\n`)
           );
         } else {
-          customFieldsText += `*GROOM*: ${formData.groom}\n`;
+          customFieldsText += `*GROOM*: ${labeledData.groom}\n`;
         }
       }
 
-      if (formData.events.length > 0) {
+      if (labeledData.events.length > 0) {
         customFieldsText += `\n*EVENTS*\n`;
         formData.events.forEach((ev: any, idx: number) => {
           customFieldsText += `*EVENT ${idx + 1}*: ${ev.type} - ${ev.date} ${ev.time} @ ${ev.venue}\n`;
@@ -473,7 +511,7 @@ export default function Checkout() {
       }
 
       customFieldsText += `\n*ADDITIONAL DETAILS*\n`;
-      Object.entries(formData.additional).forEach(
+      Object.entries(labeledData.additional).forEach(
         ([k, v]) => {
             const displayVal = formatWaValue(v);
             customFieldsText += `*${k.replace(/_/g, " ").toUpperCase()}*: ${displayVal}\n`;
@@ -1414,7 +1452,7 @@ export default function Checkout() {
           <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
             <FileText className="w-4 h-4 text-brand-purple" /> Form Details
           </h3>
-          <FormatOrderData data={formConfig ? formData : legacyFormData} theme="light" />
+          <FormatOrderData data={formConfig ? getLabeledFormData() : legacyFormData} theme="light" templateId={template?.id} />
         </div>
 
 

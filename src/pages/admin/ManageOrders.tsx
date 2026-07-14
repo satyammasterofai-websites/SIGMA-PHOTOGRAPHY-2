@@ -383,7 +383,7 @@ export default function ManageOrders() {
                       </div>
                     )}
                     <div className="flex flex-col flex-1 min-w-0">
-                      <span className="font-medium text-white truncate text-sm">{order.templateName || "Custom Template"}</span>
+                      <span className="font-medium text-white text-sm">{order.templateName || "Custom Template"}</span>
                       {order.templateId && templateMap[order.templateId] && (
                         <span className="text-xs font-mono text-gray-400 mt-0.5">#{templateMap[order.templateId]}</span>
                       )}
@@ -487,7 +487,7 @@ export default function ManageOrders() {
                       <div className="mt-4">
                         <span className="text-gray-500 block text-xs mb-2">Customization Data</span>
                         <div className="bg-gray-900 rounded-lg p-4 border border-gray-800">
-                          <FormatOrderData data={order.customData} theme="dark" />
+                          <FormatOrderData data={order.customData} theme="dark" templateId={order.templateId} />
                         </div>
                       </div>
                     )}

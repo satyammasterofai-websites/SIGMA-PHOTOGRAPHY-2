@@ -27,6 +27,8 @@ export default function TemplateManagement() {
   const [isTrending, setIsTrending] = useState(false);
   const [advancePayment,
       setAdvancePayment] = useState('');
+  const [couponCode, setCouponCode] = useState('');
+  const [couponPercentage, setCouponPercentage] = useState('');
   const [baseOrdersCount, setBaseOrdersCount] = useState<number>(100);
   const [language, setLanguage] = useState('None');
   const [activeTab, setActiveTab] = useState('All');
@@ -160,6 +162,8 @@ export default function TemplateManagement() {
       setIsFeatured(template.isFeatured || false);
       setIsTrending(template.isTrending || false);
       setAdvancePayment(template.advancePayment || '');
+      setCouponCode(template.couponCode || '');
+      setCouponPercentage(template.couponPercentage || '');
       setBaseOrdersCount(template.baseOrdersCount ?? 100);
       setLanguage(template.language || 'None');
       setCustomFields(template.customFields || []);
@@ -177,6 +181,8 @@ export default function TemplateManagement() {
       setIsFeatured(false);
       setIsTrending(false);
       setAdvancePayment('');
+    setCouponCode('');
+    setCouponPercentage('');
       setBaseOrdersCount(100);
       setLanguage('None');
     setLanguage('None');
@@ -228,6 +234,7 @@ export default function TemplateManagement() {
       const data = { 
         title, category: finalCategory, price, discountPrice, description, 
         thumbnailBase64, videoUrl, status, isFeatured, isTrending, advancePayment: advancePayment ? Number(advancePayment) : 0, 
+        couponCode: couponCode.trim().toUpperCase(), couponPercentage: couponPercentage ? Number(couponPercentage) : 0,
         baseOrdersCount: Number(baseOrdersCount), language, customFields, formId 
       };
       
@@ -528,6 +535,22 @@ export default function TemplateManagement() {
                     />
                   </div>
                   <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Template Coupon Code (Optional)</label>
+                    <input 
+                      type="text" value={couponCode} onChange={(e) => setCouponCode(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 uppercase"
+                      placeholder="e.g. SAVE20"
+                    />
+                  </div>
+                  <div>
+                    <label className="block text-sm font-medium text-gray-300 mb-2">Template Coupon Discount (%)</label>
+                    <input 
+                      type="number" value={couponPercentage} onChange={(e) => setCouponPercentage(e.target.value)}
+                      className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500"
+                      placeholder="e.g. 20"
+                    />
+                  </div>
+                  <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Base Orders Count</label>
                     <input 
                       type="number" value={baseOrdersCount} onChange={(e) => setBaseOrdersCount(Number(e.target.value))}
@@ -737,7 +760,7 @@ export default function TemplateManagement() {
                       <span className="text-xs font-mono text-gray-400 mb-0.5">
                         #{editingId ? (templates.find(t => t.id === editingId)?.displayId || editingId.slice(-8)) : 'Preview'}
                       </span>
-                      <h3 className="font-display font-bold text-xl text-gray-900 line-clamp-1">
+                      <h3 className="font-display font-bold text-xl text-gray-900 ">
                         {title || 'Template Title'}
                       </h3>
                     </div>

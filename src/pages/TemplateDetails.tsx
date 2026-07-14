@@ -63,7 +63,7 @@ export default function TemplateDetails() {
     const fetchReviews = async () => {
       if (!id) return;
       try {
-        const q = query(collection(db, 'reviews'), where('templateId', '==', id), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, 'template_reviews'), where('templateId', '==', id), orderBy('createdAt', 'desc'));
         const snap = await getDocs(q);
         setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
       } catch (error) {
@@ -124,7 +124,7 @@ export default function TemplateDetails() {
         comment: newReview.trim(),
         createdAt: new Date().toISOString()
       };
-      const docRef = await addDoc(collection(db, 'reviews'), reviewData);
+      const docRef = await addDoc(collection(db, 'template_reviews'), reviewData);
       setReviews(prev => [{ id: docRef.id, ...reviewData }, ...prev]);
       setNewReview('');
       setRating(5);

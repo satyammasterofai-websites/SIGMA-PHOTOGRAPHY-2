@@ -1,5 +1,5 @@
 import React, { useState, useEffect, useRef } from "react";
-import { collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs } from "firebase/firestore";
+import { collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs, doc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
 import { Send, ArrowLeft, Mail, Check, CheckCheck } from "lucide-react";
 import VideoModal from "../../components/VideoModal";
@@ -19,6 +19,24 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { isTyping, updateTyping } = useTypingIndicator(user?.id || '');
+
+  const [isCustomerOnline, setIsCustomerOnline] = useState(false);
+
+  useEffect(() => {
+    if (!user?.id) return;
+    const unsub = onSnapshot(doc(db, "users", user.id), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        if (data.isOnline && data.lastSeen) {
+          const lastSeenDate = typeof data.lastSeen.toMillis === 'function' ? data.lastSeen.toMillis() : new Date(data.lastSeen).getTime();
+          setIsCustomerOnline(new Date().getTime() - lastSeenDate < 2 * 60 * 1000);
+        } else {
+          setIsCustomerOnline(false);
+        }
+      }
+    });
+    return () => unsub();
+  }, [user?.id]);
 
   useEffect(() => {
     if (!user) return;
@@ -104,7 +122,10 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
           <ArrowLeft className="w-5 h-5" />
         </button>
         <div>
-          <h2 className="text-lg font-bold text-white">{user.name || "Customer"}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-lg font-bold text-white">{user.name || "Customer"}</h2>
+            {isCustomerOnline && <span className="w-2 h-2 rounded-full bg-green-500 animate-pulse" title="Online"></span>}
+          </div>
           <p className="text-sm text-gray-400">{user.email}</p>
         </div>
       </div>
