@@ -13,7 +13,7 @@ import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import PremiumGallery from './pages/PremiumGallery';
 import Checkout from './pages/Checkout';
-import CleanupDuplicates from './components/CleanupDuplicates';
+import TemplateDetails from './pages/TemplateDetails';
 import AuthProvider from './components/AuthProvider';
 import { useAuthStore } from './store/useAuthStore';
 
@@ -53,6 +53,7 @@ function AppContent() {
       <Routes>
         <Route path="/" element={<Home />} />
         <Route path="/gallery" element={<PremiumGallery />} />
+        <Route path="/template/:id" element={<TemplateDetails />} />
         <Route path="/checkout/:id" element={<Checkout />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
@@ -68,7 +69,6 @@ function AppContent() {
         } />
       </Routes>
       <Toaster position="top-right" />
-      <CleanupDuplicates />
     </Router>
   );
 }

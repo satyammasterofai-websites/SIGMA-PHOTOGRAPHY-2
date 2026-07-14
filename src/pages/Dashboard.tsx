@@ -52,20 +52,6 @@ const [prevOrders, setPrevOrders] = useState<Record<string, string>>({});
   useEffect(() => {
     if (!user) return;
 
-    const fetchTemplates = async () => {
-      try {
-        const snap = await getDocs(collection(db, "templates"));
-        const map: Record<string, string> = {};
-        snap.docs.forEach(d => {
-          const data = d.data();
-          map[d.id] = data.displayId || d.id.slice(-8);
-        });
-        setTemplateMap(map);
-      } catch (e) {
-        console.error("Failed to fetch templates for map", e);
-      }
-    };
-    fetchTemplates();
     const q = query(collection(db, "orders"), where("userId", "==", user.uid));
     const unsub = onSnapshot(q, (sn) => {
       const currentOrders: Record<string, string> = {};
@@ -242,7 +228,7 @@ function DashboardHome() {
       (sn) => {
         const ordersList = sn.docs.map((doc) => doc.data()).filter(o => o.type !== "service_enquiry");
         const orders = ordersList;
-        setRecentOrders(orders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime()).slice(0, 3));
+        setRecentOrders(orders.sort((a, b) => new Date((b as any).createdAt).getTime() - new Date((a as any).createdAt).getTime()).slice(0, 3));
         setStats({
           total: orders.length,
           pending: orders.filter(
@@ -326,12 +312,7 @@ function DashboardHome() {
                     <img src={order.thumbnailBase64} alt="Thumbnail" className="w-16 h-16 rounded-lg object-cover border border-gray-100" />
                   )}
                   <div>
-                    <div className="flex items-center gap-2">
-                      <h3 className="font-bold text-gray-900">{order.templateName || "Template Order"}</h3>
-                      {order.templateId && templateMap[order.templateId] && (
-                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-mono">#{templateMap[order.templateId]}</span>
-                      )}
-                    </div>
+                    <h3 className="font-bold text-gray-900">{order.templateName || "Template Order"}</h3>
                     <p className="text-xs text-gray-500">ID: {order.id}</p>
                   </div>
                 </div>
@@ -342,11 +323,7 @@ function DashboardHome() {
                         ? "bg-green-100 text-green-700"
                         : order.status === "Processing"
                           ? "bg-blue-100 text-blue-700"
-                          : order.status === "Delivered"
-                            ? "bg-purple-100 text-purple-700"
-                            : order.status === "Cancelled"
-                              ? "bg-red-100 text-red-700"
-                              : "bg-yellow-100 text-yellow-700"
+                          : "bg-gray-100 text-gray-700"
                     }`}
                   >
                     {order.status || "Pending"}
@@ -357,22 +334,6 @@ function DashboardHome() {
           </div>
         )}
       </div>
-
-      <div className="mt-8 bg-white rounded-2xl border border-gray-100 p-8 text-center shadow-sm">
-        <h2 className="text-lg font-bold text-gray-800 mb-2">
-          Create New Application
-        </h2>
-        <p className="text-gray-500 mb-6 max-w-sm mx-auto">
-          Browse our premium templates and start crafting your masterpiece
-          today.
-        </p>
-        <Link
-          to="/gallery"
-          className="inline-flex items-center justify-center px-6 py-2 border border-transparent rounded-full shadow-sm text-sm font-medium text-white bg-brand-purple hover:bg-brand-indigo transition-colors gap-2"
-        >
-          Browse Templates
-        </Link>
-      </div>
     </div>
   );
 }
@@ -381,22 +342,25 @@ function MyOrders() {
   const { user } = useAuthStore();
   const [orders, setOrders] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
-  const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
+  const [expandedId, setExpandedId] = useState<string | null>(null);
 
   useEffect(() => {
     if (!user) return;
-    const q = query(collection(db, "orders"), where("userId", "==", user.uid));
+    const q = query(
+      collection(db, "orders"),
+      where("userId", "==", user.uid)
+    );
     const unsubscribe = onSnapshot(
       q,
-      (sn) => {
-        const list = sn.docs.map((doc) => ({
+      (snapshot) => {
+        const list = snapshot.docs.map((doc) => ({
           id: doc.id,
-          ...(doc.data() as any),
-        })).filter(o => o.type !== "service_enquiry");
+          ...doc.data(),
+        })).filter((o: any) => o.type !== "service_enquiry");
         // Sort locally
         list.sort(
           (a, b) =>
-            new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+            new Date((b as any).createdAt).getTime() - new Date((a as any).createdAt).getTime(),
         );
         setOrders(list);
         setLoading(false);
@@ -440,37 +404,28 @@ function MyOrders() {
                     </div>
                   )}
                   <div>
-                    <div className="flex items-center gap-2 mb-1">
+                    <div className="flex flex-col gap-1">
                       <h3 className="font-bold text-gray-900 text-lg">
                         {order.templateName || "Order"}
                       </h3>
-                      {order.templateId && templateMap[order.templateId] && (
-                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-mono">#{templateMap[order.templateId]}</span>
-                      )}
-                    </div>
-                    <div className="flex flex-wrap gap-3 text-sm text-gray-500">
-                      <span>
-                        Order ID:{" "}
-                        <span className="font-mono text-xs">{order.displayId || order.id}</span>
-                      </span>
-                      <span>•</span>
-                      <span>
-                        {new Date(order.createdAt).toLocaleDateString()}
-                      </span>
-                      <span>•</span>
-                      <span>₹{order.price}</span>
-                      {(order.advancePayment > 0 ||
-                        order.advancePaymentStatus) && (
-                        <>
-                          <span>•</span>
-                          <span
-                            className={`font-medium ${order.advancePaymentStatus === "Received" ? "text-green-600" : order.advancePaymentStatus === "Pending" ? "text-orange-600" : "text-gray-500"}`}
-                          >
-                            Advance: ₹{order.advancePayment || 0} (
-                            {order.advancePaymentStatus || "Pending"})
-                          </span>
-                        </>
-                      )}
+                      <div className="flex flex-wrap gap-3 text-sm text-gray-500">
+                        <span>
+                          Order ID:{" "}
+                          <span className="font-mono text-xs">{order.displayId || order.id}</span>
+                        </span>
+                        <span>•</span>
+                        <span>
+                          {new Date(order.createdAt).toLocaleDateString()}
+                        </span>
+                        {order.price && (
+                          <>
+                            <span>•</span>
+                            <span className="font-medium text-gray-900">
+                              ₹{order.price}
+                            </span>
+                          </>
+                        )}
+                      </div>
                     </div>
                   </div>
                 </div>

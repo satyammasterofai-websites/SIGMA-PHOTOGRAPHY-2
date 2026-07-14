@@ -1,11 +1,14 @@
 const fs = require('fs');
 let code = fs.readFileSync('src/App.tsx', 'utf-8');
 
-const importStatement = `import CleanupDuplicates from './components/CleanupDuplicates';\n`;
-code = code.replace(/import AuthProvider from '\.\/components\/AuthProvider';/, importStatement + `import AuthProvider from './components/AuthProvider';`);
-
-const toaster = `<Toaster position="top-right" />`;
-const replaceToaster = `<Toaster position="top-right" />\n      <CleanupDuplicates />`;
-code = code.replace(toaster, replaceToaster);
-
-fs.writeFileSync('src/App.tsx', code);
+if (!code.includes("import TemplateDetails")) {
+  code = code.replace("import Checkout from './pages/Checkout';", "import Checkout from './pages/Checkout';\nimport TemplateDetails from './pages/TemplateDetails';");
+  
+  const routeTarget = `<Route path="/checkout/:id" element={<Checkout />} />`;
+  const routeReplacement = `<Route path="/template/:id" element={<TemplateDetails />} />
+        <Route path="/checkout/:id" element={<Checkout />} />`;
+        
+  code = code.replace(routeTarget, routeReplacement);
+  fs.writeFileSync('src/App.tsx', code);
+  console.log('Patched App.tsx');
+}
