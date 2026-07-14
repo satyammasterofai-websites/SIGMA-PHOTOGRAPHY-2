@@ -82,9 +82,12 @@ export default function PremiumGallery() {
 
                   <div className="p-6 flex flex-col flex-1">
                     <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-display font-bold text-xl text-gray-900 line-clamp-1 flex-1 pr-2">
-                        {template.title}
-                      </h3>
+                      <div className="flex flex-col flex-1 pr-2">
+                        {template.displayId && <span className="text-xs font-mono text-gray-400 mb-0.5">#{template.displayId}</span>}
+                        <h3 className="font-display font-bold text-xl text-gray-900 line-clamp-1">
+                          {template.title}
+                        </h3>
+                      </div>
                     </div>
                     <div className="flex items-center gap-2 mb-3 flex-wrap">
                       <div className="flex items-center gap-1.5 text-xs font-semibold text-brand-purple bg-brand-purple/5 w-fit px-2.5 py-1 rounded-full">
@@ -351,9 +354,8 @@ export default function PremiumGallery() {
       result = result.filter(
         (t) =>
           t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
-          (t.description || "")
-            .toLowerCase()
-            .includes(searchQuery.toLowerCase()),
+          (t.description || "").toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (t.displayId || "").toLowerCase().includes(searchQuery.toLowerCase()),
       );
     }
 

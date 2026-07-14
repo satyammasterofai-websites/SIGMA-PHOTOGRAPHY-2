@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { collection, getDocs, deleteDoc, doc, getDoc, setDoc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export default function CleanupDuplicates() {
@@ -66,6 +66,50 @@ export default function CleanupDuplicates() {
           }
         }
         
+      
+        // 4. Assign displayIds to Templates
+        const templatesWithDisplayId = new Set();
+        const templatesByCategory = {};
+        templatesSnap.docs.forEach(doc => {
+          const data = doc.data();
+          if (!data.title) return;
+          
+          if (!templatesByCategory[data.category]) {
+            templatesByCategory[data.category] = [];
+          }
+          templatesByCategory[data.category].push({ id: doc.id, ...data });
+        });
+
+        for (const cat in templatesByCategory) {
+           let maxId = 0;
+           // find existing maxId
+           templatesByCategory[cat].forEach(t => {
+             if (t.displayId) {
+               const num = parseInt(t.displayId, 10);
+               if (!isNaN(num) && num > maxId) maxId = num;
+             }
+           });
+           
+           for (const t of templatesByCategory[cat]) {
+             if (!t.displayId) {
+               maxId++;
+               const nextId = String(maxId).padStart(5, '0');
+               await setDoc(doc(db, 'templates', t.id), { ...t, displayId: nextId });
+               console.log('Assigned displayId', nextId, 'to template', t.id);
+             }
+           }
+        }
+
+        // 5. Assign displayIds to Orders
+        const ordersSnap = await getDocs(collection(db, 'orders'));
+        for (const orderDoc of ordersSnap.docs) {
+          const data = orderDoc.data();
+          if (!data.displayId) {
+            const nextId = String(Math.floor(100000 + Math.random() * 900000));
+            await setDoc(doc(db, 'orders', orderDoc.id), { ...data, displayId: nextId });
+            console.log('Assigned displayId', nextId, 'to order', orderDoc.id);
+          }
+        }
       } catch (err) {
         console.error('Error during cleanup:', err);
       }

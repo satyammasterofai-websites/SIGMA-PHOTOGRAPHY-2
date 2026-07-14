@@ -10,6 +10,7 @@ export default function SplashVideo() {
   const [show, setShow] = useState(false);
   const [visible, setVisible] = useState(false);
   const [videoUrl, setVideoUrl] = useState('');
+  const [mediaType, setMediaType] = useState<'video' | 'image'>('video');
   const [loading, setLoading] = useState(true);
   const [hasInteracted, setHasInteracted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
@@ -21,6 +22,7 @@ export default function SplashVideo() {
         if (docRef.exists()) {
           const data = docRef.data();
           if (data.enabled && data.videoUrl) {
+            setMediaType(data.mediaType || 'video');
             let fetchedUrl = data.videoUrl;
             if (fetchedUrl.includes('vimeo.com/manage/videos/')) {
               fetchedUrl = fetchedUrl.replace('manage/videos/', '');
@@ -94,12 +96,14 @@ export default function SplashVideo() {
                 <div className="bg-white/20 p-6 rounded-full group-hover:bg-white/30 transition-all transform group-hover:scale-110 mb-4">
                   <Play className="w-12 h-12 text-white ml-2" />
                 </div>
-                <p className="text-white font-medium text-lg tracking-wider drop-shadow-md">Tap to Play Splash Video</p>
+                <p className="text-white font-medium text-lg tracking-wider drop-shadow-md">{mediaType === 'image' ? 'Tap to View Splash Image' : 'Tap to Play Splash Video'}</p>
               </div>
             )}
 
             <div className="relative w-full h-full bg-black flex items-center justify-center">
-              {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') || videoUrl.includes('vimeo.com') ? (
+              {mediaType === 'image' ? (
+                <img src={videoUrl} alt="Splash Image" className="w-full h-full object-contain pointer-events-none" />
+              ) : videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') || videoUrl.includes('vimeo.com') ? (
                 /* @ts-ignore */
                 <ReactPlayer
                   url={videoUrl}

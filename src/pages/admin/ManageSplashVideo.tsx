@@ -10,6 +10,7 @@ import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 export default function ManageSplashVideo() {
   const [enabled, setEnabled] = useState(false);
   const [videoUrl, setVideoUrl] = useState('https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4');
+  const [mediaType, setMediaType] = useState<'video' | 'image'>('video');
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -243,20 +244,20 @@ export default function ManageSplashVideo() {
           )}
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Upload Video Directly</label>
+            <label className="block text-sm font-medium text-gray-700">Upload Media Directly</label>
             <div 
               className="border-2 border-dashed border-gray-300 rounded-lg p-6 flex flex-col items-center justify-center text-center hover:bg-gray-50 transition-colors cursor-pointer"
               onClick={() => fileInputRef.current?.click()}
             >
               <Upload className="w-8 h-8 text-gray-400 mb-2" />
-              <p className="text-sm font-medium text-gray-900">Click to upload video</p>
-              <p className="text-xs text-gray-500 mt-1">MP4, WebM up to 50MB</p>
+              <p className="text-sm font-medium text-gray-900">Click to upload media</p>
+              <p className="text-xs text-gray-500 mt-1">MP4, WebM, JPG, PNG, GIF up to 50MB</p>
               <p className="text-xs text-indigo-500 mt-1">Using: {uploadProvider === 'firebase' ? 'Firebase' : uploadProvider === 'cloudinary' ? 'Cloudinary' : 'Uguu (Temporary)'}</p>
               <input
                 type="file"
                 ref={fileInputRef}
                 onChange={handleVideoUpload}
-                accept="video/*"
+                accept="video/*,image/*"
                 className="hidden"
               />
             </div>
@@ -274,7 +275,14 @@ export default function ManageSplashVideo() {
           </div>
 
           <div className="space-y-2">
-            <label className="block text-sm font-medium text-gray-700">Video URL (Vimeo, YouTube, or Direct MP4 Link)</label>
+            <div className="flex items-center gap-4 mb-2">
+              <label className="block text-sm font-medium text-gray-700">Media Type:</label>
+              <select value={mediaType} onChange={(e) => setMediaType(e.target.value as 'video' | 'image')} className="px-3 py-1 border border-gray-300 rounded-lg text-sm">
+                <option value="video">Video</option>
+                <option value="image">Image</option>
+              </select>
+            </div>
+            <label className="block text-sm font-medium text-gray-700">{mediaType === 'video' ? 'Video URL (Vimeo, YouTube, or Direct MP4 Link)' : 'Image URL'}</label>
             <input
               type="text"
               value={videoUrl}
@@ -288,13 +296,15 @@ export default function ManageSplashVideo() {
               className="w-full px-4 py-2 border border-gray-300 rounded-lg focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
               placeholder="e.g. https://vimeo.com/1203840674 or https://storage.googleapis.com/.../video.mp4"
             />
-            <p className="text-xs text-gray-500">Video will auto-play on load and will automatically close once completed.</p>
+            <p className="text-xs text-gray-500">{mediaType === 'video' ? "Video will auto-play on load and will automatically close once completed." : "Image will be shown on load. User can tap to close."}</p>
           </div>
         </div>
 
         {enabled && videoUrl && (
           <div className="mt-4 border rounded-lg overflow-hidden aspect-video relative bg-black flex items-center justify-center">
-            {videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') || videoUrl.includes('vimeo.com') ? (
+            {mediaType === 'image' ? (
+              <img src={videoUrl} alt="Splash Preview" className="w-full h-full object-contain" />
+            ) : videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') || videoUrl.includes('vimeo.com') ? (
               React.createElement(ReactPlayer as any, {
                 url: videoUrl,
                 playing: true,

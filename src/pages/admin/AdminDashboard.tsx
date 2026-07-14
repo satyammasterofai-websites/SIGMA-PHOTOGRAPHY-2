@@ -192,6 +192,7 @@ function AdminHome() {
   const [recentOrders, setRecentOrders] = useState<any[]>([]);
   const [templateStats, setTemplateStats] = useState<{name: string, count: number}[]>([]);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
+  const [templateMap, setTemplateMap] = useState<Record<string, string>>({});
 
   const formatDate = (val: any) => {
      if (!val) return new Date().toLocaleDateString();
@@ -211,6 +212,12 @@ function AdminHome() {
         
         const ordersData: any[] = ordersSnap.docs.map(d=>({ ...d.data(), id: d.id })).filter((o: any) => o.type !== "service_enquiry");
         const usersData: any[] = usersSnap.docs.map(d=>({ ...d.data(), id: d.id }));
+        
+        const map: Record<string, string> = {};
+        tmplSnap.docs.forEach(d => {
+           map[d.id] = d.data().displayId || d.id.slice(-8);
+        });
+        setTemplateMap(map);
 
         let revenue = 0;
         let pending = 0;
@@ -382,7 +389,12 @@ function AdminHome() {
                          <ShoppingBag className="w-5 h-5" />
                        </div>
                        <div>
-                         <p className="text-sm font-bold text-gray-900 truncate max-w-[150px] md:max-w-[200px]">{o.templateName || o.templateTitle || 'Order'}</p>
+                         <div className="flex items-center gap-1.5 truncate max-w-[150px] md:max-w-[200px]">
+                            <p className="text-sm font-bold text-gray-900 truncate">{o.templateName || o.templateTitle || 'Order'}</p>
+                            {o.templateId && templateMap[o.templateId] && (
+                               <span className="bg-gray-100 text-gray-600 px-1.5 py-0.5 rounded text-[10px] font-mono shrink-0">#{templateMap[o.templateId]}</span>
+                            )}
+                         </div>
                          <p className="text-xs text-gray-500">{o.customerName || (o.customData && o.customData.customerName) || 'Customer'}</p>
                        </div>
                      </div>

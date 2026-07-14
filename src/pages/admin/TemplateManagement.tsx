@@ -48,6 +48,26 @@ export default function TemplateManagement() {
       querySnapshot.forEach((doc) => {
         list.push({ id: doc.id, ...doc.data() });
       });
+
+      // Backfill displayId if missing
+      const toUpdate = list.filter(t => !t.displayId);
+      if (toUpdate.length > 0) {
+        let maxId = 0;
+        list.forEach(t => {
+          if (t.displayId) {
+            const num = parseInt(t.displayId, 10);
+            if (!isNaN(num) && num > maxId) maxId = num;
+          }
+        });
+        
+        for (const t of toUpdate) {
+          maxId++;
+          const nextId = String(maxId).padStart(5, '0');
+          t.displayId = nextId;
+          updateDoc(doc(db, 'templates', t.id), { displayId: nextId }).catch(console.error);
+        }
+      }
+
       setTemplates(list);
     } catch (error) {
       console.error("Error fetching templates:", error);
@@ -214,7 +234,15 @@ export default function TemplateManagement() {
       if (editingId) {
         await updateDoc(doc(db, 'templates', editingId), data);
       } else {
-        await addDoc(collection(db, 'templates'), data);
+        let maxId = 0;
+        templates.forEach(t => {
+          if (t.displayId) {
+            const num = parseInt(t.displayId, 10);
+            if (!isNaN(num) && num > maxId) maxId = num;
+          }
+        });
+        const nextId = String(maxId + 1).padStart(5, '0');
+        await addDoc(collection(db, 'templates'), { ...data, displayId: nextId });
       }
       
       setIsModalOpen(false);
@@ -348,7 +376,8 @@ export default function TemplateManagement() {
               <thead className="bg-gray-800/50 text-gray-400 font-medium">
                 <tr>
                   <th className="px-6 py-4">Thumbnail</th>
-                  <th className="px-6 py-4">Title</th>
+                  <th className="px-6 py-4">ID</th>
+                <th className="px-6 py-4">Title</th>
                   <th className="px-6 py-4">Category</th>
                   <th className="px-6 py-4">Price</th>
                   <th className="px-6 py-4">Orders</th>
@@ -362,7 +391,9 @@ export default function TemplateManagement() {
                   const searchLower = searchQuery.toLowerCase();
                   const matchesSearch = searchQuery === '' || 
                     (t.title || '').toLowerCase().includes(searchLower) || 
-                    (t.category || '').toLowerCase().includes(searchLower);
+                    (t.category || '').toLowerCase().includes(searchLower) ||
+                    (t.displayId || '').toLowerCase().includes(searchLower) ||
+                    (t.id || '').toLowerCase().includes(searchLower);
                   return matchesTab && matchesSearch;
                 }).map(template => (
                   <tr key={template.id} className="hover:bg-gray-800/30 transition-colors">
@@ -375,6 +406,7 @@ export default function TemplateManagement() {
                           )}
                        </div>
                     </td>
+                    <td className="px-6 py-4 font-mono text-xs text-gray-500">#{template.displayId || template.id.slice(-8)}</td>
                     <td className="px-6 py-4 font-medium text-gray-100">{template.title}</td>
                     <td className="px-6 py-4">
                       <span className="bg-indigo-500/10 text-indigo-400 px-2.5 py-1 rounded-md text-xs font-medium">
@@ -423,7 +455,7 @@ export default function TemplateManagement() {
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
            <div className="bg-gray-900 border border-gray-800 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 md:p-8">
               <h2 className="text-2xl font-bold text-white mb-6">
-                {editingId ? 'Edit Template' : 'Add New Template'}
+                {editingId ? `Edit Template #${templates.find(t => t.id === editingId)?.displayId || editingId.slice(-8)}` : 'Add New Template'}
               </h2>
               
               <form onSubmit={handleSubmit} className="space-y-6">
@@ -701,8 +733,11 @@ export default function TemplateManagement() {
                   </div>
                   
                   <div className="p-6 flex flex-col flex-1">
-                    <div className="flex justify-between items-start mb-2">
-                      <h3 className="font-display font-bold text-xl text-gray-900 line-clamp-1 flex-1 pr-2">
+                    <div className="flex flex-col flex-1 pr-2 mb-2">
+                      <span className="text-xs font-mono text-gray-400 mb-0.5">
+                        #{editingId ? (templates.find(t => t.id === editingId)?.displayId || editingId.slice(-8)) : 'Preview'}
+                      </span>
+                      <h3 className="font-display font-bold text-xl text-gray-900 line-clamp-1">
                         {title || 'Template Title'}
                       </h3>
                     </div>

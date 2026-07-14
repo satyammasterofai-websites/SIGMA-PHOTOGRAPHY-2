@@ -13,6 +13,7 @@ import Dashboard from './pages/Dashboard';
 import AdminDashboard from './pages/admin/AdminDashboard';
 import PremiumGallery from './pages/PremiumGallery';
 import Checkout from './pages/Checkout';
+import CleanupDuplicates from './components/CleanupDuplicates';
 import AuthProvider from './components/AuthProvider';
 import { useAuthStore } from './store/useAuthStore';
 
@@ -67,6 +68,7 @@ function AppContent() {
         } />
       </Routes>
       <Toaster position="top-right" />
+      <CleanupDuplicates />
     </Router>
   );
 }

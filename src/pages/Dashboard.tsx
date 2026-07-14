@@ -31,6 +31,7 @@ import {
   CheckCircle,
   MessageSquare,
 } from "lucide-react";
+import { FormatOrderData } from "../components/FormatOrderData";
 import toast from "react-hot-toast";
 
 import SupportChat from "./user/SupportChat";
@@ -50,6 +51,21 @@ const [prevOrders, setPrevOrders] = useState<Record<string, string>>({});
 
   useEffect(() => {
     if (!user) return;
+
+    const fetchTemplates = async () => {
+      try {
+        const snap = await getDocs(collection(db, "templates"));
+        const map: Record<string, string> = {};
+        snap.docs.forEach(d => {
+          const data = d.data();
+          map[d.id] = data.displayId || d.id.slice(-8);
+        });
+        setTemplateMap(map);
+      } catch (e) {
+        console.error("Failed to fetch templates for map", e);
+      }
+    };
+    fetchTemplates();
     const q = query(collection(db, "orders"), where("userId", "==", user.uid));
     const unsub = onSnapshot(q, (sn) => {
       const currentOrders: Record<string, string> = {};
@@ -310,7 +326,12 @@ function DashboardHome() {
                     <img src={order.thumbnailBase64} alt="Thumbnail" className="w-16 h-16 rounded-lg object-cover border border-gray-100" />
                   )}
                   <div>
-                    <h3 className="font-bold text-gray-900">{order.templateName || "Template Order"}</h3>
+                    <div className="flex items-center gap-2">
+                      <h3 className="font-bold text-gray-900">{order.templateName || "Template Order"}</h3>
+                      {order.templateId && templateMap[order.templateId] && (
+                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-mono">#{templateMap[order.templateId]}</span>
+                      )}
+                    </div>
                     <p className="text-xs text-gray-500">ID: {order.id}</p>
                   </div>
                 </div>
@@ -419,13 +440,18 @@ function MyOrders() {
                     </div>
                   )}
                   <div>
-                    <h3 className="font-bold text-gray-900 text-lg mb-1">
-                      {order.templateName || "Order"}
-                    </h3>
+                    <div className="flex items-center gap-2 mb-1">
+                      <h3 className="font-bold text-gray-900 text-lg">
+                        {order.templateName || "Order"}
+                      </h3>
+                      {order.templateId && templateMap[order.templateId] && (
+                        <span className="bg-gray-100 text-gray-600 px-2 py-0.5 rounded text-[10px] font-mono">#{templateMap[order.templateId]}</span>
+                      )}
+                    </div>
                     <div className="flex flex-wrap gap-3 text-sm text-gray-500">
                       <span>
                         Order ID:{" "}
-                        <span className="font-mono text-xs">{order.id}</span>
+                        <span className="font-mono text-xs">{order.displayId || order.id}</span>
                       </span>
                       <span>•</span>
                       <span>
@@ -515,20 +541,7 @@ function MyOrders() {
                           </span>
                         </div>
                       )}
-                      {order.customData &&
-                        Object.entries(order.customData).map(([k, v]) => {
-                          if (typeof v === "boolean") v = v ? "Yes" : "No";
-                          return (
-                            <div key={k} className="flex">
-                              <span className="w-1/3 text-sm text-gray-500 capitalize">
-                                {k.replace(/_/g, " ")}:
-                              </span>
-                              <span className="w-2/3 text-sm font-medium text-gray-900 border-l border-gray-200 pl-2 ml-2">
-                                {String(v || "N/A")}
-                              </span>
-                            </div>
-                          );
-                        })}
+                      <FormatOrderData data={order.customData} theme="light" />
                     </div>
                   </div>
                   <div>

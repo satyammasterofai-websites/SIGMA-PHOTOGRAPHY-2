@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from "react";
-import { collection, onSnapshot, addDoc,
+import { collection, getDocs, onSnapshot, addDoc,
   doc,
   updateDoc,
   deleteDoc,
@@ -16,6 +16,7 @@ import {
   Link as LinkIcon,
   Download, Search,
 } from "lucide-react";
+import { FormatOrderData } from "../../components/FormatOrderData";
 import toast from "react-hot-toast";
 import VideoModal from "../../components/VideoModal";
 import { Play } from "lucide-react";
@@ -29,6 +30,7 @@ export default function ManageOrders() {
   const [activeTab, setActiveTab] = useState("All");
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
+  const [templateMap, setTemplateMap] = useState<Record<string, string>>({});
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
 
   const toggleSelectOrder = (id: string) => {
@@ -71,6 +73,21 @@ export default function ManageOrders() {
   };
 
   useEffect(() => {
+    const fetchTemplates = async () => {
+      try {
+        const snap = await getDocs(collection(db, "templates"));
+        const map: Record<string, string> = {};
+        snap.docs.forEach(d => {
+          const data = d.data();
+          map[d.id] = data.displayId || d.id.slice(-8);
+        });
+        setTemplateMap(map);
+      } catch (e) {
+        console.error("Failed to fetch templates for map", e);
+      }
+    };
+    fetchTemplates();
+    
     // We should show newest first
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(
@@ -155,6 +172,18 @@ export default function ManageOrders() {
     }
   };
 
+  const updateAdvancePaymentStatus = async (id: string, newAdvanceStatus: string, userId?: string) => {
+    try {
+      await updateDoc(doc(db, "orders", id), { advancePaymentStatus: newAdvanceStatus });
+      toast.success(`Advance payment status updated to ${newAdvanceStatus}`);
+      if (userId) {
+        await createNotification(userId, "Advance Payment Updated", `Your order advance payment status is now ${newAdvanceStatus}.`, id);
+      }
+    } catch (e) {
+      toast.error("Failed to update advance payment status");
+    }
+  };
+
   const updateOrderStatus = async (id: string, newStatus: string, userId?: string) => {
     try {
       await updateDoc(doc(db, "orders", id), {
@@ -187,6 +216,7 @@ export default function ManageOrders() {
   const filteredOrders = orders.filter(o => {
     const searchLower = searchQuery.toLowerCase();
     const matchesSearch = searchQuery === '' || 
+        (o.displayId || '').toLowerCase().includes(searchLower) ||
         (o.id || '').toLowerCase().includes(searchLower) ||
       (o.customerInfo?.name || '').toLowerCase().includes(searchLower) ||
       (o.customerInfo?.email || '').toLowerCase().includes(searchLower) ||
@@ -327,7 +357,7 @@ export default function ManageOrders() {
                         className="mt-1 w-4 h-4 rounded border-gray-700 bg-gray-900 text-indigo-500 focus:ring-indigo-500 focus:ring-offset-gray-800"
                       />
                     <div>
-                      <div className="text-xs text-gray-500 font-mono mb-1">#{order.id.slice(-8)}</div>
+                      <div className="text-xs text-gray-500 font-mono mb-1">#{order.displayId || order.id.slice(-8)}</div>
                       <div className="font-bold text-white text-lg">{order.customerName || order.customerEmail || "N/A"}</div>
                       <div className="text-gray-400 text-sm">{order.customerPhone || "No Phone"}</div>
                     </div>
@@ -354,6 +384,9 @@ export default function ManageOrders() {
                     )}
                     <div className="flex flex-col flex-1 min-w-0">
                       <span className="font-medium text-white truncate text-sm">{order.templateName || "Custom Template"}</span>
+                      {order.templateId && templateMap[order.templateId] && (
+                        <span className="text-xs font-mono text-gray-400 mt-0.5">#{templateMap[order.templateId]}</span>
+                      )}
                       {order.videoUrl && (
                         <button onClick={() => setPreviewVideoUrl(order.videoUrl)} className="text-xs text-brand-electric hover:underline flex items-center gap-1 mt-1 text-left">
                           <svg xmlns="http://www.w3.org/2000/svg" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polygon points="5 3 19 12 5 21 5 3"></polygon></svg>
@@ -423,29 +456,38 @@ export default function ManageOrders() {
                         <select
                           value={order.paymentStatus || "Pending"}
                           onChange={(e) => updatePaymentStatus(order.id, e.target.value, order.userId)}
-                          className={`bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-sm font-medium focus:outline-none ${order.paymentStatus === "Received" || order.paymentStatus === "Paid Online" ? "text-green-400" : order.paymentStatus === "Pending Verification" ? "text-yellow-400" : "text-orange-400"}`}
+                          className={`bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-sm font-medium focus:outline-none ${order.paymentStatus === "Received" || order.paymentStatus === "Paid Online" || order.paymentStatus === "Full Amount Received" ? "text-green-400" : order.paymentStatus === "Advance Payment Received" ? "text-blue-400" : order.paymentStatus === "Pending Verification" ? "text-yellow-400" : "text-orange-400"}`}
                         >
                           <option value="Pending">Pending</option>
                           <option value="Pending Verification">Pending Verification</option>
                           <option value="Received">Received</option>
                           <option value="Paid Online">Paid Online</option>
+                          <option value="Advance Payment Received">Advance Payment Received</option>
+                          <option value="Full Amount Received">Full Amount Received</option>
                           <option value="Refunded">Refunded</option>
                         </select>
                       </div>
+                      {(order.advancePayment > 0 || order.advancePaymentStatus) && (
+                        <div>
+                          <span className="text-gray-500 block text-xs mb-1">Advance (₹{order.advancePayment || 0})</span>
+                          <select
+                            value={order.advancePaymentStatus || "Pending"}
+                            onChange={(e) => updateAdvancePaymentStatus(order.id, e.target.value, order.userId)}
+                            className={`bg-gray-800 border border-gray-700 rounded-lg px-2 py-1 text-sm font-medium focus:outline-none ${order.advancePaymentStatus === "Received" ? "text-green-400" : order.advancePaymentStatus === "Not Received" ? "text-red-400" : "text-yellow-400"}`}
+                          >
+                            <option value="Pending">Pending</option>
+                            <option value="Received">Received</option>
+                            <option value="Not Received">Not Received</option>
+                          </select>
+                        </div>
+                      )}
                     </div>
 
                     {order.customData && Object.keys(order.customData).length > 0 && (
                       <div className="mt-4">
                         <span className="text-gray-500 block text-xs mb-2">Customization Data</span>
-                        <div className="bg-gray-900 rounded-lg p-3 space-y-2 border border-gray-800">
-                          {Object.entries(order.customData).map(([k, v]) => (
-                            <div key={k} className="flex flex-col">
-                              <span className="text-gray-500 text-xs">{k}:</span>
-                              <pre className="whitespace-pre-wrap font-sans text-gray-300 text-sm mt-0.5">
-                                {typeof v === "object" ? JSON.stringify(v, null, 2) : String(v)}
-                              </pre>
-                            </div>
-                          ))}
+                        <div className="bg-gray-900 rounded-lg p-4 border border-gray-800">
+                          <FormatOrderData data={order.customData} theme="dark" />
                         </div>
                       </div>
                     )}

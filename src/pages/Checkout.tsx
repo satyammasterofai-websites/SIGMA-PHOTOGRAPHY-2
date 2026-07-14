@@ -37,6 +37,7 @@ import {
   Languages,
   Star,
 } from "lucide-react";
+import { FormatOrderData } from "../components/FormatOrderData";
 import toast from "react-hot-toast";
 import VideoModal from "../components/VideoModal";
 import TemplateReviewsModal from "../components/TemplateReviewsModal";
@@ -383,6 +384,7 @@ export default function Checkout() {
           filesCount: files.length || 0,
           viaMethod: viaMethod || "Direct",
           couponApplied: appliedCoupon ? appliedCoupon.code : null,
+          displayId: String(Math.floor(100000 + Math.random() * 900000)),
         }),
       );
       const orderRef = await addDoc(collection(db, "orders"), cleanData);
@@ -428,12 +430,40 @@ export default function Checkout() {
     let customFieldsText = "";
     if (formConfig) {
       customFieldsText += `*DETAILS*\n`;
-      Object.entries(formData.bride).forEach(
-        ([k, v]) => (customFieldsText += `*${k.toUpperCase()}*: ${v}\n`),
-      );
-      Object.entries(formData.groom).forEach(
-        ([k, v]) => (customFieldsText += `*${k.toUpperCase()}*: ${v}\n`),
-      );
+      
+      const formatWaValue = (val: any): string => {
+        if (val === null || val === undefined) return "N/A";
+        if (typeof val === "boolean") return val ? "Yes" : "No";
+        if (typeof val !== "object") return String(val);
+        if (Array.isArray(val)) return val.map(formatWaValue).join(", ");
+        return Object.entries(val)
+          .filter(([_, v]) => v !== undefined && v !== null && v !== "")
+          .map(([k, v]) => {
+            const formattedKey = k.replace(/_/g, " ").toUpperCase();
+            return `${formattedKey}: ${formatWaValue(v)}`;
+          })
+          .join(" | ");
+      };
+
+      if (formData.bride) {
+        if (typeof formData.bride === 'object') {
+          Object.entries(formData.bride).forEach(
+            ([k, v]) => (customFieldsText += `*${k.toUpperCase()}*: ${formatWaValue(v)}\n`)
+          );
+        } else {
+          customFieldsText += `*BRIDE*: ${formData.bride}\n`;
+        }
+      }
+      
+      if (formData.groom) {
+        if (typeof formData.groom === 'object') {
+          Object.entries(formData.groom).forEach(
+            ([k, v]) => (customFieldsText += `*${k.toUpperCase()}*: ${formatWaValue(v)}\n`)
+          );
+        } else {
+          customFieldsText += `*GROOM*: ${formData.groom}\n`;
+        }
+      }
 
       if (formData.events.length > 0) {
         customFieldsText += `\n*EVENTS*\n`;
@@ -444,7 +474,10 @@ export default function Checkout() {
 
       customFieldsText += `\n*ADDITIONAL DETAILS*\n`;
       Object.entries(formData.additional).forEach(
-        ([k, v]) => (customFieldsText += `*${k.toUpperCase()}*: ${v}\n`),
+        ([k, v]) => {
+            const displayVal = formatWaValue(v);
+            customFieldsText += `*${k.replace(/_/g, " ").toUpperCase()}*: ${displayVal}\n`;
+        }
       );
     } else {
       if (template?.customFields && template.customFields.length > 0) {
@@ -1381,19 +1414,7 @@ export default function Checkout() {
           <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
             <FileText className="w-4 h-4 text-brand-purple" /> Form Details
           </h3>
-          <div className="space-y-3">
-             {Object.entries(formConfig ? formData : legacyFormData).map(([key, value]) => {
-                if (key === 'terms' || key === 'whatsapp_consent' || value === undefined || value === null || value === '') return null;
-                const displayKey = key.replace(/_/g, ' ').replace(/\b\w/g, c => c.toUpperCase());
-                const displayValue = typeof value === 'object' ? JSON.stringify(value) : String(value);
-                return (
-                  <div key={key} className="text-sm grid grid-cols-1 sm:grid-cols-3 gap-1 sm:gap-4 border-b border-gray-200 pb-2 last:border-0 last:pb-0">
-                    <span className="text-gray-500 font-medium sm:col-span-1">{displayKey}</span>
-                    <span className="text-gray-900 font-semibold sm:col-span-2 whitespace-pre-wrap">{displayValue}</span>
-                  </div>
-                );
-             })}
-          </div>
+          <FormatOrderData data={formConfig ? formData : legacyFormData} theme="light" />
         </div>
 
 
