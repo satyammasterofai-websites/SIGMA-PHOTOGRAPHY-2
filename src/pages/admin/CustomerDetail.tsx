@@ -76,7 +76,7 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
         data.forEach(msg => {
           if (msg.sender === 'user' && !msg.read) {
             import('firebase/firestore').then(({ doc, updateDoc }) => {
-              updateDoc(doc(db, 'chats', msg.id), { read: true }).catch(console.error);
+              updateDoc(doc(db, 'chats', msg.id), { read: true }).catch(e => { if (e.code !== 'permission-denied') console.error(e); });
             });
           }
         });

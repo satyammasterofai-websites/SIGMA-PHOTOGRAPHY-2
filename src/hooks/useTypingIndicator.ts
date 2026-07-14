@@ -30,7 +30,7 @@ export function useTypingIndicator(chatUserId: string) {
         }
       }
     }, (err) => {
-      console.error("Typing indicator error", err);
+      if (err.code !== 'permission-denied') console.error("Typing indicator error", err);
     });
 
     return () => unsub();

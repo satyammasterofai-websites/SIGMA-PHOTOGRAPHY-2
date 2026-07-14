@@ -74,7 +74,7 @@ export default function SupportChat() {
       // Mark unread messages from admin as read
       data.forEach(msg => {
         if (msg.sender === 'admin' && !msg.read) {
-          updateDoc(doc(db, 'chats', msg.id), { read: true }).catch(console.error);
+          updateDoc(doc(db, 'chats', msg.id), { read: true }).catch(e => { if (e.code !== 'permission-denied') console.error(e); });
         }
       });
     });

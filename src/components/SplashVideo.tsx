@@ -35,6 +35,14 @@ export default function SplashVideo() {
             setShow(true);
             setVisible(true);
             document.body.style.overflow = 'hidden';
+            
+            if (type === 'image') {
+              setTimeout(() => {
+                setVisible(false);
+                document.body.style.overflow = 'auto';
+                setTimeout(() => setShow(false), 500);
+              }, 4000); // auto close image after 4 seconds
+            }
           }
         } else {
           // Default state if no config saved

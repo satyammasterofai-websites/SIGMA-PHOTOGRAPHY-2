@@ -7,7 +7,7 @@ export async function isFileNameDuplicate(fileName: string): Promise<boolean> {
     const snapshot = await getDocs(q);
     return !snapshot.empty;
   } catch (error) {
-    console.error("Error checking file name:", error);
+    if (error.code !== 'permission-denied') console.error("Error checking file name:", error);
     return false;
   }
 }
@@ -19,6 +19,6 @@ export async function registerFileName(fileName: string): Promise<void> {
       timestamp: Date.now()
     });
   } catch (error) {
-    console.error("Error registering file name:", error);
+    if (error.code !== 'permission-denied') console.error("Error registering file name:", error);
   }
 }

@@ -34,6 +34,7 @@ export default function ManageSplashVideo() {
           }
           setEnabled(data.enabled ?? false);
           setVideoUrl(fetchedUrl);
+          if (data.mediaType) setMediaType(data.mediaType);
           setUploadProvider(data.uploadProvider || 'firebase');
           setCloudinaryCloudName(data.cloudinaryCloudName || '');
           setCloudinaryUploadPreset(data.cloudinaryUploadPreset || '');
@@ -56,6 +57,7 @@ export default function ManageSplashVideo() {
       await setDoc(doc(db, "content", "splash_video"), {
         enabled,
         videoUrl,
+        mediaType,
         uploadProvider,
         cloudinaryCloudName,
         cloudinaryUploadPreset
