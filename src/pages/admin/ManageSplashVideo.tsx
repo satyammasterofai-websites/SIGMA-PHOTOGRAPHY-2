@@ -73,9 +73,15 @@ export default function ManageSplashVideo() {
     const file = e.target.files?.[0];
     if (!file) return;
 
-    if (!file.type.startsWith('video/')) {
-      toast.error('Please select a valid video file');
+    if (!file.type.startsWith('video/') && !file.type.startsWith('image/')) {
+      toast.error('Please select a valid video or image file');
       return;
+    }
+
+    if (file.type.startsWith('image/')) {
+      setMediaType('image');
+    } else {
+      setMediaType('video');
     }
 
     const isDuplicate = await isFileNameDuplicate(file.name);
@@ -85,7 +91,7 @@ export default function ManageSplashVideo() {
     }
 
     setUploading(true);
-    const toastId = toast.loading("Uploading video...");
+    const toastId = toast.loading(`Uploading ${file.type.startsWith('image/') ? 'image' : 'video'}...`);
 
     try {
       if (uploadProvider === 'uguu') {
@@ -105,7 +111,7 @@ export default function ManageSplashVideo() {
         if (data.status === 'success' && data.data && data.data.url) {
           const finalUrl = data.data.url.replace('tmpfiles.org/', 'tmpfiles.org/dl/');
           setVideoUrl(finalUrl);
-          toast.success("Video uploaded successfully (temporary host)", { id: toastId });
+          toast.success("Media uploaded successfully (temporary host)", { id: toastId });
         } else {
           throw new Error("Invalid response from temporary host");
         }
@@ -130,18 +136,18 @@ export default function ManageSplashVideo() {
 
         const data = await res.json();
         setVideoUrl(data.secure_url);
-        toast.success("Video uploaded to Cloudinary successfully", { id: toastId });
+        toast.success("Media uploaded to Cloudinary successfully", { id: toastId });
       } else {
         const storageRef = ref(storage, `splash_videos/${Date.now()}_${file.name}`);
         await uploadBytes(storageRef, file);
         const url = await getDownloadURL(storageRef);
         setVideoUrl(url);
-        toast.success("Video uploaded to Firebase successfully", { id: toastId });
+        toast.success("Media uploaded to Firebase successfully", { id: toastId });
       }
       await registerFileName(file.name);
     } catch (error: any) {
-      console.error("Error uploading video:", error);
-      toast.error(error.message || "Failed to upload video", { id: toastId });
+      console.error("Error uploading media:", error);
+      toast.error(error.message || "Failed to upload media", { id: toastId });
     } finally {
       setUploading(false);
       if (fileInputRef.current) {

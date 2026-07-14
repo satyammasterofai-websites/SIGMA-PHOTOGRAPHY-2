@@ -1,10 +1,11 @@
 import React, { useState, useEffect, useRef } from "react";
 import { collection, query, where, onSnapshot, addDoc, serverTimestamp, getDocs, doc } from "firebase/firestore";
 import { db } from "../../lib/firebase";
-import { Send, ArrowLeft, Mail, Check, CheckCheck } from "lucide-react";
+import { Send, ArrowLeft, Mail, Check, CheckCheck, Image as ImageIcon } from "lucide-react";
 import VideoModal from "../../components/VideoModal";
 import toast from "react-hot-toast";
 import { useTypingIndicator } from "../../hooks/useTypingIndicator";
+import { useChatSound } from "../../hooks/useChatSound";
 
 interface CustomerDetailProps {
   user: any;
@@ -19,6 +20,8 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const messagesEndRef = useRef<HTMLDivElement>(null);
   const { isTyping, updateTyping } = useTypingIndicator(user?.id || '');
+  const { playSound } = useChatSound();
+  const initialLoadRef = useRef(true);
 
   const [isCustomerOnline, setIsCustomerOnline] = useState(false);
 
@@ -46,6 +49,20 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
     );
     const unsub = onSnapshot(q, (snapshot) => {
       const data = snapshot.docs.map((d) => ({ id: d.id, ...d.data() } as any));
+      
+      if (!initialLoadRef.current) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === 'added') {
+            const msgData = change.doc.data();
+            if (msgData.sender === 'user') {
+              playSound();
+            }
+          }
+        });
+      } else {
+        initialLoadRef.current = false;
+      }
+
       data.sort((a: any, b: any) => {
         const timeA = a.timestamp ? (typeof a.timestamp.toMillis === 'function' ? a.timestamp.toMillis() : new Date(a.timestamp).getTime()) : Date.now();
         const timeB = b.timestamp ? (typeof b.timestamp.toMillis === 'function' ? b.timestamp.toMillis() : new Date(b.timestamp).getTime()) : Date.now();
@@ -83,9 +100,65 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
     return () => unsub();
   }, [user]);
 
+  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (e.target.files && e.target.files[0]) {
+      const file = e.target.files[0];
+      const reader = new FileReader();
+      reader.onload = (event) => {
+        const img = new Image();
+        img.onload = async () => {
+          const canvas = document.createElement('canvas');
+          let width = img.width;
+          let height = img.height;
+          const MAX_WIDTH = 1000;
+          const MAX_HEIGHT = 1000;
+          if (width > height) {
+            if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
+          } else {
+            if (height > MAX_HEIGHT) { width *= MAX_HEIGHT / height; height = MAX_HEIGHT; }
+          }
+          canvas.width = width; canvas.height = height;
+          const ctx = canvas.getContext('2d');
+          ctx?.drawImage(img, 0, 0, width, height);
+          const base64 = canvas.toDataURL('image/jpeg', 0.8);
+          
+          try {
+            await addDoc(collection(db, "chats"), {
+              userId: user.id,
+              userEmail: user.email,
+              sender: "admin",
+              text: "Sent an image",
+              imageUrl: base64,
+              timestamp: serverTimestamp(),
+              read: false
+            });
+            setTimeout(() => messagesEndRef.current?.scrollIntoView({ behavior: "smooth" }), 100);
+          } catch (error) {
+            console.error("Error sending image:", error);
+            toast.error("Failed to send image");
+          }
+        };
+        img.src = event.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    }
+  };
+
+  const typingTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+
   const handleMessageChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     setNewMessage(e.target.value);
-    updateTyping(e.target.value.length > 0);
+    
+    if (e.target.value.length > 0) {
+      updateTyping(true);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+      typingTimeoutRef.current = setTimeout(() => {
+        updateTyping(false);
+      }, 2000);
+    } else {
+      updateTyping(false);
+      if (typingTimeoutRef.current) clearTimeout(typingTimeoutRef.current);
+    }
   };
 
   const sendMessage = async (e: React.FormEvent) => {
@@ -161,8 +234,11 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
                         : "bg-gray-800 text-gray-200 rounded-bl-none"
                     }`}
                   >
-                    <p className="text-sm">{msg.text}</p>
-                    <div className="flex items-center justify-end gap-1 text-[10px] mt-1 opacity-70">
+                    {msg.imageUrl && (
+                      <img src={msg.imageUrl} alt="Uploaded" className="max-w-full rounded-lg mb-2" />
+                    )}
+                    {(!msg.imageUrl || msg.text !== "Sent an image") && <p className="text-sm">{msg.text}</p>}
+                    <div className={`flex items-center justify-end gap-1.5 text-[9px] font-medium tracking-wider uppercase mt-2 px-2 py-0.5 rounded-full backdrop-blur-md w-fit ml-auto shadow-sm transition-all ${msg.sender === 'admin' ? 'bg-white/10 text-white/90 border border-white/20' : 'bg-black/20 text-gray-400 border border-white/5'}`}>
                       <span>
                         {(msg.timestamp && typeof msg.timestamp.toDate === 'function') 
                           ? msg.timestamp.toDate().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) 
@@ -196,6 +272,21 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
             </div>
 
             <form onSubmit={sendMessage} className="p-4 border-t border-gray-800 bg-gray-900 flex gap-2">
+              <div className="relative">
+                <input
+                  type="file"
+                  accept="image/*"
+                  id="admin-chat-image-upload"
+                  className="hidden"
+                  onChange={handleImageUpload}
+                />
+                <label 
+                  htmlFor="admin-chat-image-upload"
+                  className="flex items-center justify-center w-10 h-10 bg-gray-800 text-gray-400 rounded-xl hover:bg-gray-700 hover:text-white cursor-pointer transition-colors"
+                >
+                  <ImageIcon className="w-5 h-5" />
+                </label>
+              </div>
               <input
                 type="text"
                 value={newMessage}

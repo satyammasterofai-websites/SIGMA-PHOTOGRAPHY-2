@@ -22,7 +22,11 @@ export default function SplashVideo() {
         if (docRef.exists()) {
           const data = docRef.data();
           if (data.enabled && data.videoUrl) {
-            setMediaType(data.mediaType || 'video');
+            const type = data.mediaType || 'video';
+            setMediaType(type);
+            if (type === 'image') {
+              setHasInteracted(true);
+            }
             let fetchedUrl = data.videoUrl;
             if (fetchedUrl.includes('vimeo.com/manage/videos/')) {
               fetchedUrl = fetchedUrl.replace('manage/videos/', '');

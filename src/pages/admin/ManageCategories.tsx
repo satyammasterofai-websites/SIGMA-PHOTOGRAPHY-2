@@ -50,8 +50,8 @@ export default function ManageCategories() {
           let width = img.width;
           let height = img.height;
           
-          const MAX_WIDTH = 400;
-          const MAX_HEIGHT = 400;
+          const MAX_WIDTH = 1920;
+          const MAX_HEIGHT = 1080;
           
           if (width > height) {
             if (width > MAX_WIDTH) {
@@ -70,7 +70,7 @@ export default function ManageCategories() {
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
           
-          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.6);
+          const compressedBase64 = canvas.toDataURL('image/jpeg', 0.85);
           setNewCatImage(compressedBase64);
           toast.success("Image selected and compressed");
         };
@@ -154,8 +154,8 @@ export default function ManageCategories() {
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          const MAX_WIDTH = 400;
-          const MAX_HEIGHT = 400;
+          const MAX_WIDTH = 1920;
+          const MAX_HEIGHT = 1080;
           if (width > height) {
             if (width > MAX_WIDTH) { height *= MAX_WIDTH / width; width = MAX_WIDTH; }
           } else {
@@ -164,7 +164,7 @@ export default function ManageCategories() {
           canvas.width = width; canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          setEditCatImage(canvas.toDataURL('image/jpeg', 0.6));
+          setEditCatImage(canvas.toDataURL('image/jpeg', 0.85));
         };
         img.src = event.target?.result as string;
       };

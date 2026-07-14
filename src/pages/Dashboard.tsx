@@ -7,6 +7,7 @@ import {
   useLocation,
 } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
+import { useChatSound } from "../hooks/useChatSound";
 import { auth, db } from "../lib/firebase";
 import { signOut } from "firebase/auth";
 import {
@@ -625,6 +626,7 @@ function Downloads() {
 
 function Profile() {
   const { user } = useAuthStore();
+  const { soundEnabled, setSoundEnabled } = useChatSound();
 
   return (
     <div>
@@ -673,6 +675,23 @@ function Profile() {
                 </div>
               </div>
             </div>
+            
+            <div className="mt-8 border-t border-gray-200 pt-6">
+              <h3 className="text-lg font-medium text-gray-900 mb-4">Preferences</h3>
+              <div className="flex items-center justify-between">
+                <div>
+                  <h4 className="text-sm font-medium text-gray-900">Chat Sound Effects</h4>
+                  <p className="text-sm text-gray-500">Play a sound when receiving a new message.</p>
+                </div>
+                <button
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-purple focus:ring-offset-2 ${soundEnabled ? 'bg-brand-purple' : 'bg-gray-200'}`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${soundEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+            </div>
+            
           </div>
         </div>
       </div>

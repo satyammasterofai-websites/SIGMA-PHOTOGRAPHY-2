@@ -12,9 +12,11 @@ import {
   Settings,
 } from "lucide-react";
 import toast from "react-hot-toast";
+import { useChatSound } from "../../hooks/useChatSound";
 
 export default function ManageSettings() {
   const [activeTab, setActiveTab] = useState<"general" | "coupons" | "templateCoupons">("general");
+  const { soundEnabled, setSoundEnabled } = useChatSound();
   const [templateDiscounts, setTemplateDiscounts] = useState<Record<string, string>>({});
   const { templates, init } = useSiteStore();
   useEffect(() => {
@@ -227,6 +229,22 @@ export default function ManageSettings() {
               />
             </div>
 
+            <div className="pb-6 border-b border-gray-800">
+              <div className="flex items-center justify-between mb-2">
+                <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
+                  <MessageSquare className="w-4 h-4 text-brand-electric" />
+                  Chat Sound Effects
+                </label>
+                <button
+                  onClick={() => setSoundEnabled(!soundEnabled)}
+                  className={`relative inline-flex h-6 w-11 flex-shrink-0 cursor-pointer rounded-full border-2 border-transparent transition-colors duration-200 ease-in-out focus:outline-none focus:ring-2 focus:ring-brand-electric focus:ring-offset-2 focus:ring-offset-gray-900 ${soundEnabled ? 'bg-brand-electric' : 'bg-gray-700'}`}
+                >
+                  <span className={`pointer-events-none inline-block h-5 w-5 transform rounded-full bg-white shadow ring-0 transition duration-200 ease-in-out ${soundEnabled ? 'translate-x-5' : 'translate-x-0'}`} />
+                </button>
+              </div>
+              <p className="text-xs text-gray-500 mb-4">Play a sound when receiving a new message.</p>
+            </div>
+            
             <div className="pb-6 border-b border-gray-800">
               <label className="block text-sm font-medium text-gray-300 mb-2 flex items-center gap-2">
                 <MessageSquare className="w-4 h-4 text-brand-electric" />

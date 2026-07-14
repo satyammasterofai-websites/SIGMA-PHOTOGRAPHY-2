@@ -1,7 +1,0 @@
-import https from 'https';
-
-https.get('https://api.gofile.io/servers', (res) => {
-  let data = '';
-  res.on('data', chunk => data += chunk);
-  res.on('end', () => console.log(data));
-});
