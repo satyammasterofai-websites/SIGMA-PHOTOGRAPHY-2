@@ -27,8 +27,8 @@ export default function TemplateManagement() {
   const [isTrending, setIsTrending] = useState(false);
   const [advancePayment,
       setAdvancePayment] = useState('');
-  const [couponCode, setCouponCode] = useState('');
-  const [couponPercentage, setCouponPercentage] = useState('');
+  const [couponOverrides, setCouponOverrides] = useState<Record<string, number>>({});
+  const [globalCoupons, setGlobalCoupons] = useState<any[]>([]);
   const [baseOrdersCount, setBaseOrdersCount] = useState<number>(100);
   const [language, setLanguage] = useState('None');
   const [activeTab, setActiveTab] = useState('All');
@@ -82,6 +82,12 @@ export default function TemplateManagement() {
   useEffect(() => {
     fetchTemplates();
     const fetchCategories = async () => {
+
+        const settingsDoc = await getDoc(doc(db, 'settings', 'config'));
+        if (settingsDoc.exists() && settingsDoc.data().coupons) {
+          setGlobalCoupons(settingsDoc.data().coupons);
+        }
+
       try {
         const catDoc = await getDoc(doc(db, 'content', 'categories'));
         if (catDoc.exists() && catDoc.data().items) {
@@ -162,8 +168,7 @@ export default function TemplateManagement() {
       setIsFeatured(template.isFeatured || false);
       setIsTrending(template.isTrending || false);
       setAdvancePayment(template.advancePayment || '');
-      setCouponCode(template.couponCode || '');
-      setCouponPercentage(template.couponPercentage || '');
+      setCouponOverrides(template.couponOverrides || {});
       setBaseOrdersCount(template.baseOrdersCount ?? 100);
       setLanguage(template.language || 'None');
       setCustomFields(template.customFields || []);
@@ -181,8 +186,7 @@ export default function TemplateManagement() {
       setIsFeatured(false);
       setIsTrending(false);
       setAdvancePayment('');
-    setCouponCode('');
-    setCouponPercentage('');
+    setCouponOverrides({});
       setBaseOrdersCount(100);
       setLanguage('None');
     setLanguage('None');
@@ -234,7 +238,7 @@ export default function TemplateManagement() {
       const data = { 
         title, category: finalCategory, price, discountPrice, description, 
         thumbnailBase64, videoUrl, status, isFeatured, isTrending, advancePayment: advancePayment ? Number(advancePayment) : 0, 
-        couponCode: couponCode.trim().toUpperCase(), couponPercentage: couponPercentage ? Number(couponPercentage) : 0,
+        couponOverrides,
         baseOrdersCount: Number(baseOrdersCount), language, customFields, formId 
       };
       
@@ -534,21 +538,41 @@ export default function TemplateManagement() {
                       placeholder="e.g. 500"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Template Coupon Code (Optional)</label>
-                    <input 
-                      type="text" value={couponCode} onChange={(e) => setCouponCode(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500 uppercase"
-                      placeholder="e.g. SAVE20"
-                    />
-                  </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Template Coupon Discount (%)</label>
-                    <input 
-                      type="number" value={couponPercentage} onChange={(e) => setCouponPercentage(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500"
-                      placeholder="e.g. 20"
-                    />
+                  <div className="col-span-1 md:col-span-2">
+                    <label className="block text-sm font-medium text-gray-300 mb-4">Coupon Overrides (Optional)</label>
+                    <div className="space-y-3 bg-gray-900 p-4 rounded-xl border border-gray-700 max-h-60 overflow-y-auto">
+                      {globalCoupons.length === 0 ? (
+                        <p className="text-gray-500 text-sm">No global coupons found. Create them in settings.</p>
+                      ) : (
+                        globalCoupons.map(coupon => (
+                          <div key={coupon.id} className="flex flex-col md:flex-row items-start md:items-center justify-between bg-gray-800 p-3 rounded-lg border border-gray-700 gap-3">
+                            <span className="text-sm font-bold text-white">{coupon.code} <span className="text-gray-500 font-normal text-xs ml-2">(Default: {coupon.percentage}%)</span></span>
+                            <div className="flex items-center gap-2">
+                              <span className="text-xs text-gray-400">Override:</span>
+                              <input 
+                                type="number" 
+                                placeholder={coupon.percentage}
+                                value={couponOverrides[coupon.code] !== undefined ? couponOverrides[coupon.code] : ''}
+                                onChange={(e) => {
+                                  const val = e.target.value;
+                                  setCouponOverrides(prev => {
+                                    const next = { ...prev };
+                                    if (val === '') {
+                                      delete next[coupon.code];
+                                    } else {
+                                      next[coupon.code] = Number(val);
+                                    }
+                                    return next;
+                                  });
+                                }}
+                                className="w-20 bg-gray-900 border border-gray-600 text-white rounded-lg px-3 py-1.5 focus:outline-none focus:border-indigo-500 text-right"
+                              />
+                              <span className="text-sm text-gray-400">%</span>
+                            </div>
+                          </div>
+                        ))
+                      )}
+                    </div>
                   </div>
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Base Orders Count</label>

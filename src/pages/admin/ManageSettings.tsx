@@ -15,82 +15,57 @@ import toast from "react-hot-toast";
 import { useChatSound } from "../../hooks/useChatSound";
 
 export default function ManageSettings() {
-  const [activeTab, setActiveTab] = useState<"general" | "coupons" | "templateCoupons">("general");
+  const [activeTab, setActiveTab] = useState<"general" | "coupons">("general");
   const { soundEnabled, setSoundEnabled } = useChatSound();
   const [templateDiscounts, setTemplateDiscounts] = useState<Record<string, string>>({});
   const { templates, init } = useSiteStore();
+
   useEffect(() => {
     init();
   }, [init]);
 
   // General State
   const [baseOnlineUsers, setBaseOnlineUsers] = useState(50);
-
+  
   // Chat State
   const [welcomeMessage, setWelcomeMessage] = useState("Hello! How can we help you today?");
-
+  
   // WhatsApp State
   const [waNumber, setWaNumber] = useState("9162478070");
   const [waMessageFormat, setWaMessageFormat] = useState(
-    "*Booking Request*\n\nTemplate: {template}\nTemplate ID: {templateId}\nOrder ID: {orderId}\n\n*Customer Details*\nName: {name}\nPhone: {phone}\n\n{details}",
+    "*Booking Request*\n\nTemplate: {template}\nTemplate ID: {templateId}\nOrder ID: {orderId}\n\n*Customer Details*\nName: {name}\nPhone: {phone}\n\n{details}"
   );
   const [waOrderingEnabled, setWaOrderingEnabled] = useState(true);
   const [paymentQRBase64, setPaymentQRBase64] = useState("");
 
   // Checkout State
-  const [checkoutFormNote, setCheckoutFormNote] = useState(
-    '📝 Important Instructions / महत्वपूर्ण निर्देश\nEnglish:\nFill Carefully: Please enter the details of your events exactly as you want them to appear on your invitation card.\nNot Applicable: If a specific ceremony is not happening, or if you wish to keep that information private, simply enter "0" or "N/A" in that field.\nAdditional Requests: If you have any extra details or special instructions to add, please use the "Other" section.\nहिंदी:\nध्यानपूर्वक भरें: आपके यहाँ जो-जो फंक्शन होने वाले हैं, उनकी सही जानकारी इस फॉर्म में भरें ताकि कार्ड में वही दिखाई दे।\nजानकारी न होने पर: यदि कोई फंक्शन आपके यहाँ नहीं है या आप उसकी जानकारी शेयर नहीं करना चाहते, तो उस बॉक्स में "0" या "N/A" लिख दें।\nअन्य जानकारी: यदि आप कोई अतिरिक्त जानकारी या स्पेशल नोट जोड़ना चाहते हैं, तो उसे "Other" वाले सेक्शन में लिख सकते हैं।\nThank you! If you face any issues while filling out the form, feel free to contact us. / धन्यवाद! यदि आपको फॉर्म भरने में कोई समस्या आए, तो हमसे संपर्क करें।',
-  );
+  const [checkoutFormNote, setCheckoutFormNote] = useState("");
 
   // Coupons State
   const [coupons, setCoupons] = useState<any[]>([]);
-  const [newCoupon, setNewCoupon] = useState<{
-    code: string;
-    percentage: string;
-    expiryDate: string;
-    maxPriceThreshold: string;
-    excludedTemplates: string[];
-  }>({
+  const [newCoupon, setNewCoupon] = useState({
     code: "",
     percentage: "",
     expiryDate: "",
-    maxPriceThreshold: "",
-    excludedTemplates: [],
   });
 
   useEffect(() => {
-    const unsub = onSnapshot(
-      doc(db, "settings", "config"),
-      (docSnap) => {
-        if (docSnap.exists()) {
-          const data = docSnap.data();
-          if (data.baseOnlineUsers !== undefined) {
-            setBaseOnlineUsers(data.baseOnlineUsers);
-          }
-          if (data.whatsapp) {
-            setWaNumber(data.whatsapp.number || "9162478070");
-            setWaMessageFormat(
-              data.whatsapp.messageFormat ||
-                "*Booking Request*\n\nTemplate: {template}\nTemplate ID: {templateId}\nOrder ID: {orderId}\n\n*Customer Details*\nName: {name}\nPhone: {phone}\n\n{details}",
-            );
-            setWaOrderingEnabled(data.whatsapp.enabled !== false);
-          }
-          if (data.welcomeMessage) {
-            setWelcomeMessage(data.welcomeMessage);
-          }
-          if (data.checkoutFormNote) {
-            setCheckoutFormNote(data.checkoutFormNote);
-          }
-          if (data.paymentQRBase64) {
-            setPaymentQRBase64(data.paymentQRBase64);
-          }
-          if (data.coupons) {
-            setCoupons(data.coupons || []);
-          }
-        }
-      },
-      () => {},
-    );
+    const unsub = onSnapshot(doc(db, "settings", "config"), (doc) => {
+      if (doc.exists()) {
+        const data = doc.data();
+        setBaseOnlineUsers(data.baseOnlineUsers || 50);
+        setWaNumber(data.whatsapp?.number || "9162478070");
+        setWaMessageFormat(
+          data.whatsapp?.messageFormat ||
+            "*Booking Request*\n\nTemplate: {template}\nTemplate ID: {templateId}\nOrder ID: {orderId}\n\n*Customer Details*\nName: {name}\nPhone: {phone}\n\n{details}"
+        );
+        setWaOrderingEnabled(data.whatsapp?.enabled ?? true);
+        setWelcomeMessage(data.welcomeMessage || "Hello! How can we help you today?");
+        setCheckoutFormNote(data.checkoutFormNote || "");
+        setCoupons(data.coupons || []);
+        setPaymentQRBase64(data.paymentQRBase64 || "");
+      }
+    });
     return () => unsub();
   }, []);
 
@@ -111,7 +86,7 @@ export default function ManageSettings() {
           coupons: finalCoupons,
           paymentQRBase64,
         },
-        { merge: true },
+        { merge: true }
       );
       toast.success("Settings saved successfully");
     } catch (e) {
@@ -122,8 +97,6 @@ export default function ManageSettings() {
   const handleQRUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      
-      // Compress image before saving to avoid 1MB Firestore limit
       const img = new Image();
       const reader = new FileReader();
       
@@ -162,9 +135,9 @@ export default function ManageSettings() {
 
   const addCoupon = async () => {
     if (!newCoupon.code || !newCoupon.percentage) return;
-    const updated = [...coupons, { id: Date.now().toString(), ...newCoupon }];
+    const updated = [...coupons, { id: Date.now().toString(), ...newCoupon, isTemplateSpecific: false }];
     setCoupons(updated);
-    setNewCoupon({ code: "", percentage: "", expiryDate: "", maxPriceThreshold: "", excludedTemplates: [] });
+    setNewCoupon({ code: "", percentage: "", expiryDate: "" });
     await saveSettings(updated);
   };
 
@@ -183,15 +156,8 @@ export default function ManageSettings() {
             Manage global configurations for checkout.
           </p>
         </div>
-        <button
-          onClick={() => saveSettings()}
-          className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 rounded-xl flex items-center gap-2 font-medium"
-        >
-          <Save className="w-4 h-4" /> Save Changes
-        </button>
       </div>
 
-      {/* Tabs */}
       <div className="flex gap-2 mb-8 border-b border-gray-800">
         <button
           onClick={() => setActiveTab("general")}
@@ -205,19 +171,12 @@ export default function ManageSettings() {
         >
           <Tag className="w-4 h-4" /> Global Coupons
         </button>
-        <button
-          onClick={() => setActiveTab("templateCoupons")}
-          className={`px-4 py-3 font-medium text-sm flex items-center gap-2 border-b-2 transition-all ${activeTab === "templateCoupons" ? "border-brand-electric text-white" : "border-transparent text-gray-500 hover:text-gray-300"}`}
-        >
-          <Tag className="w-4 h-4" /> Template Specific Coupons
-        </button>
       </div>
 
-      {/* Tab Contents */}
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 md:p-8">
         {activeTab === "general" && (
           <div className="space-y-6 max-w-2xl">
-                        <div className="pb-6 border-b border-gray-800">
+            <div className="pb-6 border-b border-gray-800">
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Base Online Users (Default is 50)
               </label>
@@ -228,7 +187,7 @@ export default function ManageSettings() {
                 className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3"
               />
             </div>
-
+            
             <div className="pb-6 border-b border-gray-800">
               <div className="flex items-center justify-between mb-2">
                 <label className="text-sm font-medium text-gray-300 flex items-center gap-2">
@@ -257,10 +216,8 @@ export default function ManageSettings() {
                 placeholder="Hello! How can we help you today?"
                 className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3"
               />
-              <p className="text-xs text-gray-500 mt-2">
-                This message will be shown to users when they open the live chat.
-              </p>
             </div>
+            
             <div>
               <label className="flex items-center gap-3 cursor-pointer">
                 <input
@@ -270,15 +227,11 @@ export default function ManageSettings() {
                   className="rounded border-gray-700 bg-gray-800 w-5 h-5"
                 />
                 <div>
-                  <p className="font-medium text-white">
-                    Enable WhatsApp Ordering
-                  </p>
-                  <p className="text-sm text-gray-400">
-                    Allow users to place orders directly via WhatsApp
-                  </p>
+                  <p className="font-medium text-white">Enable WhatsApp Ordering</p>
                 </div>
               </label>
             </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 WhatsApp Business Number (with country code)
@@ -291,13 +244,10 @@ export default function ManageSettings() {
                 className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3"
               />
             </div>
+            
             <div>
               <label className="block text-sm font-medium text-gray-300 mb-2">
-                Message Format (Variables:{" "}
-                {
-                  "{template}, {templateId}, {orderId}, {name}, {phone}, {details}"
-                }
-                )
+                Message Format
               </label>
               <textarea
                 rows={8}
@@ -319,14 +269,23 @@ export default function ManageSettings() {
                   type="file"
                   accept="image/*"
                   onChange={handleQRUpload}
-                  className="block w-full text-sm text-gray-400 file:mr-4 file:py-2 file:px-4 file:rounded-full file:border-0 file:text-sm file:font-semibold file:bg-brand-purple file:text-white hover:file:bg-purple-700"
+                  className="block w-full text-sm text-gray-400"
                 />
               </div>
             </div>
+
             <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                Checkout Form Note
-              </label>
+              <div className="flex items-center justify-between mb-2">
+                <label className="block text-sm font-medium text-gray-300">
+                  Checkout Form Note
+                </label>
+                <button
+                  onClick={() => saveSettings()}
+                  className="bg-brand-electric hover:bg-indigo-600 text-white px-4 py-2 rounded-lg text-sm font-medium flex items-center gap-2"
+                >
+                  <Save className="w-4 h-4" /> Save General Settings
+                </button>
+              </div>
               <textarea
                 rows={8}
                 value={checkoutFormNote}
@@ -339,87 +298,36 @@ export default function ManageSettings() {
 
         {activeTab === "coupons" && (
           <div className="space-y-6">
-                        <div className="flex flex-col gap-4 bg-gray-800/50 p-6 rounded-xl border border-gray-800">
+            <div className="flex flex-col gap-4 bg-gray-800/50 p-6 rounded-xl border border-gray-800">
               <div className="flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1 w-full">
-                  <label className="block text-xs font-medium text-gray-400 mb-2">
-                    Coupon Code
-                  </label>
+                <div className="flex-1 w-full md:w-1/3">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">Coupon Code</label>
                   <input
                     type="text"
-                    value={newCoupon.code || ""}
-                    onChange={(e) =>
-                      setNewCoupon({
-                        ...newCoupon,
-                        code: e.target.value.toUpperCase(),
-                      })
-                    }
-                    placeholder="SUMMER50"
-                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
+                    value={newCoupon.code}
+                    onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
+                    placeholder="e.g. ALLFESTIVAL"
+                    className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-2"
                   />
                 </div>
-                <div className="w-full md:w-32">
-                  <label className="block text-xs font-medium text-gray-400 mb-2">
-                    Discount (%)
-                  </label>
+                <div className="flex-1 w-full md:w-1/3">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">Discount (%)</label>
                   <input
                     type="number"
-                    value={newCoupon.percentage || ""}
-                    onChange={(e) =>
-                      setNewCoupon({ ...newCoupon, percentage: e.target.value })
-                    }
-                    placeholder="20"
-                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
+                    value={newCoupon.percentage}
+                    onChange={(e) => setNewCoupon({ ...newCoupon, percentage: e.target.value })}
+                    placeholder="e.g. 15"
+                    className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-2"
                   />
                 </div>
-                <div className="w-full md:w-48">
-                  <label className="block text-xs font-medium text-gray-400 mb-2">
-                    Expiry Date (Optional)
-                  </label>
+                <div className="flex-1 w-full md:w-1/3">
+                  <label className="block text-xs font-medium text-gray-400 mb-2">Expiry Date</label>
                   <input
                     type="date"
-                    value={newCoupon.expiryDate || ""}
-                    onChange={(e) =>
-                      setNewCoupon({ ...newCoupon, expiryDate: e.target.value })
-                    }
-                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
+                    value={newCoupon.expiryDate}
+                    onChange={(e) => setNewCoupon({ ...newCoupon, expiryDate: e.target.value })}
+                    className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-2"
                   />
-                </div>
-              </div>
-              <div className="flex flex-col md:flex-row gap-4 items-start">
-                <div className="w-full md:w-1/3">
-                  <label className="block text-xs font-medium text-gray-400 mb-2">
-                    Max Price Threshold (Valid if Price &lt;= X)
-                  </label>
-                  <input
-                    type="number"
-                    value={newCoupon.maxPriceThreshold || ""}
-                    onChange={(e) =>
-                      setNewCoupon({ ...newCoupon, maxPriceThreshold: e.target.value })
-                    }
-                    placeholder="e.g. 500"
-                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2"
-                  />
-                  <p className="text-[10px] text-gray-500 mt-1">Leave empty to apply to any price.</p>
-                </div>
-                <div className="flex-1 w-full">
-                  <label className="block text-xs font-medium text-gray-400 mb-2">
-                    Exclude Templates (Coupon not valid for these)
-                  </label>
-                  <select
-                    multiple
-                    value={newCoupon.excludedTemplates || []}
-                    onChange={(e) => {
-                      const options = Array.from(e.target.selectedOptions, option => option.value);
-                      setNewCoupon({ ...newCoupon, excludedTemplates: options });
-                    }}
-                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2 h-24"
-                  >
-                    {templates.map(t => (
-                      <option key={t.id} value={t.id}>{t.title || t.name} (₹{t.price})</option>
-                    ))}
-                  </select>
-                  <p className="text-[10px] text-gray-500 mt-1">Hold Cmd/Ctrl to select multiple. Leave empty to apply to all (unless blocked by price threshold).</p>
                 </div>
                 <div className="w-full md:w-auto mt-6">
                   <button
@@ -445,21 +353,9 @@ export default function ManageSettings() {
                 <tbody className="divide-y divide-gray-800">
                   {coupons.filter(c => !c.isTemplateSpecific).map((c) => (
                     <tr key={c.id}>
-                      <td className="px-4 py-3 font-bold text-white">
-                        {c.code}
-                        {(c.maxPriceThreshold || (c.excludedTemplates && c.excludedTemplates.length > 0)) && (
-                          <div className="text-[10px] font-normal text-gray-500 mt-1">
-                            {c.maxPriceThreshold && <span>Max Price: ₹{c.maxPriceThreshold} </span>}
-                            {c.excludedTemplates && c.excludedTemplates.length > 0 && <span>Excluded: {c.excludedTemplates.length} templates</span>}
-                          </div>
-                        )}
-                      </td>
-                      <td className="px-4 py-3 text-green-400">
-                        {c.percentage}% OFF
-                      </td>
-                      <td className="px-4 py-3 text-gray-400">
-                        {c.expiryDate || "Never ends"}
-                      </td>
+                      <td className="px-4 py-3 font-bold text-white">{c.code}</td>
+                      <td className="px-4 py-3 text-green-400">{c.percentage}% OFF</td>
+                      <td className="px-4 py-3 text-gray-400">{c.expiryDate || "Never ends"}</td>
                       <td className="px-4 py-3 text-right">
                         <button
                           onClick={() => removeCoupon(c.id)}
@@ -472,129 +368,8 @@ export default function ManageSettings() {
                   ))}
                   {coupons.filter(c => !c.isTemplateSpecific).length === 0 && (
                     <tr>
-                      <td
-                        colSpan={4}
-                        className="px-4 py-6 text-center text-gray-500"
-                      >
-                        No coupons active.
-                      </td>
-                    </tr>
-                  )}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === "templateCoupons" && (
-          <div className="space-y-6">
-            <div className="flex flex-col gap-4 bg-gray-800/50 p-6 rounded-xl border border-gray-800">
-              <h2 className="text-lg font-bold text-white mb-2">Create Universal Coupon (Template Specific)</h2>
-              <div className="flex flex-col md:flex-row gap-4 items-end">
-                <div className="flex-1 w-full md:w-1/3">
-                  <label className="block text-xs font-medium text-gray-400 mb-2">
-                    Coupon Code
-                  </label>
-                  <input
-                    type="text"
-                    value={newCoupon.code || ""}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, code: e.target.value.toUpperCase() })}
-                    placeholder="e.g. ALLFESTIVAL"
-                    className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-2"
-                  />
-                </div>
-                <div className="flex-1 w-full md:w-1/3">
-                  <label className="block text-xs font-medium text-gray-400 mb-2">
-                    Expiry Date
-                  </label>
-                  <input
-                    type="date"
-                    value={newCoupon.expiryDate || ""}
-                    onChange={(e) => setNewCoupon({ ...newCoupon, expiryDate: e.target.value })}
-                    className="w-full bg-gray-900 border border-gray-700 text-white rounded-xl px-4 py-2"
-                  />
-                </div>
-              </div>
-              
-              <div className="mt-4">
-                <label className="block text-xs font-medium text-gray-400 mb-4">
-                  Set Percentage Discount (%) for Each Template
-                </label>
-                <div className="grid grid-cols-1 md:grid-cols-2 gap-4 max-h-96 overflow-y-auto pr-2 custom-scrollbar">
-                  {templates.map(t => (
-                    <div key={t.id} className="flex items-center justify-between bg-gray-900 p-3 rounded-lg border border-gray-700">
-                      <span className="text-sm text-gray-300 truncate mr-2" title={t.title || t.name}>{t.title || t.name}</span>
-                      <div className="flex items-center gap-2 w-24 shrink-0">
-                        <input
-                          type="number"
-                          placeholder="0"
-                          value={templateDiscounts[t.id] || ""}
-                          onChange={(e) => setTemplateDiscounts({...templateDiscounts, [t.id]: e.target.value})}
-                          className="w-full bg-gray-800 border border-gray-600 text-white rounded-md px-2 py-1 text-sm text-right"
-                        />
-                        <span className="text-gray-400 text-sm">%</span>
-                      </div>
-                    </div>
-                  ))}
-                </div>
-              </div>
-
-              <div className="flex justify-end mt-4">
-                <button
-                  onClick={async () => {
-                    if (!newCoupon.code) return;
-                    const updated = [...coupons, { 
-                      id: Date.now().toString(), 
-                      code: newCoupon.code,
-                      expiryDate: newCoupon.expiryDate,
-                      isTemplateSpecific: true,
-                      templateDiscounts
-                    }];
-                    setCoupons(updated);
-                    setNewCoupon({ code: "", percentage: "", expiryDate: "", maxPriceThreshold: "", excludedTemplates: [] });
-                    setTemplateDiscounts({});
-                    await saveSettings(updated);
-                  }}
-                  className="bg-brand-electric hover:bg-indigo-600 text-white px-6 py-2 rounded-xl text-sm font-medium transition-colors"
-                >
-                  Create Universal Coupon
-                </button>
-              </div>
-            </div>
-
-            {/* List existing template specific coupons */}
-            <div className="bg-gray-800/30 rounded-xl border border-gray-800 overflow-hidden">
-              <table className="w-full text-left text-sm text-gray-300">
-                <thead className="bg-gray-800">
-                  <tr>
-                    <th className="px-4 py-3">Code</th>
-                    <th className="px-4 py-3">Type</th>
-                    <th className="px-4 py-3">Expiry</th>
-                    <th className="px-4 py-3 text-right">Actions</th>
-                  </tr>
-                </thead>
-                <tbody className="divide-y divide-gray-800">
-                  {coupons.filter(c => c.isTemplateSpecific).map((c) => (
-                    <tr key={c.id}>
-                      <td className="px-4 py-3 font-bold text-white">
-                        {c.code}
-                      </td>
-                      <td className="px-4 py-3 text-emerald-400">Template Specific</td>
-                      <td className="px-4 py-3 text-gray-400">{c.expiryDate || "Never"}</td>
-                      <td className="px-4 py-3 text-right">
-                        <button
-                          onClick={() => removeCoupon(c.id)}
-                          className="text-red-400 p-2 hover:bg-red-400/10 rounded-lg"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </button>
-                      </td>
-                    </tr>
-                  ))}
-                  {coupons.filter(c => c.isTemplateSpecific).length === 0 && (
-                    <tr>
                       <td colSpan={4} className="px-4 py-6 text-center text-gray-500">
-                        No template specific coupons active.
+                        No coupons active.
                       </td>
                     </tr>
                   )}

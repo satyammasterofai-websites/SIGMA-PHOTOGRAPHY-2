@@ -283,12 +283,7 @@ export default function Checkout() {
     let isSigma = targetCode === "SIGMA20";
     let matched = null;
 
-    // Check template specific coupon first
-    if (template?.couponCode && template.couponCode.trim().toUpperCase() === targetCode) {
-      matched = { code: template.couponCode, percentage: template.couponPercentage || 0 };
-    }
-
-    if (!matched && settings?.coupons && settings.coupons.length > 0) {
+    if (settings?.coupons && settings.coupons.length > 0) {
       matched = settings.coupons.find(
         (c: any) =>
           c.code.replace(/\s+/g, "").toUpperCase() === targetCode.replace(/\s+/g, "").toUpperCase(),
@@ -304,62 +299,41 @@ export default function Checkout() {
       return;
     }
 
-    if (matched) {
-      if (matched.expiryDate) {
-        const today = new Date().toISOString().split("T")[0];
-        if (today > matched.expiryDate) {
-          toast.error("This coupon has expired");
-          return;
-        }
-      }
-      
-      const priceThreshold = Number(matched.maxPriceThreshold);
-      if (priceThreshold > 0 && initialPrice > priceThreshold) {
-        toast.error(`This coupon is only valid for templates priced at or below ₹${priceThreshold}`);
+    if (matched.expiryDate) {
+      const today = new Date().toISOString().split("T")[0];
+      if (today > matched.expiryDate) {
+        toast.error("This coupon has expired");
         return;
       }
-      
-      if (matched.excludedTemplates && matched.excludedTemplates.includes(template?.id)) {
-        toast.error("This coupon is not valid for this template");
-        return;
-      }
-
-      if (matched.isTemplateSpecific) {
-        if (!matched.templateDiscounts || !matched.templateDiscounts[template?.id] || Number(matched.templateDiscounts[template?.id]) <= 0) {
-          toast.error("This coupon is not valid for this template");
-          return;
-        }
-      }
-
-      if (user) {
-        try {
-          const q = query(
-            collection(db, "orders"),
-            where("userId", "==", user.uid),
-            where("couponApplied", "==", matched.code)
-          );
-          const snap = await getDocs(q);
-          if (!snap.empty) {
-            toast.error("You have already used this coupon code once.");
-            return;
-          }
-        } catch (err) {
-          console.error("Error checking coupon usage", err);
-        }
-      }
-
-      setAppliedCoupon(matched);
-      confetti({ particleCount: 150, spread: 80, origin: { y: 0.6 } });
-      const perc = matched.isTemplateSpecific ? (matched.templateDiscounts?.[template?.id] || 0) : matched.percentage;
-      toast.success(`Coupon Applied! ${perc}% OFF`);
-    } else {
-      toast.error("Invalid coupon code");
     }
+
+    if (formData.phone) {
+      try {
+        const q = query(
+          collection(db, "orders"),
+          where("phone", "==", formData.phone),
+          where("couponApplied", "==", matched.code)
+        );
+        const snap = await getDocs(q);
+        if (!snap.empty) {
+          toast.error("You have already used this coupon code once.");
+          return;
+        }
+      } catch (err) {
+        console.error("Error checking coupon usage", err);
+      }
+    }
+
+    let finalPercentage = matched.percentage;
+    if (template?.couponOverrides && template.couponOverrides[matched.code] !== undefined) {
+      finalPercentage = template.couponOverrides[matched.code];
+    }
+
+    setAppliedCoupon({ ...matched, percentage: finalPercentage });
+    toast.success(`Coupon Applied! ${finalPercentage}% OFF`);
   };
 
-  const discountAmount = appliedCoupon
-    ? initialPrice * (Number(appliedCoupon.isTemplateSpecific ? (appliedCoupon.templateDiscounts?.[template?.id] || 0) : appliedCoupon.percentage) / 100)
-    : 0;
+  const discountAmount = appliedCoupon ? initialPrice * (Number(appliedCoupon.percentage) / 100) : 0;
   const finalPrice = Math.round(initialPrice - discountAmount);
 
   const [waUrlToOpen, setWaUrlToOpen] = useState("");

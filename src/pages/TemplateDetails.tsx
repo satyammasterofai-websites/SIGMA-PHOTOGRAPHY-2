@@ -5,6 +5,7 @@ import { db } from "../lib/firebase";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
 import { useAuthStore } from "../store/useAuthStore";
+import { useSiteStore } from "../store/useSiteStore";
 import toast from "react-hot-toast";
 import VideoModal from "../components/VideoModal";
 import { Play, Star, ShoppingBag, CheckCircle2, Tag, ChevronRight, Users, Clock, ArrowLeft, Send } from "lucide-react";
@@ -13,6 +14,8 @@ export default function TemplateDetails() {
   const { id } = useParams();
   const navigate = useNavigate();
   const { user } = useAuthStore();
+  const { settings, init: initSettings } = useSiteStore();
+  useEffect(() => { initSettings(); }, [initSettings]);
   
   const [template, setTemplate] = useState<any>(null);
   const [loading, setLoading] = useState(true);
@@ -63,9 +66,15 @@ export default function TemplateDetails() {
     const fetchReviews = async () => {
       if (!id) return;
       try {
-        const q = query(collection(db, 'template_reviews'), where('templateId', '==', id), orderBy('createdAt', 'desc'));
+        const q = query(collection(db, 'template_reviews'), where('templateId', '==', id));
         const snap = await getDocs(q);
-        setReviews(snap.docs.map(d => ({ id: d.id, ...d.data() })));
+        const fetchedReviews = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+        fetchedReviews.sort((a: any, b: any) => {
+          const aTime = a.createdAt?.toMillis ? a.createdAt.toMillis() : (a.createdAt || 0);
+          const bTime = b.createdAt?.toMillis ? b.createdAt.toMillis() : (b.createdAt || 0);
+          return bTime - aTime;
+        });
+        setReviews(fetchedReviews);
       } catch (error) {
         console.error("Error fetching reviews", error);
       }
@@ -75,27 +84,38 @@ export default function TemplateDetails() {
 
   const handleApplyCoupon = async () => {
     if (!couponInput.trim()) return;
-    try {
-      const q = query(
-        collection(db, "coupons"),
-        where("code", "==", couponInput.trim().toUpperCase())
+    
+    let targetCode = couponInput.trim().toUpperCase();
+    let matched = null;
+
+    if (settings?.coupons && settings.coupons.length > 0) {
+      matched = settings.coupons.find(
+        (c: any) =>
+          c.code.replace(/\s+/g, "").toUpperCase() === targetCode.replace(/\s+/g, "").toUpperCase(),
       );
-      const snap = await getDocs(q);
-      if (snap.empty) {
-        toast.error("Invalid coupon code");
-        return;
-      }
-      const couponDoc = snap.docs[0].data();
-      if (couponDoc.status !== "Active") {
-        toast.error("This coupon is not active");
-        return;
-      }
-      setAppliedCoupon({ id: snap.docs[0].id, ...couponDoc });
-      toast.success("Coupon applied successfully!");
-    } catch (error) {
-      console.error(error);
-      toast.error("Failed to apply coupon");
     }
+
+    if (!matched) {
+      toast.error("Invalid coupon code");
+      return;
+    }
+
+    if (matched.expiryDate) {
+      const today = new Date().toISOString().split("T")[0];
+      if (today > matched.expiryDate) {
+        toast.error("This coupon has expired");
+        return;
+      }
+    }
+
+    // Apply template specific percentage override if defined
+    let finalPercentage = matched.percentage;
+    if (template?.couponOverrides && template.couponOverrides[matched.code] !== undefined) {
+      finalPercentage = template.couponOverrides[matched.code];
+    }
+
+    setAppliedCoupon({ ...matched, percentage: finalPercentage });
+    toast.success(`Coupon Applied! ${finalPercentage}% OFF`);
   };
 
   const handleBuy = () => {
