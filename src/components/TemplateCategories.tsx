@@ -10,61 +10,61 @@ const defaultCategories = [
     name: "Wedding",
     price: "2,999",
     image:
-      "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=500&q=60",
   },
   {
     name: "Engagement",
     price: "1,999",
     image:
-      "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1515934751635-c81c6bc9a2d8?auto=format&fit=crop&q=80&w=500&q=60",
   },
   {
     name: "Reception",
     price: "2,499",
     image:
-      "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&q=80&w=500&q=60",
   },
   {
     name: "Haldi",
     price: "1,499",
     image:
-      "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80&w=500&q=60",
   },
   {
     name: "Mehendi",
     price: "1,499",
     image:
-      "https://images.unsplash.com/photo-1594980596870-8caa52a7fa7b?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1594980596870-8caa52a7fa7b?auto=format&fit=crop&q=80&w=500&q=60",
   },
   {
     name: "Birthday",
     price: "999",
     image:
-      "https://images.unsplash.com/photo-1530103862676-de8896b10404?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1530103862676-de8896b10404?auto=format&fit=crop&q=80&w=500&q=60",
   },
   {
     name: "Anniversary",
     price: "1,499",
     image:
-      "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1606800052052-a08af7148866?auto=format&fit=crop&q=80&w=500&q=60",
   },
   {
     name: "Baby Shower",
     price: "1,299",
     image:
-      "https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1519689680058-324335c77eba?auto=format&fit=crop&q=80&w=500&q=60",
   },
   {
     name: "Housewarming",
     price: "1,499",
     image:
-      "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1560518883-ce09059eeffa?auto=format&fit=crop&q=80&w=500&q=60",
   },
   {
     name: "Corporate Events",
     price: "3,499",
     image:
-      "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=800",
+      "https://images.unsplash.com/photo-1511578314322-379afb476865?auto=format&fit=crop&q=80&w=500&q=60",
   },
 ];
 
@@ -188,7 +188,7 @@ export default function TemplateCategories() {
                   <img
                     src={
                       cat.image ||
-                      "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=800"
+                      "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=500&q=60"
                     }
                     alt={cat.name}
                     className="w-full h-auto block group-hover:scale-105 transition-transform duration-700"

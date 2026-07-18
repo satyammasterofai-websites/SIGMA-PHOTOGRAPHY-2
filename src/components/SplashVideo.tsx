@@ -2,7 +2,7 @@
 import React, { useEffect, useState, useRef } from 'react';
 import { doc, getDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
-import ReactPlayer from 'react-player';
+const ReactPlayer = React.lazy(() => import('react-player'));
 import { X, Play } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
 
@@ -117,7 +117,8 @@ export default function SplashVideo() {
                 <img src={videoUrl} alt="Splash Image" className="w-full h-full object-contain pointer-events-none" />
               ) : videoUrl.includes('youtube.com') || videoUrl.includes('youtu.be') || videoUrl.includes('vimeo.com') ? (
                 /* @ts-ignore */
-                <ReactPlayer
+                <React.Suspense fallback={<div className="w-full h-full flex items-center justify-center"><div className="w-8 h-8 rounded-full border-4 border-white border-t-transparent animate-spin"></div></div>}>
+                  <ReactPlayer
                   url={videoUrl}
                   playing={hasInteracted && visible}
                   muted={false}
@@ -134,11 +135,10 @@ export default function SplashVideo() {
                     youtube: {
                       playerVars: { showinfo: 0, rel: 0, autoplay: 1, muted: 0, playsinline: 1, controls: 0 }
                     },
-                    vimeo: {
-                      playerOptions: { title: 0, byline: 0, portrait: 0, dnt: 1, autopause: 0, playsinline: true, muted: false, autoplay: true }
-                    }
+                    vimeo: { playerOptions: { title: 0, byline: 0, portrait: 0, dnt: 1, autopause: 0, playsinline: true, muted: false, autoplay: true } }
                   }}
                 />
+                </React.Suspense>
               ) : (
                 <video
                   ref={videoRef}

@@ -37,19 +37,21 @@ function ProtectedRoute({ children, adminOnly = false }: { children: React.React
 
 import { usePresence } from './hooks/usePresence';
 
-import SplashVideo from './components/SplashVideo';
-import WhatsAppButton from './components/WhatsAppButton';
-import SupportChatButton from './components/SupportChatButton';
-import GlobalChatListener from './components/GlobalChatListener';
+const SplashVideo = React.lazy(() => import('./components/SplashVideo'));
+const WhatsAppButton = React.lazy(() => import('./components/WhatsAppButton'));
+const SupportChatButton = React.lazy(() => import('./components/SupportChatButton'));
+const GlobalChatListener = React.lazy(() => import('./components/GlobalChatListener'));
 
 function AppContent() {
   usePresence();
   return (
     <Router>
-      <SplashVideo />
-      <WhatsAppButton />
-      <SupportChatButton />
-      <GlobalChatListener />
+      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-brand-navy"><div className="w-12 h-12 rounded-full border-4 border-brand-purple border-t-transparent animate-spin"></div></div>}>
+        <SplashVideo />
+        <WhatsAppButton />
+        <SupportChatButton />
+        <GlobalChatListener />
+      </Suspense>
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-8 h-8 rounded-full border-4 border-brand-purple border-t-transparent animate-spin"></div></div>}>
       <Routes>
         <Route path="/" element={<Home />} />
