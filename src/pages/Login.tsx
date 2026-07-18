@@ -70,7 +70,8 @@ export default function Login() {
       toast.success('Successfully logged in with Google');
       await handleCustomRedirect(userCred.user);
     } catch (error: any) {
-      toast.error('Failed to log in with Google');
+      toast.error(error.message || 'Failed to log in with Google');
+      console.error('Google login error:', error);
     } finally {
       setLoading(false);
     }

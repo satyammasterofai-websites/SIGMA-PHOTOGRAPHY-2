@@ -81,8 +81,10 @@ export const useSiteStore = create<SiteContentState>((set, get) => ({
       checkLoaded();
     }, () => checkLoaded());
 
-    onSnapshot(doc(db, "content", "categories"), (doc) => {
-      if (doc.exists()) set({ categories: doc.data().items || [] });
+    onSnapshot(collection(db, 'content', 'template_categories', 'items'), (snapshot) => {
+      const list = [];
+      snapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
+      set({ categories: list });
       checkLoaded();
     }, () => checkLoaded());
 

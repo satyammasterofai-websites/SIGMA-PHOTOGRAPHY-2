@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, setDoc, deleteDoc } from 'firebase/firestore';
+import { collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, updateDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { Trash2, Plus, Image as ImageIcon, Edit2, X, Search } from 'lucide-react';
 import toast from 'react-hot-toast';
@@ -19,12 +19,10 @@ export default function ManageCategories() {
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, 'content', 'categories'), (docSnap) => {
-      if (docSnap.exists() && docSnap.data().items) {
-        setCategories(docSnap.data().items);
-      } else {
-        setCategories([]);
-      }
+    const unsub = onSnapshot(collection(db, 'content', 'template_categories', 'items'), (snapshot) => {
+      const list = [];
+      snapshot.forEach(doc => list.push({ id: doc.id, ...doc.data() }));
+      setCategories(list);
     }, (error) => {
       console.error("Error fetching categories:", error);
     });
@@ -34,14 +32,6 @@ export default function ManageCategories() {
   const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
-      
-      const isDuplicate = await isFileNameDuplicate(file.name);
-      if (isDuplicate) {
-        toast.error(`A file named "${file.name}" has already been uploaded.`);
-        return;
-      }
-      await registerFileName(file.name);
-      
       const reader = new FileReader();
       reader.onload = (event) => {
         const img = new Image();
@@ -98,16 +88,11 @@ export default function ManageCategories() {
     }
 
     try {
-      const id = Date.now().toString(); // Or use a slug
       const newCat = {
-        id,
         name: newCatName.trim(),
         image: newCatImage
       };
-      const existingItems = Array.isArray(categories) ? categories : [];
-      await setDoc(doc(db, 'content', 'categories'), {
-        items: [...existingItems, newCat]
-      });
+      await addDoc(collection(db, 'content', 'template_categories', 'items'), newCat);
       toast.success("Sub Template Category added");
       setNewCatName('');
       setNewCatImage('');
@@ -120,13 +105,10 @@ export default function ManageCategories() {
   const confirmDelete = async () => {
     if(!deleteId) return;
     try {
-      const newCategories = (categories || []).filter((c: any) => c.id !== deleteId);
-      await setDoc(doc(db, 'content', 'categories'), {
-        items: newCategories
-      });
+      await deleteDoc(doc(db, 'content', 'template_categories', 'items', deleteId));
       toast.success("Category deleted");
       setDeleteId(null);
-    } catch (e) {
+    } catch (err: any) {
       toast.error("Failed to delete category");
       setDeleteId(null);
     }
@@ -165,6 +147,7 @@ export default function ManageCategories() {
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
           setEditCatImage(canvas.toDataURL('image/jpeg', 0.6));
+          toast.success("Image updated");
         };
         img.src = event.target?.result as string;
       };
@@ -184,10 +167,10 @@ export default function ManageCategories() {
     }
 
     try {
-      const newCategories = (categories || []).map(cat => 
-        cat.id === editingCatId ? { ...cat, name: editCatName.trim(), image: editCatImage } : cat
-      );
-      await setDoc(doc(db, 'content', 'categories'), { items: newCategories });
+      await updateDoc(doc(db, 'content', 'template_categories', 'items', editingCatId), {
+        name: editCatName.trim(),
+        image: editCatImage
+      });
       toast.success("Category updated");
       cancelEdit();
     } catch (e: any) {

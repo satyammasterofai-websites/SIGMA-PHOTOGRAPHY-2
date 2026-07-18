@@ -1,5 +1,5 @@
 import { useEffect, useRef } from 'react';
-import { collection, getDocs, deleteDoc, doc, getDoc, setDoc, updateDoc } from 'firebase/firestore';
+import { collection, getDocs, deleteDoc, doc, getDoc, setDoc, updateDoc, addDoc } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 
 export default function CleanupDuplicates() {
@@ -11,6 +11,47 @@ export default function CleanupDuplicates() {
 
     const cleanup = async () => {
       try {
+        // 0. Migrate categories if needed
+        let legacyItems = [];
+        try {
+            const catDoc = await getDoc(doc(db, 'content', 'categories'));
+            if (catDoc.exists() && catDoc.data().items) {
+              legacyItems = catDoc.data().items;
+            }
+        } catch(e) {}
+        
+        let rootItems = [];
+        try {
+            const rootCatSnap = await getDocs(collection(db, 'categories'));
+            if (!rootCatSnap.empty) {
+                rootCatSnap.forEach(d => rootItems.push({ id: d.id, ...d.data() }));
+            }
+        } catch(e) {}
+
+        const finalLegacy = rootItems.length > 0 ? rootItems : legacyItems;
+
+        const templateCatsSnap = await getDocs(collection(db, 'content', 'template_categories', 'items'));
+        if (templateCatsSnap.empty && finalLegacy.length > 0) {
+            console.log('Migrating legacy categories to collection...');
+            for (const item of finalLegacy) {
+              // Only add if it has a name
+              if (item.name) {
+                  await addDoc(collection(db, 'content', 'template_categories', 'items'), item);
+              }
+            }
+            console.log('Migration complete.');
+            try {
+              await deleteDoc(doc(db, 'content', 'categories'));
+            } catch(e) {}
+            try {
+              if (rootItems.length > 0) {
+                for(const item of rootItems) {
+                  await deleteDoc(doc(db, 'categories', item.id));
+                }
+              }
+            } catch(e) {}
+        }
+
         // 1. Cleanup Duplicate Templates
         const templatesSnap = await getDocs(collection(db, 'templates'));
         const seenTemplateTitles = new Set<string>();
@@ -28,25 +69,18 @@ export default function CleanupDuplicates() {
         }
 
         // 2. Cleanup Duplicate Categories
-        const catDoc = await getDoc(doc(db, 'content', 'categories'));
-        if (catDoc.exists() && catDoc.data().items) {
-          const categories = catDoc.data().items;
-          const seenCategoryNames = new Set<string>();
-          const uniqueCategories = [];
-          for (const cat of categories) {
-            if (cat.name) {
-              const name = cat.name.toLowerCase().trim();
-              if (!seenCategoryNames.has(name)) {
-                seenCategoryNames.add(name);
-                uniqueCategories.push(cat);
-              } else {
-                console.log('Found duplicate category:', name);
-              }
+        const catSnap = await getDocs(collection(db, 'content', 'template_categories', 'items'));
+        const seenCategoryNames = new Set<string>();
+        for (const catDoc of catSnap.docs) {
+          const data = catDoc.data();
+          if (data.name) {
+            const name = data.name.toLowerCase().trim();
+            if (seenCategoryNames.has(name)) {
+              console.log('Deleting duplicate category:', name);
+              await deleteDoc(doc(db, 'content', 'template_categories', 'items', catDoc.id));
+            } else {
+              seenCategoryNames.add(name);
             }
-          }
-          if (uniqueCategories.length < categories.length) {
-            await setDoc(doc(db, 'content', 'categories'), { items: uniqueCategories });
-            console.log('Cleaned up duplicate categories.');
           }
         }
 

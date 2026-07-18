@@ -97,7 +97,8 @@ export default function Signup() {
       toast.success('Successfully registered with Google');
       handleCustomRedirect(userCred.user.email);
     } catch (error: any) {
-      toast.error('Failed to register with Google');
+      toast.error(error.message || 'Failed to register with Google');
+      console.error('Google signup error:', error);
     } finally {
       setLoading(false);
     }

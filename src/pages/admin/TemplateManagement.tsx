@@ -89,10 +89,10 @@ export default function TemplateManagement() {
         }
 
       try {
-        const catDoc = await getDoc(doc(db, 'content', 'categories'));
-        if (catDoc.exists() && catDoc.data().items) {
-          setCategories(catDoc.data().items.map((item: any) => item.name));
-        }
+        const catSnap = await getDocs(collection(db, 'content', 'template_categories', 'items'));
+        const list = [];
+        catSnap.forEach(doc => list.push(doc.data().name));
+        setCategories(list);
         
         const formsSnap = await getDocs(collection(db, 'settings', 'data', 'custom_forms'));
         const fList: any[] = [];
@@ -176,7 +176,7 @@ export default function TemplateManagement() {
     } else {
       setEditingId(null);
       setTitle('');
-      setCategory(categories.length > 0 ? categories[0] : 'Wedding');
+      setCategory(activeTab !== 'All' ? activeTab : (categories.length > 0 ? categories[0] : 'Wedding'));
       setPrice('');
       setDiscountPrice('');
       setDescription('');

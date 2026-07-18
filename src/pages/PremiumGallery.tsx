@@ -35,7 +35,7 @@ export default function PremiumGallery() {
   const renderTemplateCard = (template: any) => (
     <div
       key={template.id}
-      className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all border border-gray-100 group flex flex-col"
+      className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all border border-gray-100 group flex flex-col break-inside-avoid mb-8"
     >
       <div className="relative overflow-hidden bg-gray-100 flex items-center justify-center">
         {template.thumbnailBase64 || template.image ? (
@@ -322,7 +322,7 @@ export default function PremiumGallery() {
             
               <div className="space-y-12 w-full">
                 {filteredTemplates.length > 0 && (
-                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-8">
+                  <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-8">
                     {filteredTemplates.map(template => renderTemplateCard(template))}
                   </div>
                 )}

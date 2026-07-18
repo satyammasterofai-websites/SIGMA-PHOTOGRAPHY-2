@@ -8,11 +8,14 @@ service cloud.firestore {
     }
     
     function isAdmin() {
+      let uid = request.auth.uid;
+      let userDoc = /databases/$(database)/documents/users/$(uid);
+      let isDbAdmin = exists(userDoc) && get(userDoc).data.get('role', '') == 'admin';
       return request.auth != null && (
         (request.auth.token.email != null && request.auth.token.email.lower() == 'satyammasterofai@gmail.com') ||
         (request.auth.token.email != null && request.auth.token.email.lower() == 'jhahimanshukumar87@gmail.com') ||
         (request.auth.token.email != null && request.auth.token.email.lower() == 'sigmaphotography0001@gmail.com') ||
-        (exists(/databases/$(database)/documents/users/$(request.auth.uid)) && get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin')
+        isDbAdmin
       );
     }
     
@@ -25,7 +28,7 @@ service cloud.firestore {
       // Users can read/write their own profile
       // Admins can read/write any profile
       // Anyone can create their profile when they first log in (or at least users can write to their own uid)
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin() || resource.data.role == 'admin');
+      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin() || resource.data.get('role', '') == 'admin');
       allow create: if isOwner(userId);
       allow update: if isOwner(userId) || isAdmin();
       allow delete: if isAdmin();
@@ -54,6 +57,7 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
+    match /template_categories/{document=**} { allow read: if true; allow write: if isAdmin(); }
     match /categories/{document=**} { allow read, write: if true; } match /categories_bak/{document=**} {
       allow read: if true;
       allow write: if isAdmin();

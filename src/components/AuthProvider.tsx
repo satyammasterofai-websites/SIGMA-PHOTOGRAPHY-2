@@ -11,6 +11,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
 
   useEffect(() => {
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
+      if (currentUser) { setLoading(true); }
       if (currentUser) {
         let currentRole: 'user' | 'admin' = 'user';
         const isAdminEmail = currentUser.email && ADMIN_EMAILS.includes(currentUser.email.toLowerCase());
