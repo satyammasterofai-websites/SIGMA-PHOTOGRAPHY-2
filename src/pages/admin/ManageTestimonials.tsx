@@ -51,7 +51,7 @@ export default function ManageTestimonials() {
        return;
     }
     try {
-      const id = formData.id || Date.now().toString();
+      const id = formData.id || Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
             await setDoc(doc(db, 'testimonials', id), {
         imageUrl: formData.imageUrl,
         name: formData.name || '',
@@ -153,7 +153,7 @@ export default function ManageTestimonials() {
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
         {testimonials.map((t, index) => (
-          <div key={t.id} className={`bg-gray-900 border border-gray-800 rounded-xl overflow-hidden flex flex-col ${!t.isVisible ? 'opacity-60' : ''}`}>
+          <div key={`${t.id}-${index}`} className={`bg-gray-900 border border-gray-800 rounded-xl overflow-hidden flex flex-col ${!t.isVisible ? 'opacity-60' : ''}`}>
             <div className="w-full h-48 bg-gray-800 relative">
                {t.imageUrl || t.image ? (
                  <img src={t.imageUrl || t.image} alt="Testimonial" className="w-full h-full object-contain" />

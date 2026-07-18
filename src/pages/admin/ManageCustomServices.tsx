@@ -111,7 +111,7 @@ export default function ManageCustomServices() {
     } else {
       setEditingIndex(null);
       setCurrentService({
-        id: Date.now().toString(),
+        id: Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2),
         title: "",
         description: "",
         buttonText: "Create Now",
@@ -231,7 +231,7 @@ export default function ManageCustomServices() {
             
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                {settings.services.map((svc: any, idx: number) => (
-                 <div key={idx} className="bg-gray-800 rounded-xl p-5 border border-gray-700 relative group">
+                 <div key={`service-${idx}`} className="bg-gray-800 rounded-xl p-5 border border-gray-700 relative group">
                     <div className="absolute top-4 right-4 flex gap-2">
                        <button onClick={() => openForm(idx)} className="p-2 bg-gray-700 rounded-md hover:bg-indigo-500 text-gray-300 hover:text-white transition-colors">
                           <Edit className="w-4 h-4" />
@@ -283,8 +283,8 @@ export default function ManageCustomServices() {
                       </tr>
                    </thead>
                    <tbody>
-                      {enquiries.map((enq) => (
-                        <tr key={enq.id} className="border-b border-gray-800 hover:bg-gray-800/50">
+                      {enquiries.map((enq, index) => (
+                        <tr key={`${enq.id}-${index}`} className="border-b border-gray-800 hover:bg-gray-800/50">
                            <td className="px-6 py-4 whitespace-nowrap">
                               {enq.createdAt ? format(typeof enq.createdAt?.toDate === 'function' ? enq.createdAt.toDate() : new Date(enq.createdAt), 'PPP p') : 'Unknown'}
                            </td>

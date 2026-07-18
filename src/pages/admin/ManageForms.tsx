@@ -193,8 +193,8 @@ export default function ManageForms() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {forms.map(form => (
-          <div key={form.id} className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
+        {forms.map((form, index) => (
+          <div key={`${form.id}-${index}`} className="bg-gray-900 border border-gray-800 rounded-2xl p-6">
             <div className="flex justify-between items-start">
                <div>
                  <h2 className="text-xl font-bold text-white flex items-center gap-2"><Server className="w-5 h-5 text-indigo-400"/> {form.name}</h2>

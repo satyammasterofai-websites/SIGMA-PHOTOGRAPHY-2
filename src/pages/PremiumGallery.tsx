@@ -140,7 +140,7 @@ export default function PremiumGallery() {
 
   const dynamicCategories =
     cmsCategories.length > 0
-      ? cmsCategories.map((c) => c.name)
+      ? cmsCategories.map(c => c.name).filter((name, idx, arr) => arr.findIndex(n => n.trim().toLowerCase() === name.trim().toLowerCase()) === idx)
       : defaultCategories;
   const categories = ["All", ...dynamicCategories];
 
@@ -179,7 +179,7 @@ export default function PremiumGallery() {
       result = result.filter(
         (t) =>
           t.category &&
-          t.category.trim().toLowerCase().replace(/\s+/g, " ") ===
+          (t.category || '').trim().toLowerCase().replace(/\s+/g, " ") ===
             normalizedActive,
       );
     }
@@ -193,10 +193,10 @@ export default function PremiumGallery() {
     if (searchQuery) {
       result = result.filter(
         (t) =>
-          t.title.toLowerCase().includes(searchQuery.toLowerCase()) ||
+          (t.title || '').toLowerCase().includes((searchQuery || '').toLowerCase()) ||
           (t.description || "")
             .toLowerCase()
-            .includes(searchQuery.toLowerCase()),
+            .includes((searchQuery || '').toLowerCase()),
       );
     }
 

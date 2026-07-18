@@ -137,8 +137,8 @@ export default function TemplateReviewsModal({ templateId, isOpen, onClose }: { 
             ) : reviews.length === 0 ? (
               <p className="text-gray-400 text-center py-12 bg-gray-50/50 rounded-2xl italic border border-dashed border-gray-200">No reviews yet. Be the first to review!</p>
             ) : (
-              reviews.map(review => (
-                <div key={review.id} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
+              reviews.map((review, index) => (
+                <div key={`${review.id}-${index}`} className="bg-white border border-gray-100 rounded-2xl p-5 shadow-sm">
                   <div className="flex items-center justify-between mb-3">
                     <div className="flex items-center gap-3">
                       <div className="w-10 h-10 bg-gradient-to-br from-brand-purple/20 to-brand-purple/5 rounded-full flex items-center justify-center border border-brand-purple/10">

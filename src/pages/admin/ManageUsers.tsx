@@ -122,7 +122,7 @@ export default function ManageUsers() {
             </thead>
             <tbody>
               {users.filter(u => {
-                const searchLower = searchQuery.toLowerCase();
+                const searchLower = (searchQuery || '').toLowerCase();
                 return searchQuery === '' || 
                   (u.name || '').toLowerCase().includes(searchLower) ||
                   (u.email || '').toLowerCase().includes(searchLower) ||

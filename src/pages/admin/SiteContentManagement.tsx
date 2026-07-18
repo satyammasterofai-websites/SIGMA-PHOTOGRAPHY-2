@@ -241,7 +241,7 @@ export default function SiteContentManagement() {
 
   const addFeature = () => {
     const newFeature = {
-      id: Date.now().toString(),
+      id: Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2),
       number: "",
       title: "",
       description: "",
@@ -846,7 +846,7 @@ export default function SiteContentManagement() {
               <div className="space-y-6">
                 {features.map((feature, index) => (
                   <div
-                    key={feature.id}
+                    key={`${feature.id}-${index}`}
                     className="bg-gray-800/50 border border-gray-700 rounded-xl p-5 relative"
                   >
                     <button

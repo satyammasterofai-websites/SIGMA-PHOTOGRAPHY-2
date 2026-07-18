@@ -773,8 +773,8 @@ export default function Checkout() {
       let updateVal = e.target.value;
       if (
         field.type === "phone" ||
-        field.name.toLowerCase().includes("phone") ||
-        field.name.toLowerCase().includes("number")
+        (field.name || '').toLowerCase().includes("phone") ||
+        (field.name || '').toLowerCase().includes("number")
       ) {
         if (field.type === "phone") {
           updateVal = updateVal.replace(/\D/g, "");
@@ -828,7 +828,7 @@ export default function Checkout() {
       "function name": "समारोह का नाम (Function Name)",
     };
 
-    const lowered = field.name.toLowerCase().trim();
+    const lowered = (field.name || '').toLowerCase().trim();
     let translatedMatch = dynamicTranslations[lowered];
     if (!translatedMatch) {
       // Fallback keyword matching
@@ -850,7 +850,7 @@ export default function Checkout() {
       lang === "hi" ? translatedMatch || field.name : field.name;
 
     return (
-      <div key={field.id} className="md:col-span-1">
+      <div key={`${field.id || ''}-${Math.random()}`} className="md:col-span-1">
         <label className="block text-sm font-semibold text-gray-700 mb-2">
           {translatedLabel}{" "}
           {field.required && <span className="text-red-500">*</span>}

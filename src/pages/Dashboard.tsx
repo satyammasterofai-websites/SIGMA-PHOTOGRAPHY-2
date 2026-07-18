@@ -306,8 +306,8 @@ function DashboardHome() {
           </div>
         ) : (
           <div className="space-y-4">
-            {recentOrders.map(order => (
-              <div key={order.id} className="bg-white border border-gray-100 rounded-xl shadow-sm p-4 flex items-center justify-between">
+            {recentOrders.map((order, index) => (
+              <div key={`${order.id}-${index}`} className="bg-white border border-gray-100 rounded-xl shadow-sm p-4 flex items-center justify-between">
                 <div className="flex items-center gap-4">
                   {order.thumbnailBase64 && (
                     <img src={order.thumbnailBase64} alt="Thumbnail" className="w-16 h-16 rounded-lg object-cover border border-gray-100" />
@@ -388,9 +388,9 @@ function MyOrders() {
         </div>
       ) : (
         <div className="space-y-4">
-          {orders.map((order) => (
+          {orders.map((order, index) => (
             <div
-              key={order.id}
+              key={`${order.id}-${index}`}
               className="bg-white border border-gray-100 rounded-2xl shadow-sm flex flex-col"
             >
               <div className="p-6 flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -585,9 +585,9 @@ function Downloads() {
         </div>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-          {downloads.map((d) => (
+          {downloads.map((d, index) => (
             <div
-              key={d.id}
+              key={`${d.id}-${index}`}
               className="bg-white p-6 border border-gray-100 rounded-2xl shadow-sm hover:shadow-md transition-shadow flex flex-col items-center text-center"
             >
               <div className="w-16 h-16 bg-green-50 rounded-full flex items-center justify-center text-green-500 mb-4">

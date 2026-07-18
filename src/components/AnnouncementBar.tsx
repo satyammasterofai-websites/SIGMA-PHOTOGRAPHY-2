@@ -63,7 +63,7 @@ export default function AnnouncementBar() {
         <div className="flex h-10 items-center justify-center text-sm font-medium">
           <AnimatePresence mode="wait">
             <motion.div
-              key={current.id}
+              key={`${current.id}-${currentIndex}`}
               initial={{ y: 20, opacity: 0 }}
               animate={{ y: 0, opacity: 1 }}
               exit={{ y: -20, opacity: 0 }}

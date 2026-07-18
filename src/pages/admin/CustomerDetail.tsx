@@ -222,9 +222,9 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
         {activeTab === "chat" && (
           <div className="absolute inset-0 flex flex-col bg-gray-900">
             <div className="flex-1 overflow-y-auto p-4 space-y-4">
-              {messages.map((msg) => (
+              {messages.map((msg, index) => (
                 <div
-                  key={msg.id}
+                  key={`${msg.id}-${index}`}
                   className={`flex ${msg.sender === "admin" ? "justify-end" : "justify-start"}`}
                 >
                   <div
@@ -310,8 +310,8 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
             {orders.length === 0 ? (
               <div className="text-center text-gray-500 py-8">No orders found for this customer.</div>
             ) : (
-              orders.map((order) => (
-                <div key={order.id} className="bg-gray-800 rounded-xl p-4 border border-gray-700">
+              orders.map((order, index) => (
+                <div key={`${order.id}-${index}`} className="bg-gray-800 rounded-xl p-4 border border-gray-700">
                   <div className="flex justify-between items-start mb-4">
                     <div className="flex items-center gap-3">
                       {order.thumbnailBase64 && (

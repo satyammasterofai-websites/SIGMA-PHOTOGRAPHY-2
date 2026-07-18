@@ -26,7 +26,7 @@ export default function ManageFAQ() {
     
     // Check for duplicate FAQ question
     const isDuplicate = faqs.some(
-      faq => faq.id !== formData.id && faq.question.toLowerCase().trim() === formData.question.toLowerCase().trim()
+      faq => faq.id !== formData.id && (faq.question || '').toLowerCase().trim() === (formData.question || '').toLowerCase().trim()
     );
     
     if (isDuplicate) {
@@ -35,7 +35,7 @@ export default function ManageFAQ() {
     }
 
     try {
-      const id = formData.id || Date.now().toString();
+      const id = formData.id || Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
       await setDoc(doc(db, 'faqs', id), {
         question: formData.question.trim(),
         answer: formData.answer.trim()
@@ -70,8 +70,8 @@ export default function ManageFAQ() {
       </div>
 
       <div className="space-y-4">
-        {faqs.map(faq => (
-          <div key={faq.id} className="bg-gray-900 border border-gray-800 rounded-xl p-6">
+        {faqs.map((faq, index) => (
+          <div key={`${faq.id}-${index}`} className="bg-gray-900 border border-gray-800 rounded-xl p-6">
             <div className="flex justify-between items-start">
               <div>
                 <h3 className="text-white font-bold mb-2">{faq.question}</h3>

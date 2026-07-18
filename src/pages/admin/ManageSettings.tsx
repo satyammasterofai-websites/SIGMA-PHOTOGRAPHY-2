@@ -135,7 +135,7 @@ export default function ManageSettings() {
 
   const addCoupon = async () => {
     if (!newCoupon.code || !newCoupon.percentage) return;
-    const updated = [...coupons, { id: Date.now().toString(), ...newCoupon, isTemplateSpecific: false }];
+    const updated = [...coupons, { id: Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2), ...newCoupon, isTemplateSpecific: false }];
     setCoupons(updated);
     setNewCoupon({ code: "", percentage: "", expiryDate: "" });
     await saveSettings(updated);
@@ -351,8 +351,8 @@ export default function ManageSettings() {
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-800">
-                  {coupons.filter(c => !c.isTemplateSpecific).map((c) => (
-                    <tr key={c.id}>
+                  {coupons.filter(c => !c.isTemplateSpecific).map((c, index) => (
+                    <tr key={`${c.id}-${index}`}>
                       <td className="px-4 py-3 font-bold text-white">{c.code}</td>
                       <td className="px-4 py-3 text-green-400">{c.percentage}% OFF</td>
                       <td className="px-4 py-3 text-gray-400">{c.expiryDate || "Never ends"}</td>

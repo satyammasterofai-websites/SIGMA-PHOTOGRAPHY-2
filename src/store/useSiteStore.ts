@@ -84,6 +84,11 @@ export const useSiteStore = create<SiteContentState>((set, get) => ({
     onSnapshot(collection(db, 'content', 'template_categories', 'items'), (snapshot) => {
       const list = [];
       snapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
+      list.sort((a, b) => {
+        const orderA = typeof a.order === 'number' ? a.order : 9999;
+        const orderB = typeof b.order === 'number' ? b.order : 9999;
+        return orderA - orderB;
+      });
       set({ categories: list });
       checkLoaded();
     }, () => checkLoaded());

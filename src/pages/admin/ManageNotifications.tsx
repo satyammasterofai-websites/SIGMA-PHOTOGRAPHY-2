@@ -38,7 +38,7 @@ export default function ManageNotifications() {
 
   const saveAnnouncement = async () => {
     try {
-      const id = editingId || Date.now().toString();
+      const id = editingId || Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
       await setDoc(doc(db, 'announcements', id), {
         title: formData.title,
         message: formData.message,
@@ -118,7 +118,7 @@ export default function ManageNotifications() {
           <button 
             onClick={async () => {
               try {
-                await setDoc(doc(db, 'announcements', Date.now().toString()), {
+                await setDoc(doc(db, 'announcements', Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2)), {
                   title: 'SUMMER OFFER',
                   message: 'UPTO 50% OFF ON ALL TEMPLATES',
                   type: 'marketing',
@@ -149,8 +149,8 @@ export default function ManageNotifications() {
       </div>
 
       <div className="space-y-4">
-        {notifications.map(notif => (
-          <div key={notif.id} className="bg-white border text-gray-900 border-gray-200 shadow-sm rounded-xl p-6">
+        {notifications.map((notif, index) => (
+          <div key={`${notif.id}-${index}`} className="bg-white border text-gray-900 border-gray-200 shadow-sm rounded-xl p-6">
             <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
               <div className="flex-1">
                 <div className="flex items-center gap-3 mb-2">

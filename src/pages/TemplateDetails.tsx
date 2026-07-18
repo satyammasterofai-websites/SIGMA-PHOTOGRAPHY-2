@@ -371,8 +371,8 @@ export default function TemplateDetails() {
 
               <div className="lg:col-span-2 space-y-6">
                 {reviews.length > 0 ? (
-                  reviews.map((review) => (
-                    <div key={review.id} className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
+                  reviews.map((review, index) => (
+                    <div key={`${review.id}-${index}`} className="bg-white border border-gray-100 p-6 rounded-2xl shadow-sm">
                       <div className="flex items-start justify-between mb-4">
                         <div className="flex items-center gap-3">
                           <div className="w-10 h-10 rounded-full bg-brand-purple/10 flex items-center justify-center text-brand-purple font-bold">

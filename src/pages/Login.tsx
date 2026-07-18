@@ -70,7 +70,7 @@ export default function Login() {
       toast.success('Successfully logged in with Google');
       await handleCustomRedirect(userCred.user);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to log in with Google');
+      if (error.code === 'auth/unauthorized-domain') { toast.error('Please add this domain to Firebase Auth Authorized Domains.', {duration: 6000}); } else if (error.code === 'auth/popup-closed-by-user' || error.message.includes('popup')) { toast.error('Popup blocked or closed. Please open the app in a new tab to sign in with Google.', {duration: 6000}); } else { toast.error(error.message || 'Failed to log in with Google'); }
       console.error('Google login error:', error);
     } finally {
       setLoading(false);

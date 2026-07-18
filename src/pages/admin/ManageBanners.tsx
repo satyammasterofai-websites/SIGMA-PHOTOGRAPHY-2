@@ -50,7 +50,7 @@ export default function ManageBanners() {
         }
 
         await registerFileName(file.name);
-        const id = Date.now().toString();
+        const id = Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
         await setDoc(doc(db, "banners", id), { image: base64Url, active: true });
         toast.success("HD Banner added successfully", { id: toastId });
       } catch (err: any) {
@@ -67,7 +67,7 @@ export default function ManageBanners() {
     }
     const toastId = toast.loading("Adding banner via URL...");
     try {
-      const id = Date.now().toString();
+      const id = Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
       let finalUrl = imageUrl;
 
       // Auto-convert Google Drive viewing links to direct download links
@@ -165,9 +165,9 @@ export default function ManageBanners() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-        {banners.map((banner) => (
+        {banners.map((banner, index) => (
           <div
-            key={banner.id}
+            key={`${banner.id}-${index}`}
             className="bg-gray-900 border border-gray-800 rounded-xl p-4"
           >
             <div className="h-40 w-full mb-4 bg-gray-800 rounded-lg overflow-hidden flex items-center justify-center">

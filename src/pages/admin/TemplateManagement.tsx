@@ -91,7 +91,20 @@ export default function TemplateManagement() {
       try {
         const catSnap = await getDocs(collection(db, 'content', 'template_categories', 'items'));
         const list = [];
-        catSnap.forEach(doc => list.push(doc.data().name));
+        const cats = [];
+        catSnap.forEach(doc => cats.push({ id: doc.id, ...doc.data() }));
+        cats.sort((a, b) => {
+          const orderA = typeof a.order === 'number' ? a.order : 9999;
+          const orderB = typeof b.order === 'number' ? b.order : 9999;
+          return orderA - orderB;
+        });
+        const seenNames = new Set();
+        cats.forEach(c => {
+          if (!seenNames.has(c.name)) {
+            seenNames.add(c.name);
+            list.push(c.name);
+          }
+        });
         setCategories(list);
         
         const formsSnap = await getDocs(collection(db, 'settings', 'data', 'custom_forms'));
@@ -203,7 +216,7 @@ export default function TemplateManagement() {
 
   const addCustomField = () => {
     if (newFieldName.trim()) {
-      setCustomFields([...customFields, { id: Date.now().toString(), name: newFieldName.trim(), type: 'text', required: true }]);
+      setCustomFields([...customFields, { id: Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2), name: newFieldName.trim(), type: 'text', required: true }]);
       setNewFieldName('');
     }
   };
@@ -221,7 +234,7 @@ export default function TemplateManagement() {
     
     // Check for duplicate template name/title
     const isDuplicate = templates.some(
-      t => t.id !== editingId && t.title.toLowerCase().trim() === title.toLowerCase().trim()
+      t => t.id !== editingId && (t.title || '').toLowerCase().trim() === (title || '').toLowerCase().trim()
     );
     
     if (isDuplicate) {
@@ -399,7 +412,7 @@ export default function TemplateManagement() {
               <tbody className="divide-y divide-gray-800">
                 {templates.filter(t => {
                   const matchesTab = activeTab === 'All' ? true : t.category === activeTab;
-                  const searchLower = searchQuery.toLowerCase();
+                  const searchLower = (searchQuery || '').toLowerCase();
                   const matchesSearch = searchQuery === '' || 
                     (t.title || '').toLowerCase().includes(searchLower) || 
                     (t.category || '').toLowerCase().includes(searchLower) ||
@@ -544,8 +557,8 @@ export default function TemplateManagement() {
                       {globalCoupons.length === 0 ? (
                         <p className="text-gray-500 text-sm">No global coupons found. Create them in settings.</p>
                       ) : (
-                        globalCoupons.map(coupon => (
-                          <div key={coupon.id} className="flex flex-col md:flex-row items-start md:items-center justify-between bg-gray-800 p-3 rounded-lg border border-gray-700 gap-3">
+                        globalCoupons.map((coupon, index) => (
+                          <div key={`${coupon.id}-${index}`} className="flex flex-col md:flex-row items-start md:items-center justify-between bg-gray-800 p-3 rounded-lg border border-gray-700 gap-3">
                             <span className="text-sm font-bold text-white">{coupon.code} <span className="text-gray-500 font-normal text-xs ml-2">(Default: {coupon.percentage}%)</span></span>
                             <div className="flex items-center gap-2">
                               <span className="text-xs text-gray-400">Override:</span>
@@ -650,8 +663,8 @@ export default function TemplateManagement() {
                        </div>
                        
                        <div className="space-y-3">
-                         {customFields.map((field) => (
-                           <div key={field.id} className="flex flex-col gap-2 bg-gray-800 p-3 rounded-lg text-sm text-gray-300">
+                         {customFields.map((field, index) => (
+                           <div key={`${field.id}-${index}`} className="flex flex-col gap-2 bg-gray-800 p-3 rounded-lg text-sm text-gray-300">
                              <div className="flex justify-between items-center">
                                <input type="text" value={field.name} onChange={e => updateCustomField(field.id, 'name', e.target.value)} className="bg-gray-700 text-white px-2 py-1 rounded" />
                                <button type="button" onClick={() => removeCustomField(field.id)} className="text-red-400 p-1 hover:bg-red-400/10 rounded">

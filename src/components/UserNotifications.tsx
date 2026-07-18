@@ -96,9 +96,9 @@ export default function UserNotifications() {
               </div>
             ) : (
               <div className="space-y-1">
-                {notifications.map((notif) => (
+                {notifications.map((notif, index) => (
                   <div 
-                    key={notif.id}
+                    key={`${notif.id}-${index}`}
                     className={`p-3 rounded-lg transition-colors cursor-pointer ${notif.read ? 'bg-white hover:bg-gray-50' : 'bg-brand-purple/5 hover:bg-brand-purple/10'}`}
                     onClick={() => {
                       if (!notif.read) markAsRead(notif.id);

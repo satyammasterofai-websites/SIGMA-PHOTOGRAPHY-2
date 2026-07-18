@@ -189,9 +189,9 @@ export default function SupportChat() {
 
       <div className="flex-1 overflow-y-auto p-6 space-y-4 bg-gray-50">
 
-        {messages.map((msg) => (
+        {messages.map((msg, index) => (
           <div
-            key={msg.id}
+            key={`${msg.id}-${index}`}
             className={`flex ${msg.sender === "user" ? "justify-end" : "justify-start"}`}
           >
             <div

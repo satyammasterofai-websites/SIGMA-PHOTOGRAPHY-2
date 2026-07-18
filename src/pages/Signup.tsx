@@ -97,7 +97,7 @@ export default function Signup() {
       toast.success('Successfully registered with Google');
       handleCustomRedirect(userCred.user.email);
     } catch (error: any) {
-      toast.error(error.message || 'Failed to register with Google');
+      if (error.code === 'auth/unauthorized-domain') { toast.error('Please add this domain to Firebase Auth Authorized Domains.', {duration: 6000}); } else if (error.code === 'auth/popup-closed-by-user' || error.message.includes('popup')) { toast.error('Popup blocked or closed. Please open the app in a new tab to sign in with Google.', {duration: 6000}); } else { toast.error(error.message || 'Failed to register with Google'); }
       console.error('Google signup error:', error);
     } finally {
       setLoading(false);

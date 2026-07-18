@@ -355,8 +355,8 @@ function AdminHome() {
              <h3 className="text-lg font-bold text-brand-navy mb-4">Recent Registrations</h3>
              {recentUsers.length > 0 ? (
                <div className="space-y-4">
-                 {recentUsers.map(u => (
-                   <div key={u.id} className="flex justify-between items-center bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+                 {recentUsers.map((u, index) => (
+                   <div key={`${u.id}-${index}`} className="flex justify-between items-center bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
                      <div className="flex items-center gap-3">
                        <div className="w-10 h-10 rounded-full bg-brand-purple/10 flex items-center justify-center text-brand-purple overflow-hidden">
                          {u.photoURL ? <img src={u.photoURL} alt="avatar" /> : <Users className="w-5 h-5" />}
@@ -382,8 +382,8 @@ function AdminHome() {
              <h3 className="text-lg font-bold text-brand-navy mb-4">Recent Orders</h3>
              {recentOrders.length > 0 ? (
                <div className="space-y-4">
-                 {recentOrders.map(o => (
-                   <div key={o.id} className="flex justify-between items-center bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
+                 {recentOrders.map((o, index) => (
+                   <div key={`${o.id}-${index}`} className="flex justify-between items-center bg-white border border-gray-100 p-3 rounded-lg shadow-sm">
                      <div className="flex items-center gap-3">
                        <div className="w-10 h-10 rounded-full bg-blue-500/10 flex items-center justify-center text-blue-500">
                          <ShoppingBag className="w-5 h-5" />
@@ -426,7 +426,7 @@ function Placeholder({ title }: { title: string }) {
     <div className="max-w-7xl mx-auto h-full flex flex-col">
        <div className="mb-8">
          <h1 className="text-2xl md:text-3xl font-display font-bold text-brand-navy">{title}</h1>
-         <p className="text-brand-slate mt-1">Manage and update {title.toLowerCase()} configurations.</p>
+         <p className="text-brand-slate mt-1">Manage and update {(title || '').toLowerCase()} configurations.</p>
       </div>
       <div className="flex-1 bg-gray-900 border border-gray-800 rounded-2xl flex flex-col items-center justify-center p-8 text-center shadow-sm">
          <Settings className="w-16 h-16 text-gray-700 mb-4 animate-[spin_4s_linear_infinite]" />

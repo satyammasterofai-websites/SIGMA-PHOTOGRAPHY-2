@@ -70,8 +70,17 @@ const defaultCategories = [
 
 export default function TemplateCategories() {
   const { categories, settings } = useSiteContent();
+  const uniqueCategories = [];
+  const seenNames = new Set();
+  for (const cat of categories) {
+    const normName = (cat.name || "").trim().toLowerCase();
+    if (normName && !seenNames.has(normName)) {
+      seenNames.add(normName);
+      uniqueCategories.push(cat);
+    }
+  }
   const displayCategories =
-    categories.length > 0 ? categories : defaultCategories;
+    uniqueCategories.length > 0 ? uniqueCategories : defaultCategories;
 
   const scrollRef = useRef<HTMLDivElement>(null);
   const [isHovered, setIsHovered] = useState(false);
@@ -167,7 +176,7 @@ export default function TemplateCategories() {
         <div className="grid grid-cols-1 divide-y divide-gray-200">
           {displayCategories.map((cat, index) => (
             <motion.div
-              key={cat.id || cat.name}
+              key={`${cat.id || cat.name}-${index}`}
               initial={{ opacity: 0, y: 10 }}
               whileInView={{ opacity: 1, y: 0 }}
               viewport={{ once: true }}
@@ -190,11 +199,12 @@ export default function TemplateCategories() {
 
               <div className="w-full md:w-2/3 flex flex-col items-center md:items-start text-center md:text-left relative py-4">
                 <h3 className="text-3xl md:text-4xl font-display font-black uppercase tracking-wider text-brand-navy mb-4">
+                  
                   {cat.name}
                 </h3>
                 <p className="text-brand-slate text-base md:text-lg mb-8 max-w-xl">
                   {cat.description ||
-                    `Explore our premium ${cat.name.toLowerCase()} invitation templates crafted to perfection.`}
+                    `Explore our premium ${(cat.name || '').toLowerCase()} invitation templates crafted to perfection.`}
                 </p>
                 <Link
                   to={`/gallery?category=${encodeURIComponent(cat.name)}`}

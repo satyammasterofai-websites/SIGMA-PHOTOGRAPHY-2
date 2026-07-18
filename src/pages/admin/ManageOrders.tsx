@@ -214,7 +214,7 @@ export default function ManageOrders() {
     }
   };
   const filteredOrders = orders.filter(o => {
-    const searchLower = searchQuery.toLowerCase();
+    const searchLower = (searchQuery || '').toLowerCase();
     const matchesSearch = searchQuery === '' || 
         (o.displayId || '').toLowerCase().includes(searchLower) ||
         (o.id || '').toLowerCase().includes(searchLower) ||

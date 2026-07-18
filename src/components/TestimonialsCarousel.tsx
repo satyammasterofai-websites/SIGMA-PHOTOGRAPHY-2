@@ -152,7 +152,7 @@ export default function TestimonialsCarousel({ testimonials }: { testimonials: T
 
               {/* Indicators */}
               <div className="absolute bottom-8 left-1/2 -translate-x-1/2 flex gap-3 z-20 bg-white/50 backdrop-blur-md px-4 py-2 rounded-full">
-                {testimonials.map((_, idx) => (
+                {testimonials.map((t, idx) => (
                   <button
                     key={idx}
                     onClick={() => {
