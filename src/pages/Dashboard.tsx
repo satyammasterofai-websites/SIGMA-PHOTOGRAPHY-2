@@ -416,6 +416,11 @@ function MyOrders() {
                         </span>
                         <span>•</span>
                         <span>
+                          Template ID:{" "}
+                          <span className="font-mono text-xs">{order.templateDisplayId || order.templateId}</span>
+                        </span>
+                        <span>•</span>
+                        <span>
                           {new Date(order.createdAt).toLocaleDateString()}
                         </span>
                         {order.price && (

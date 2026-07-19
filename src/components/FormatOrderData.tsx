@@ -93,7 +93,6 @@ export const FormatOrderData = ({ data, theme = 'light', templateId }: { data: a
   if (data.events && Array.isArray(data.events)) {
     return (
       <div className="space-y-3">
-{templateId && <div className="text-xs text-red-500">DEBUG: templateId={templateId}</div>}
         {data.bride && typeof data.bride === 'object' && Object.keys(data.bride).length > 0 && (
           <div className="mt-2">
             <span className={`font-medium text-sm ${labelClass}`}>Bride Details:</span>
@@ -171,8 +170,6 @@ export const FormatOrderData = ({ data, theme = 'light', templateId }: { data: a
   // Legacy data fallback
   return (
     <div className="space-y-2">
-{templateId && <div className="text-xs text-red-500">DEBUG: templateId={templateId}</div>}
-{!templateId && <div className="text-xs text-red-500">DEBUG: NO templateId</div>}
       {Object.entries(data).map(([k, v]) => {
         return (
           <div key={k} className="flex flex-col sm:flex-row sm:gap-2 text-sm">

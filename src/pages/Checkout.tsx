@@ -347,6 +347,7 @@ export default function Checkout() {
         JSON.stringify({
           createdAt: new Date().toISOString(),
           templateId: template?.id || "",
+          templateDisplayId: template?.displayId || "",
           templateName: template?.title || template?.name || "Template",
           thumbnailBase64: template?.thumbnailBase64 || "",
           videoUrl: template?.videoUrl || "",
@@ -391,10 +392,10 @@ export default function Checkout() {
         }
       }
 
-      return orderRef.id;
+      return { id: orderRef.id, displayId: cleanData.displayId };
     } catch (e) {
       console.error(e);
-      return "ORDER_ERR";
+      return { id: "ORDER_ERR", displayId: "ORDER_ERR" };
     }
   };
 
@@ -431,12 +432,9 @@ export default function Checkout() {
     return labeled;
   };
 
-  const getWaUrl = (orderId: string) => {
+  const getWaUrl = (orderId: string, displayId: string) => {
     const number = settings?.whatsapp?.number || "9162478070";
-    const displayOrderId =
-      orderId === "ORDER_ERR"
-        ? `REQ-${Math.floor(Math.random() * 100000)}`
-        : orderId;
+    const displayOrderId = orderId === "ORDER_ERR" ? `REQ-${Math.floor(Math.random() * 100000)}` : (displayId || orderId);
 
     let customFieldsText = "";
     if (formConfig) {
@@ -522,13 +520,13 @@ export default function Checkout() {
     ) {
       details = settings.whatsapp.messageFormat
         .replace("{template}", template?.title || "Unknown")
-        .replace("{templateId}", template?.id || "Unknown")
+        .replace("{templateId}", template?.displayId || template?.id || "Unknown")
         .replace("{orderId}", displayOrderId)
         .replace("{name}", customerName || "N/A")
         .replace("{phone}", customerPhone || "N/A")
         .replace("{details}", allDetails);
     } else {
-      details = `*BOOKING REQUEST*\n\n*TEMPLATE*: ${template?.title || "Unknown"}\n*TEMPLATE ID*: ${template?.id}\n*ORDER ID*: ${displayOrderId}\n\n*CUSTOMER DETAILS*\n*NAME*: ${customerName}\n*PHONE*: ${customerPhone}\n\n${allDetails}`;
+      details = `*BOOKING REQUEST*\n\n*TEMPLATE*: ${template?.title || "Unknown"}\n*TEMPLATE ID*: ${template?.displayId || template?.id}\n*ORDER ID*: ${displayOrderId}\n\n*CUSTOMER DETAILS*\n*NAME*: ${customerName}\n*PHONE*: ${customerPhone}\n\n${allDetails}`;
     }
 
     const encodedMsg = encodeURIComponent(details);
@@ -537,15 +535,15 @@ export default function Checkout() {
 
   const proceedToWhatsApp = async (viaMethod: string) => {
     setPaymentSuccessPopup({ show: true, msg: "Saving order details..." });
-    const orderId = await createOrderRecord("Pending", viaMethod);
-    const url = getWaUrl(orderId);
+    const orderData = await createOrderRecord("Pending", viaMethod);
+    const url = getWaUrl(orderData.id, orderData.displayId);
     setWaUrlToOpen(url);
     const advanceMsg = template?.advancePayment
       ? ` Note: An advance payment of ₹${template.advancePayment} is required.`
       : "";
     setPaymentSuccessPopup({
       show: true,
-      msg: `Order saved! Please click below to send us your details on WhatsApp.${advanceMsg}`,
+      msg: `Order saved (ID: ${orderData.displayId})! Please click below to send us your details on WhatsApp.${advanceMsg}`,
     });
   };
 
@@ -557,15 +555,15 @@ export default function Checkout() {
         msg: "Initializing secure payment gateway...",
       });
       setTimeout(async () => {
-        const orderId = await createOrderRecord("Pending Verification", "Online Payment");
+        const orderData = await createOrderRecord("Pending Verification", "Online Payment");
         const advanceMsg = template?.advancePayment
           ? ` Note: An advance payment of ₹${template.advancePayment} is required.`
           : "";
         setPaymentSuccessPopup({
           show: true,
-          msg: `Payment successful! Redirecting to WhatsApp to send assets.${advanceMsg}`,
+          msg: `Payment successful (Order ID: ${orderData.displayId})! Redirecting to WhatsApp to send assets.${advanceMsg}`,
         });
-        const url = getWaUrl(orderId);
+        const url = getWaUrl(orderData.id, orderData.displayId);
         setWaUrlToOpen(url);
       }, 2000);
       return;
@@ -580,15 +578,15 @@ export default function Checkout() {
       show: true,
       msg: "Saving order details...",
     });
-    const orderId = await createOrderRecord("Pending Verification", "Online Payment");
-    const advanceMsg = template?.advancePayment
+    const orderData = await createOrderRecord("Pending Verification", "Online Payment");
+        const advanceMsg = template?.advancePayment
       ? ` Note: An advance payment of ₹${template.advancePayment} is required.`
       : "";
     setPaymentSuccessPopup({
       show: true,
-      msg: `Order saved! Please send us the payment screenshot on WhatsApp.${advanceMsg}`,
+      msg: `Order saved (ID: ${orderData.displayId})! Please send us the payment screenshot on WhatsApp.${advanceMsg}`,
     });
-    const url = getWaUrl(orderId);
+    const url = getWaUrl(orderData.id, orderData.displayId);
     setWaUrlToOpen(url);
   };
 
