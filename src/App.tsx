@@ -6,7 +6,7 @@
 import React, { Suspense } from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { Toaster } from 'react-hot-toast';
-const Home = React.lazy(() => import('./pages/Home'));
+import Home from './pages/Home';
 const Login = React.lazy(() => import('./pages/Login'));
 const Signup = React.lazy(() => import('./pages/Signup'));
 const Dashboard = React.lazy(() => import('./pages/Dashboard'));
@@ -46,7 +46,7 @@ function AppContent() {
   usePresence();
   return (
     <Router>
-      <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-brand-navy"><div className="w-12 h-12 rounded-full border-4 border-brand-purple border-t-transparent animate-spin"></div></div>}>
+      <Suspense fallback={null}>
         <SplashVideo />
         <WhatsAppButton />
         <SupportChatButton />

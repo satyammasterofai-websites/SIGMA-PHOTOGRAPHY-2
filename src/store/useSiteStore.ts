@@ -131,6 +131,6 @@ export const useSiteStore = create<SiteContentState>((set, get) => ({
         initialLoadComplete = true;
         set({ loading: false });
       }
-    }, 15000);
+    }, 3000);
   }
 }));

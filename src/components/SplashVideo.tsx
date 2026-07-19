@@ -14,6 +14,7 @@ export default function SplashVideo() {
   const [loading, setLoading] = useState(true);
   const [hasInteracted, setHasInteracted] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
+  const splashTimeoutRef = useRef<any>(null);
 
   useEffect(() => {
     const fetchSettings = async () => {
@@ -34,6 +35,7 @@ export default function SplashVideo() {
             setVideoUrl(fetchedUrl);
             setShow(true);
             setVisible(true);
+            splashTimeoutRef.current = setTimeout(() => closeSplash(), 20000);
             document.body.style.overflow = 'hidden';
             
             if (type === 'image') {
@@ -49,6 +51,7 @@ export default function SplashVideo() {
           setVideoUrl('https://storage.googleapis.com/gtv-videos-bucket/sample/ForBiggerBlazes.mp4');
           setShow(true);
           setVisible(true);
+          splashTimeoutRef.current = setTimeout(() => closeSplash(), 20000);
           document.body.style.overflow = 'hidden';
         }
       } catch (error) {
@@ -67,6 +70,7 @@ export default function SplashVideo() {
   }, []);
 
   const closeSplash = () => {
+    if (splashTimeoutRef.current) clearTimeout(splashTimeoutRef.current);
     setVisible(false);
     document.body.style.overflow = 'auto';
     if (videoRef.current) {
@@ -129,7 +133,7 @@ export default function SplashVideo() {
                   onReady={() => console.log("Video ready")}
                   onStart={() => console.log("Video playing")}
                   onEnded={closeSplash}
-                  onError={(e) => console.error("Video player error:", e)}
+                  onError={(e) => { console.error("Video player error:", e); closeSplash(); }}
                   playsinline={true}
                   config={{
                     youtube: {
@@ -145,7 +149,7 @@ export default function SplashVideo() {
                   src={videoUrl}
                   playsInline
                   onEnded={closeSplash}
-                  onError={(e) => console.error("Native video player error:", e)}
+                  onError={(e) => { console.error("Native video player error:", e); closeSplash(); }}
                   className="w-full h-full object-cover pointer-events-none"
                 />
               )}
