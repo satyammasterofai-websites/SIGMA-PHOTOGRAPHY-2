@@ -83,9 +83,9 @@ export default function TemplateDetails() {
   }, [id]);
 
   const handleApplyCoupon = async () => {
-    if (!couponInput.trim()) return;
+    if (!(couponInput || "").trim()) return;
     
-    let targetCode = couponInput.trim().toUpperCase();
+    let targetCode = (couponInput || "").trim().toUpperCase();
     let matched = null;
 
     if (settings?.coupons && settings.coupons.length > 0) {
@@ -132,7 +132,7 @@ export default function TemplateDetails() {
   const handleSubmitReview = async (e: React.FormEvent) => {
     e.preventDefault();
 
-    if (!newReview.trim()) return;
+    if (!(newReview || "").trim()) return;
     setSubmittingReview(true);
     try {
       const reviewData = {
@@ -141,7 +141,7 @@ export default function TemplateDetails() {
         userName: user ? (user.displayName || 'Anonymous') : 'Guest User',
         userPhoto: user ? (user.photoURL || '') : '',
         rating,
-        comment: newReview.trim(),
+        comment: (newReview || "").trim(),
         createdAt: new Date().toISOString()
       };
       const docRef = await addDoc(collection(db, 'template_reviews'), reviewData);

@@ -58,7 +58,7 @@ export default function CleanupDuplicates() {
         for (const templateDoc of templatesSnap.docs) {
           const data = templateDoc.data();
           if (data.title) {
-            const title = data.title.toLowerCase().trim();
+            const title = (data.title || "").toLowerCase().trim();
             if (seenTemplateTitles.has(title)) {
               console.log('Deleting duplicate template:', title);
               await deleteDoc(doc(db, 'templates', templateDoc.id));
@@ -74,7 +74,7 @@ export default function CleanupDuplicates() {
         for (const catDoc of catSnap.docs) {
           const data = catDoc.data();
           if (data.name) {
-            const name = data.name.toLowerCase().trim();
+            const name = (data.name || "").toLowerCase().trim();
             if (seenCategoryNames.has(name)) {
               console.log('Deleting duplicate category:', name);
               await deleteDoc(doc(db, 'content', 'template_categories', 'items', catDoc.id));
@@ -90,7 +90,7 @@ export default function CleanupDuplicates() {
         for (const faqDoc of faqsSnap.docs) {
           const data = faqDoc.data();
           if (data.question) {
-            const question = data.question.toLowerCase().trim();
+            const question = (data.question || "").toLowerCase().trim();
             if (seenFaqQuestions.has(question)) {
               console.log('Deleting duplicate FAQ:', question);
               await deleteDoc(doc(db, 'faqs', faqDoc.id));

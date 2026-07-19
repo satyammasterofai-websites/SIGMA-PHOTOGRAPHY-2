@@ -144,7 +144,7 @@ export default function SupportChat() {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user) return;
+    if (!(newMessage || "").trim() || !user) return;
     try {
       const isFirstMessage = messages.length === 0;
       await addDoc(collection(db, "chats"), {
@@ -259,7 +259,7 @@ export default function SupportChat() {
         />
         <button
           type="submit"
-          disabled={!newMessage.trim()}
+          disabled={!(newMessage || "").trim()}
           className="px-6 py-3 bg-brand-electric text-white rounded-xl hover:bg-brand-electric/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center gap-2 font-medium shadow-md shadow-brand-electric/20"
         >
           <Send className="w-5 h-5" />

@@ -43,7 +43,7 @@ export default function TemplateReviewsModal({ templateId, isOpen, onClose }: { 
   };
 
   const submitReview = async () => {
-    if (!newReview.trim()) {
+    if (!(newReview || "").trim()) {
       toast.error('Please write a review');
       return;
     }
@@ -54,7 +54,7 @@ export default function TemplateReviewsModal({ templateId, isOpen, onClose }: { 
         templateId,
         userId: user?.uid || 'guest',
         userName: user?.displayName || user?.email?.split('@')[0] || 'Guest User',
-        text: newReview.trim(),
+        text: (newReview || "").trim(),
         rating,
         createdAt: serverTimestamp()
       });

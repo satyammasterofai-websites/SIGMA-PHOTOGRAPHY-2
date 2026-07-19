@@ -163,7 +163,7 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
 
   const sendMessage = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newMessage.trim() || !user) return;
+    if (!(newMessage || "").trim() || !user) return;
 
     try {
       await addDoc(collection(db, "chats"), {
@@ -296,7 +296,7 @@ export default function CustomerDetail({ user, onBack }: CustomerDetailProps) {
               />
               <button
                 type="submit"
-                disabled={!newMessage.trim()}
+                disabled={!(newMessage || "").trim()}
                 className="px-4 py-2 bg-brand-electric text-white rounded-xl hover:bg-brand-electric/90 transition-colors disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center"
               >
                 <Send className="w-5 h-5" />

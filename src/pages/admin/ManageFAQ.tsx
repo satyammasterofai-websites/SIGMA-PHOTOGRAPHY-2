@@ -19,7 +19,7 @@ export default function ManageFAQ() {
   }, []);
 
   const saveFaq = async () => {
-    if (!formData.question.trim() || !formData.answer.trim()) {
+    if (!(formData.question || "").trim() || !(formData.answer || "").trim()) {
       toast.error("Question and answer are required");
       return;
     }
@@ -37,8 +37,8 @@ export default function ManageFAQ() {
     try {
       const id = formData.id || Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2);
       await setDoc(doc(db, 'faqs', id), {
-        question: formData.question.trim(),
-        answer: formData.answer.trim()
+        question: (formData.question || "").trim(),
+        answer: (formData.answer || "").trim()
       });
       toast.success("Saved successfully");
       setShowModal(false);

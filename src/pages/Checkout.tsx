@@ -277,9 +277,9 @@ export default function Checkout() {
     : basePrice;
 
   const applyCoupon = async () => {
-    if (!couponCode.trim()) return;
+    if (!(couponCode || "").trim()) return;
 
-    let targetCode = couponCode.trim().toUpperCase();
+    let targetCode = (couponCode || "").trim().toUpperCase();
     let isSigma = targetCode === "SIGMA20";
     let matched = null;
 
@@ -673,7 +673,7 @@ export default function Checkout() {
         toast.error("Please provide your Contact Details");
         return;
       }
-      if (!/^\d{10}$/.test(customerPhone.trim())) {
+      if (!/^\d{10}$/.test((customerPhone || "").trim())) {
         toast.error("Contact number must be exactly 10 digits");
         return;
       }

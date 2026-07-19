@@ -215,8 +215,8 @@ export default function TemplateManagement() {
   };
 
   const addCustomField = () => {
-    if (newFieldName.trim()) {
-      setCustomFields([...customFields, { id: Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2), name: newFieldName.trim(), type: 'text', required: true }]);
+    if ((newFieldName || "").trim()) {
+      setCustomFields([...customFields, { id: Date.now().toString() + Math.random().toString(36).substring(2) + Math.random().toString(36).substring(2), name: (newFieldName || "").trim(), type: 'text', required: true }]);
       setNewFieldName('');
     }
   };

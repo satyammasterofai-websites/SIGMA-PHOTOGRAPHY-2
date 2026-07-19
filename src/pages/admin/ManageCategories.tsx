@@ -36,7 +36,7 @@ export default function ManageCategories() {
         const tSnap = await getDocs(collection(db, 'templates'));
         const templateCats = new Set<string>();
         tSnap.forEach(t => {
-           if (t.data().category) templateCats.add(t.data().category.trim());
+           if (t.data().category) templateCats.add(String(t.data().category).trim());
         });
         const existingCats = new Set(list.map(c => (c.name || '').trim().toLowerCase()));
         
@@ -95,7 +95,7 @@ export default function ManageCategories() {
 
   const addCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!newCatName.trim()) {
+    if (!(newCatName || "").trim()) {
       toast.error("Category name required");
       return;
     }
@@ -123,7 +123,7 @@ export default function ManageCategories() {
 
     try {
       const newCat = {
-        name: newCatName.trim(),
+        name: (newCatName || "").trim(),
         image: newCatImage,
         order: parsedNewOrder !== null ? parsedNewOrder : (categories.length > 0 ? Math.max(...categories.map(c => c.order || 0)) + 1 : 1)
       };
@@ -204,7 +204,7 @@ export default function ManageCategories() {
   };
 
   const saveEdit = async () => {
-    if (!editCatName.trim() || !editingCatId) return;
+    if (!(editCatName || "").trim() || !editingCatId) return;
     
     const isDuplicate = (categories || []).some(
       (cat: any) => cat.id !== editingCatId && (cat.name || '').toLowerCase() === (editCatName || '').toLowerCase().trim()
@@ -227,7 +227,7 @@ export default function ManageCategories() {
 
     try {
       await setDoc(doc(db, 'content', 'template_categories', 'items', editingCatId), {
-        name: editCatName.trim(),
+        name: (editCatName || "").trim(),
         image: editCatImage,
         order: parsedOrder !== null ? parsedOrder : (categories.find(c => c.id === editingCatId)?.order || 0)
       }, { merge: true });
