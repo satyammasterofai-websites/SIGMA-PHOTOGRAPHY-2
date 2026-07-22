@@ -2,6 +2,7 @@ import React, { useState, useEffect, useRef } from "react";
 import { Bell, Check } from "lucide-react";
 import { collection, query, where, orderBy, onSnapshot, updateDoc, doc, getDocs, writeBatch } from "firebase/firestore";
 import { auth, db } from "../lib/firebase";
+import toast from "react-hot-toast";
 
 export default function UserNotifications() {
   const [notifications, setNotifications] = useState<any[]>([]);
@@ -19,7 +20,17 @@ export default function UserNotifications() {
       orderBy("createdAt", "desc")
     );
 
+    let initialLoad = true;
     const unsubscribe = onSnapshot(q, (snapshot) => {
+      if (!initialLoad) {
+        snapshot.docChanges().forEach((change) => {
+          if (change.type === "added") {
+            const data = change.doc.data();
+            toast(data.title + ": " + data.message, { icon: '🔔' });
+          }
+        });
+      }
+      initialLoad = false;
       const notifs = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
       setNotifications(notifs);
       setUnreadCount(notifs.filter(n => !(n as any).read).length);

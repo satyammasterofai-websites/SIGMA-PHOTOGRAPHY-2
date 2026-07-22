@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, doc, onSnapshot, setDoc, deleteDoc, addDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Plus, Trash2, Edit, Save, Copy, Eye, FileEdit, Settings, Server, X } from 'lucide-react';
+import {  Plus, Trash2, Edit, Save, Copy, Eye, FileEdit, Settings, Server, X , ArrowUp, ArrowDown } from 'lucide-react';
 import toast from 'react-hot-toast';
 
 export default function ManageForms() {
@@ -113,6 +113,26 @@ export default function ManageForms() {
      setEditingForm(updated);
   };
 
+  
+  const moveField = (section: string, idx: number, direction: 'up' | 'down') => {
+    const updated = { ...editingForm };
+    let arr = [];
+    if (section === 'bride') arr = updated.familySettings.brideFields;
+    if (section === 'groom') arr = updated.familySettings.groomFields;
+    if (section === 'additional') arr = updated.additionalFields;
+    
+    if (direction === 'up' && idx > 0) {
+      const temp = arr[idx];
+      arr[idx] = arr[idx - 1];
+      arr[idx - 1] = temp;
+    } else if (direction === 'down' && idx < arr.length - 1) {
+      const temp = arr[idx];
+      arr[idx] = arr[idx + 1];
+      arr[idx + 1] = temp;
+    }
+    setEditingForm(updated);
+  };
+
   const removeField = (section: string, idx: number) => {
      const updated = { ...editingForm };
      if (section === 'bride') updated.familySettings.brideFields.splice(idx, 1);
@@ -169,11 +189,19 @@ export default function ManageForms() {
                       Required
                    </label>
                 </div>
-                <div className="mt-4 md:mt-0 md:ml-2 pt-2 md:pt-0">
-                   <button onClick={() => removeField(section, i)} className="p-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-lg transition-colors">
+                
+                <div className="mt-4 md:mt-0 md:ml-2 pt-2 md:pt-0 flex items-center gap-1">
+                   <button onClick={() => moveField(section, i, 'up')} disabled={i === 0} className="p-2 bg-gray-700 text-gray-300 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      <ArrowUp className="w-4 h-4" />
+                   </button>
+                   <button onClick={() => moveField(section, i, 'down')} disabled={i === fields.length - 1} className="p-2 bg-gray-700 text-gray-300 hover:bg-gray-600 rounded-lg transition-colors disabled:opacity-50 disabled:cursor-not-allowed">
+                      <ArrowDown className="w-4 h-4" />
+                   </button>
+                   <button onClick={() => removeField(section, i)} className="p-2 bg-red-500/10 text-red-400 hover:bg-red-500/20 hover:text-red-300 rounded-lg transition-colors ml-1">
                       <Trash2 className="w-4 h-4" />
                    </button>
                 </div>
+
              </div>
           ))}
           {fields.length === 0 && <p className="text-sm text-gray-500 py-2">No fields added.</p>}

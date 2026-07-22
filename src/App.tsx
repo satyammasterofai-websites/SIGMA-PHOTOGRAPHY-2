@@ -41,6 +41,7 @@ const SplashVideo = React.lazy(() => import('./components/SplashVideo'));
 const WhatsAppButton = React.lazy(() => import('./components/WhatsAppButton'));
 const SupportChatButton = React.lazy(() => import('./components/SupportChatButton'));
 const GlobalChatListener = React.lazy(() => import('./components/GlobalChatListener'));
+const GlobalOrderNotifications = React.lazy(() => import('./components/GlobalOrderNotifications'));
 
 function AppContent() {
   usePresence();
@@ -51,6 +52,7 @@ function AppContent() {
         <WhatsAppButton />
         <SupportChatButton />
         <GlobalChatListener />
+        <GlobalOrderNotifications />
       </Suspense>
       <Suspense fallback={<div className="min-h-screen flex items-center justify-center bg-gray-50"><div className="w-8 h-8 rounded-full border-4 border-brand-purple border-t-transparent animate-spin"></div></div>}>
       <Routes>

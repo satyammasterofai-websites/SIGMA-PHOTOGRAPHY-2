@@ -405,30 +405,34 @@ export default function Checkout() {
     const labeled: any = {
       bride: {},
       groom: {},
-      events: formData.events,
+      events: formData.events || [],
       additional: {}
     };
     
-    const getLabel = (fields, id) => {
-      const f = fields?.find(f => f.id === id);
-      return f ? f.name : id;
-    };
+    if (formConfig.familySettings?.brideFields) {
+      formConfig.familySettings.brideFields.forEach((f: any) => {
+        if (formData.bride && formData.bride[f.id] !== undefined) {
+          labeled.bride[f.name || f.id] = formData.bride[f.id];
+        }
+      });
+    }
+    
+    if (formConfig.familySettings?.groomFields) {
+      formConfig.familySettings.groomFields.forEach((f: any) => {
+        if (formData.groom && formData.groom[f.id] !== undefined) {
+          labeled.groom[f.name || f.id] = formData.groom[f.id];
+        }
+      });
+    }
+    
+    if (formConfig.additionalFields) {
+      formConfig.additionalFields.forEach((f: any) => {
+        if (formData.additional && formData.additional[f.id] !== undefined) {
+          labeled.additional[f.name || f.id] = formData.additional[f.id];
+        }
+      });
+    }
 
-    if (formData.bride && typeof formData.bride === 'object') {
-      Object.entries(formData.bride).forEach(([k, v]) => {
-        labeled.bride[getLabel(formConfig.familySettings?.brideFields, k)] = v;
-      });
-    }
-    if (formData.groom && typeof formData.groom === 'object') {
-      Object.entries(formData.groom).forEach(([k, v]) => {
-        labeled.groom[getLabel(formConfig.familySettings?.groomFields, k)] = v;
-      });
-    }
-    if (formData.additional && typeof formData.additional === 'object') {
-      Object.entries(formData.additional).forEach(([k, v]) => {
-        labeled.additional[getLabel(formConfig.additionalFields, k)] = v;
-      });
-    }
     return labeled;
   };
 
