@@ -8,7 +8,8 @@ import { useAuthStore } from "../store/useAuthStore";
 import { useSiteStore } from "../store/useSiteStore";
 import toast from "react-hot-toast";
 import VideoModal from "../components/VideoModal";
-import { Play, Star, ShoppingBag, CheckCircle2, Tag, ChevronRight, Users, Clock, ArrowLeft, Send } from "lucide-react";
+import { Play, Star, ShoppingBag, CheckCircle2, Tag, ChevronRight, Users, Clock, ArrowLeft, Send, Globe, Calendar, ExternalLink, Sparkles } from "lucide-react";
+import { formatTemplateDate, formatTemplateTime, formatTemplateDateTime, isNewlyCreated } from "../lib/utils";
 
 export default function TemplateDetails() {
   const { id } = useParams();
@@ -192,47 +193,93 @@ export default function TemplateDetails() {
 
           <div className="bg-white rounded-3xl shadow-xl overflow-hidden border border-gray-100 flex flex-col lg:flex-row mb-12">
             {/* Left Image/Video Section */}
-            <div className="w-full lg:w-1/2 bg-gray-100 relative flex items-center justify-center p-8 border-b lg:border-b-0 lg:border-r border-gray-100">
-               {template.thumbnailBase64 || template.image ? (
-                  <img
-                    src={template.thumbnailBase64 || template.image}
-                    alt={template.title}
-                    className="w-full h-auto max-h-[600px] object-contain drop-shadow-2xl rounded-lg"
-                  />
-                ) : (
-                  <div className="w-full aspect-video flex items-center justify-center text-gray-400">
-                    No Preview
+            {(() => {
+              const isWebsite = (template.category || '').toLowerCase() === 'website invitation' || !!template.websiteUrl;
+              return (
+                <div className="w-full lg:w-1/2 bg-gray-100 relative flex flex-col items-center justify-center p-8 border-b lg:border-b-0 lg:border-r border-gray-100">
+                  <div className={`relative w-full flex items-center justify-center ${
+                    isWebsite ? 'aspect-[1/1.414] max-h-[560px]' : ''
+                  }`}>
+                    {template.thumbnailBase64 || template.image ? (
+                      <img
+                        src={template.thumbnailBase64 || template.image}
+                        alt={template.title}
+                        className={`h-auto object-contain drop-shadow-2xl rounded-xl ${
+                          isWebsite ? 'max-h-[520px] w-auto border border-purple-200' : 'w-full max-h-[600px]'
+                        }`}
+                      />
+                    ) : (
+                      <div className="w-full aspect-video flex items-center justify-center text-gray-400">
+                        No Preview
+                      </div>
+                    )}
+                    
+                    {isWebsite && template.websiteUrl ? (
+                      <a
+                        href={template.websiteUrl}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="absolute inset-0 bg-black/20 hover:bg-black/40 transition-colors flex flex-col items-center justify-center group cursor-pointer"
+                      >
+                        <div className="w-20 h-20 bg-purple-600/90 backdrop-blur-md border border-white/40 rounded-full flex items-center justify-center text-white transform scale-90 group-hover:scale-100 transition-transform shadow-2xl mb-2">
+                          <Globe className="w-10 h-10" />
+                        </div>
+                        <span className="text-xs font-bold text-white bg-black/70 px-4 py-1.5 rounded-full flex items-center gap-1.5 shadow-lg">
+                          Preview Live Website <ExternalLink className="w-3.5 h-3.5" />
+                        </span>
+                      </a>
+                    ) : template.videoUrl ? (
+                      <button
+                        onClick={() => setActiveVideo(template.videoUrl)}
+                        className="absolute inset-0 bg-black/20 hover:bg-black/40 transition-colors flex items-center justify-center group"
+                      >
+                        <div className="w-20 h-20 bg-white/20 backdrop-blur-md border border-white/40 rounded-full flex items-center justify-center text-white transform scale-90 group-hover:scale-100 transition-transform shadow-2xl">
+                          <Play className="w-10 h-10 fill-white" />
+                        </div>
+                      </button>
+                    ) : null}
                   </div>
-                )}
-                
-                {template.videoUrl && (
-                  <button
-                    onClick={() => setActiveVideo(template.videoUrl)}
-                    className="absolute inset-0 bg-black/20 hover:bg-black/40 transition-colors flex items-center justify-center group"
-                  >
-                    <div className="w-20 h-20 bg-white/20 backdrop-blur-md border border-white/40 rounded-full flex items-center justify-center text-white transform scale-90 group-hover:scale-100 transition-transform shadow-2xl">
-                      <Play className="w-10 h-10 fill-white" />
-                    </div>
-                  </button>
-                )}
-            </div>
+
+                  {isWebsite && template.websiteUrl && (
+                    <a
+                      href={template.websiteUrl}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      className="mt-6 w-full flex items-center justify-center gap-2 py-3 px-6 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white rounded-xl font-bold shadow-lg shadow-purple-600/20 transition-all hover:scale-[1.01]"
+                    >
+                      <Globe className="w-4 h-4" /> Open Full Interactive Website <ExternalLink className="w-4 h-4" />
+                    </a>
+                  )}
+                </div>
+              );
+            })()}
 
             {/* Right Details Section */}
             <div className="w-full lg:w-1/2 p-8 lg:p-12 flex flex-col">
-               <div className="flex items-center gap-3 mb-4">
-                 <span className="bg-brand-purple/10 text-brand-purple px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider">
+               <div className="flex items-center gap-3 mb-4 flex-wrap">
+                 <span className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider flex items-center gap-1 ${
+                   (template.category || '').toLowerCase() === 'website invitation' 
+                     ? 'bg-purple-100 text-purple-700 border border-purple-200' 
+                     : 'bg-brand-purple/10 text-brand-purple'
+                 }`}>
+                   {(template.category || '').toLowerCase() === 'website invitation' && <Globe className="w-3.5 h-3.5" />}
                    {template.category}
                  </span>
                  <span className="text-gray-400 font-mono text-sm">
                    #{displayId}
                  </span>
+                 {isNewlyCreated(template.createdAt) && (
+                   <span className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-xs font-bold px-2.5 py-0.5 rounded-full flex items-center gap-1 shadow-sm">
+                     <Sparkles className="w-3 h-3" /> Newly Created
+                   </span>
+                 )}
                </div>
                
                <h1 className="text-4xl font-display font-bold text-gray-900 mb-4">
                  {template.title}
                </h1>
 
-               <div className="flex items-center gap-6 mb-6 flex-wrap">
+               <div className="flex items-center gap-4 mb-6 flex-wrap">
                  <div className="flex items-center gap-2 text-sm font-semibold text-gray-600 bg-gray-100 px-3 py-1.5 rounded-lg">
                    <ShoppingBag className="w-4 h-4 text-brand-purple" />
                    {orderCount} Orders
@@ -243,6 +290,11 @@ export default function TemplateDetails() {
                       <span className="relative inline-flex rounded-full h-2.5 w-2.5 bg-green-500"></span>
                     </span>
                     <span className="text-green-700">{onlineUsersCount}+ people online</span>
+                 </div>
+                 {/* Creation Date & Time note */}
+                 <div className="flex items-center gap-1.5 text-sm font-semibold text-gray-600 bg-purple-50 px-3 py-1.5 rounded-lg">
+                   <Calendar className="w-4 h-4 text-brand-purple" />
+                   <span>Created: {formatTemplateDateTime(template.createdAt)}</span>
                  </div>
                </div>
 
@@ -314,7 +366,7 @@ export default function TemplateDetails() {
                    onClick={handleBuy}
                    className="w-full flex items-center justify-center gap-2 bg-brand-purple hover:bg-brand-purple/90 text-white py-4 rounded-xl font-bold text-lg transition-all shadow-lg shadow-brand-purple/30 hover:shadow-xl hover:shadow-brand-purple/40 hover:-translate-y-0.5"
                  >
-                   Buy Template <ChevronRight className="w-5 h-5" />
+                   {(template.category || '').toLowerCase() === 'website invitation' ? 'Order Website Invitation' : 'Buy Template'} <ChevronRight className="w-5 h-5" />
                  </button>
                </div>
             </div>

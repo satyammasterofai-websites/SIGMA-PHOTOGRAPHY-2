@@ -68,6 +68,11 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    match /selfVideoTemplates/{document=**} {
+      allow read: if true;
+      allow write: if isAdmin();
+    }
+
     match /orders/{orderId} {
       allow create: if true;
       // Users can read/update their own orders, admins can read/update all

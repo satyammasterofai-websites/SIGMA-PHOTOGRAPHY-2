@@ -146,10 +146,10 @@ export default function SplashVideo() {
               ) : (
                 <video
                   ref={videoRef}
-                  src={videoUrl}
+                  src={videoUrl || undefined}
                   playsInline
                   onEnded={closeSplash}
-                  onError={(e) => { console.error("Native video player error:", e); closeSplash(); }}
+                  onError={(e) => { console.log("Native video player error:", e); closeSplash(); }}
                   className="w-full h-full object-cover pointer-events-none"
                 />
               )}

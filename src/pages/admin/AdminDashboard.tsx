@@ -23,6 +23,7 @@ import ManageForms from './ManageForms';
 import ManageCategories from './ManageCategories';
 import ManageCustomServices from './ManageCustomServices';
 import ManageSplashVideo from './ManageSplashVideo';
+import ManageSelfVideoTemplates from './ManageSelfVideoTemplates';
 import CleanupDuplicates from '../../components/CleanupDuplicates';
 import VideoModal from "../../components/VideoModal";
 import { Play } from "lucide-react";
@@ -60,6 +61,7 @@ export default function AdminDashboardLayout() {
     { name: 'Announcements', path: '/admin/notifications', icon: Bell },
     { name: 'Customers', path: '/admin/users', icon: Users },
     { name: 'Site Content', path: '/admin/content', icon: Settings },
+    { name: 'Video Editor', path: '/admin/video-editor', icon: FileEdit },
   ];
 
   return (
@@ -171,6 +173,7 @@ export default function AdminDashboardLayout() {
               <Route path="/notifications" element={<ManageNotifications />} />
               <Route path="/users" element={<ManageUsers />} />
               <Route path="/content" element={<SiteContentManagement />} />
+              <Route path="/video-editor" element={<ManageSelfVideoTemplates />} />
            </Routes>
         </main>
       </div>

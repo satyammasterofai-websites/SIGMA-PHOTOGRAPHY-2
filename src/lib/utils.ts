@@ -103,3 +103,81 @@ export const saveBase64ToFirestore = async (base64String: string, callback: (str
 export const loadBase64FromFirestore = async (callback: () => Promise<string | null>) => {
   return await callback();
 };
+
+export function formatTemplateDate(dateVal: any): string {
+  if (!dateVal) return "Recently Added";
+  try {
+    let d: Date;
+    if (typeof dateVal === 'string' || typeof dateVal === 'number') {
+      d = new Date(dateVal);
+    } else if (dateVal.toDate && typeof dateVal.toDate === 'function') {
+      d = dateVal.toDate();
+    } else if (dateVal.seconds) {
+      d = new Date(dateVal.seconds * 1000);
+    } else {
+      d = new Date(dateVal);
+    }
+    if (isNaN(d.getTime())) return "Recently Added";
+    
+    return d.toLocaleDateString("en-IN", {
+      day: "numeric",
+      month: "short",
+      year: "numeric",
+    });
+  } catch {
+    return "Recently Added";
+  }
+}
+
+export function formatTemplateTime(dateVal: any): string {
+  if (!dateVal) return "";
+  try {
+    let d: Date;
+    if (typeof dateVal === 'string' || typeof dateVal === 'number') {
+      d = new Date(dateVal);
+    } else if (dateVal.toDate && typeof dateVal.toDate === 'function') {
+      d = dateVal.toDate();
+    } else if (dateVal.seconds) {
+      d = new Date(dateVal.seconds * 1000);
+    } else {
+      d = new Date(dateVal);
+    }
+    if (isNaN(d.getTime())) return "";
+    
+    return d.toLocaleTimeString("en-IN", {
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return "";
+  }
+}
+
+export function formatTemplateDateTime(dateVal: any): string {
+  if (!dateVal) return "Recently Added";
+  const dateStr = formatTemplateDate(dateVal);
+  const timeStr = formatTemplateTime(dateVal);
+  return timeStr ? `${dateStr} at ${timeStr}` : dateStr;
+}
+
+export function isNewlyCreated(dateVal: any, daysThreshold = 7): boolean {
+  if (!dateVal) return false;
+  try {
+    let d: Date;
+    if (typeof dateVal === 'string' || typeof dateVal === 'number') {
+      d = new Date(dateVal);
+    } else if (dateVal.toDate && typeof dateVal.toDate === 'function') {
+      d = dateVal.toDate();
+    } else if (dateVal.seconds) {
+      d = new Date(dateVal.seconds * 1000);
+    } else {
+      d = new Date(dateVal);
+    }
+    if (isNaN(d.getTime())) return false;
+    const diffMs = Date.now() - d.getTime();
+    return diffMs >= 0 && diffMs <= daysThreshold * 24 * 60 * 60 * 1000;
+  } catch {
+    return false;
+  }
+}

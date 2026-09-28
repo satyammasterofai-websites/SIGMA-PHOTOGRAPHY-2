@@ -3,6 +3,7 @@ import Hero from '../components/Hero';
 import HomeBanners from '../components/HomeBanners';
 import TemplateCategories from '../components/TemplateCategories';
 import ContactAndTestimonials from '../components/ContactAndTestimonials';
+import SelfVideoEditing from '../components/SelfVideoEditing';
 import Footer from '../components/Footer';
 import { useSiteContent } from '../hooks/useSiteContent';
 import { motion } from 'motion/react';
@@ -44,6 +45,9 @@ export default function Home() {
         </FadeInSection>
         <FadeInSection>
           <TemplateCategories />
+        </FadeInSection>
+        <FadeInSection>
+          <SelfVideoEditing />
         </FadeInSection>
         <FadeInSection>
           <ContactAndTestimonials />

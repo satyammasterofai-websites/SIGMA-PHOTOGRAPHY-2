@@ -331,8 +331,8 @@ export default function ManageSplashVideo() {
                 }
               })
             ) : (
-              <video 
-                src={videoUrl} 
+              <video onError={(e) => console.log("Video error", e)} 
+                src={videoUrl || undefined} 
                 className="w-full h-full object-contain"
                 controls
                 autoPlay

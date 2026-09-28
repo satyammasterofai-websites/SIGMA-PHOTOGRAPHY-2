@@ -13,6 +13,13 @@ const defaultCategories = [
       "https://images.unsplash.com/photo-1519225421980-715cb0215aed?auto=format&fit=crop&q=80&w=500&q=60",
   },
   {
+    name: "Website Invitation",
+    price: "2,499",
+    image:
+      "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=500&q=60",
+    description: "Interactive digital wedding & event website invitations featuring RSVP tracking, Google Maps directions, photo galleries, countdown timer, and background music.",
+  },
+  {
     name: "Engagement",
     price: "1,999",
     image:
