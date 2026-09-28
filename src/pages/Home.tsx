@@ -23,7 +23,19 @@ const FadeInSection = ({ children }: { children: React.ReactNode }) => {
 };
 
 export default function Home() {
-  const { loading } = useSiteContent();
+  const { loading, settings } = useSiteContent();
+
+  const isLocallyHidden = typeof window !== 'undefined' && localStorage.getItem('sigma_hide_self_video_editor') === 'true';
+  const isLocallyEnabled = typeof window !== 'undefined' && localStorage.getItem('sigma_self_video_editing_enabled') === 'true';
+
+  let isSelfVideoVisible = true;
+  if (settings) {
+    isSelfVideoVisible = settings.selfVideoEditingEnabled !== false && !settings.hideSelfVideoEditor;
+  } else if (isLocallyHidden) {
+    isSelfVideoVisible = false;
+  } else if (isLocallyEnabled) {
+    isSelfVideoVisible = true;
+  }
 
   if (loading) {
     return (
@@ -46,9 +58,11 @@ export default function Home() {
         <FadeInSection>
           <TemplateCategories />
         </FadeInSection>
-        <FadeInSection>
-          <SelfVideoEditing />
-        </FadeInSection>
+        {isSelfVideoVisible && (
+          <FadeInSection>
+            <SelfVideoEditing />
+          </FadeInSection>
+        )}
         <FadeInSection>
           <ContactAndTestimonials />
         </FadeInSection>

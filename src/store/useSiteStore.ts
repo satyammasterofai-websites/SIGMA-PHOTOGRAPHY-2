@@ -122,7 +122,19 @@ export const useSiteStore = create<SiteContentState>((set, get) => ({
     }, () => checkLoaded());
 
     onSnapshot(doc(db, "settings", "config"), (doc) => {
-      if (doc.exists()) set({ settings: doc.data() });
+      if (doc.exists()) {
+        const data = doc.data();
+        set({ settings: data });
+        if (data.hideSelfVideoEditor !== undefined || data.selfVideoEditingEnabled !== undefined) {
+          const isHidden = data.hideSelfVideoEditor === true || data.selfVideoEditingEnabled === false;
+          try {
+            localStorage.setItem('sigma_hide_self_video_editor', isHidden.toString());
+            localStorage.setItem('sigma_self_video_editing_enabled', (!isHidden).toString());
+          } catch (e) {
+            // ignore
+          }
+        }
+      }
       checkLoaded();
     }, () => checkLoaded());
 

@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from 'react';
-import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc } from 'firebase/firestore';
+import { collection, query, onSnapshot, addDoc, updateDoc, deleteDoc, doc, setDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Plus, Trash2, Edit, Save, X, Settings } from 'lucide-react';
+import { Plus, Trash2, Edit, Save, X, Settings, Eye, EyeOff, CheckCircle2, AlertCircle } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { storage } from '../../lib/firebase';
 import { ref, uploadBytes, getDownloadURL } from 'firebase/storage';
@@ -10,10 +10,58 @@ export default function ManageSelfVideoTemplates() {
   const [templates, setTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [editingTemplate, setEditingTemplate] = useState<any | null>(null);
+  const [isToolEnabled, setIsToolEnabled] = useState(true);
+  const [updatingVisibility, setUpdatingVisibility] = useState(false);
   const videoRef = useRef<HTMLVideoElement>(null);
   const containerRef = useRef<HTMLDivElement>(null);
   const [videoTime, setVideoTime] = useState(0);
   const [draggingId, setDraggingId] = useState<string | null>(null);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "settings", "config"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const enabled = data.selfVideoEditingEnabled !== false && !data.hideSelfVideoEditor;
+        setIsToolEnabled(enabled);
+        try {
+          localStorage.setItem('sigma_hide_self_video_editor', (!enabled).toString());
+          localStorage.setItem('sigma_self_video_editing_enabled', enabled.toString());
+        } catch (e) {
+          // ignore
+        }
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const toggleToolVisibility = async () => {
+    setUpdatingVisibility(true);
+    const newStatus = !isToolEnabled;
+    setIsToolEnabled(newStatus);
+    try {
+      localStorage.setItem('sigma_hide_self_video_editor', (!newStatus).toString());
+      localStorage.setItem('sigma_self_video_editing_enabled', newStatus.toString());
+      await setDoc(
+        doc(db, "settings", "config"),
+        {
+          selfVideoEditingEnabled: newStatus,
+          hideSelfVideoEditor: !newStatus,
+        },
+        { merge: true }
+      );
+      if (newStatus) {
+        toast.success("Self Video Editing section is now LIVE on the website!");
+      } else {
+        toast.success("Self Video Editing section is now completely HIDDEN from the website.");
+      }
+    } catch (err) {
+      console.error("Failed to toggle tool visibility:", err);
+      toast.error("Failed to update visibility");
+      setIsToolEnabled(!newStatus);
+    } finally {
+      setUpdatingVisibility(false);
+    }
+  };
 
   useEffect(() => {
     const video = videoRef.current;
@@ -158,12 +206,82 @@ export default function ManageSelfVideoTemplates() {
 
   return (
     <div className="p-6 text-brand-navy">
-      <div className="flex justify-between items-center mb-6">
-        <h1 className="text-2xl font-bold">Self Video Editor Templates</h1>
-        <button onClick={createNewTemplate} className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl flex items-center gap-2">
-          <Plus className="w-4 h-4" /> Create New
-        </button>
+      <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-6">
+        <div>
+          <h1 className="text-2xl font-bold">Self Video Editor Templates</h1>
+          <p className="text-sm text-gray-500 mt-0.5">Configure live text-replacement video templates & control section visibility.</p>
+        </div>
+        <div className="flex items-center gap-3 flex-wrap">
+          {/* Hide & Unhide Button for Self Video Editing Tool */}
+          <button
+            onClick={toggleToolVisibility}
+            disabled={updatingVisibility}
+            className={`px-4 py-2.5 rounded-xl flex items-center gap-2 font-medium text-sm transition-all shadow-sm ${
+              isToolEnabled
+                ? 'bg-emerald-50 text-emerald-700 border border-emerald-300 hover:bg-emerald-100 hover:shadow'
+                : 'bg-rose-50 text-rose-700 border border-rose-300 hover:bg-rose-100 hover:shadow'
+            }`}
+            title={isToolEnabled ? "Click to completely hide this section from website" : "Click to make this section visible on website"}
+          >
+            {isToolEnabled ? (
+              <>
+                <Eye className="w-4 h-4 text-emerald-600" />
+                <span className="font-semibold">Tool is Live (Click to Hide)</span>
+              </>
+            ) : (
+              <>
+                <EyeOff className="w-4 h-4 text-rose-600" />
+                <span className="font-semibold">Tool is Hidden (Click to Unhide)</span>
+              </>
+            )}
+          </button>
+
+          <button onClick={createNewTemplate} className="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2.5 rounded-xl flex items-center gap-2 text-sm font-medium shadow-sm transition-colors">
+            <Plus className="w-4 h-4" /> Create New
+          </button>
+        </div>
       </div>
+
+      {/* Visibility Status Alert Banner */}
+      {!isToolEnabled ? (
+        <div className="mb-6 p-4 rounded-2xl bg-rose-50 border border-rose-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-rose-100 text-rose-600 flex items-center justify-center flex-shrink-0">
+              <EyeOff className="w-5 h-5" />
+            </div>
+            <div>
+              <h3 className="font-bold text-rose-900 text-sm flex items-center gap-1.5">
+                Self Video Editing Section is Hidden
+                <span className="text-[10px] bg-rose-200 text-rose-800 px-2 py-0.5 rounded-full font-bold uppercase">Disabled on Website</span>
+              </h3>
+              <p className="text-xs text-rose-700 mt-0.5">The entire self video editing section is currently hidden from the website. Visitors cannot see or use it.</p>
+            </div>
+          </div>
+          <button
+            onClick={toggleToolVisibility}
+            disabled={updatingVisibility}
+            className="px-4 py-2 bg-emerald-600 hover:bg-emerald-700 text-white rounded-xl text-xs font-bold whitespace-nowrap shadow-sm self-start sm:self-auto flex items-center gap-1.5 transition-colors"
+          >
+            <Eye className="w-3.5 h-3.5" /> Unhide Section Now
+          </button>
+        </div>
+      ) : (
+        <div className="mb-6 p-3.5 rounded-2xl bg-emerald-50/80 border border-emerald-200/80 flex items-center justify-between gap-3 shadow-xs">
+          <div className="flex items-center gap-2.5">
+            <div className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse flex-shrink-0"></div>
+            <span className="text-xs text-emerald-800 font-medium">
+              The Self Video Editing section is currently <strong className="font-bold text-emerald-950">Active & Live</strong> on the website.
+            </span>
+          </div>
+          <button
+            onClick={toggleToolVisibility}
+            disabled={updatingVisibility}
+            className="text-xs font-bold text-rose-600 hover:text-rose-800 flex items-center gap-1"
+          >
+            <EyeOff className="w-3.5 h-3.5" /> Hide from Website
+          </button>
+        </div>
+      )}
 
       {editingTemplate ? (
         <div className="bg-white p-6 rounded-2xl shadow-sm border border-gray-100">

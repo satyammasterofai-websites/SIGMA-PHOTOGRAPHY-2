@@ -10,6 +10,10 @@ import {
   Tag,
   Users,
   Settings,
+  Eye,
+  EyeOff,
+  Video,
+  Clock,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useChatSound } from "../../hooks/useChatSound";
@@ -26,6 +30,8 @@ export default function ManageSettings() {
 
   // General State
   const [baseOnlineUsers, setBaseOnlineUsers] = useState(50);
+  const [selfVideoEditingEnabled, setSelfVideoEditingEnabled] = useState(true);
+  const [timelineVisibility, setTimelineVisibility] = useState<"admin" | "public" | "hidden">("admin");
   
   // Chat State
   const [welcomeMessage, setWelcomeMessage] = useState("Hello! How can we help you today?");
@@ -54,6 +60,21 @@ export default function ManageSettings() {
       if (doc.exists()) {
         const data = doc.data();
         setBaseOnlineUsers(data.baseOnlineUsers || 50);
+        const isEnabled = data.selfVideoEditingEnabled !== false && !data.hideSelfVideoEditor;
+        setSelfVideoEditingEnabled(isEnabled);
+        try {
+          localStorage.setItem('sigma_hide_self_video_editor', (!isEnabled).toString());
+          localStorage.setItem('sigma_self_video_editing_enabled', isEnabled.toString());
+        } catch (e) {
+          // ignore
+        }
+        if (data.timelineVisibility) {
+          setTimelineVisibility(data.timelineVisibility);
+        } else if (data.showTimelineToPublic) {
+          setTimelineVisibility("public");
+        } else if (data.hideTimeline) {
+          setTimelineVisibility("hidden");
+        }
         setWaNumber(data.whatsapp?.number || "9162478070");
         setWaMessageFormat(
           data.whatsapp?.messageFormat ||
@@ -76,6 +97,11 @@ export default function ManageSettings() {
         doc(db, "settings", "config"),
         {
           baseOnlineUsers: Number(baseOnlineUsers),
+          selfVideoEditingEnabled,
+          hideSelfVideoEditor: !selfVideoEditingEnabled,
+          timelineVisibility,
+          showTimelineToPublic: timelineVisibility === "public",
+          hideTimeline: timelineVisibility === "hidden",
           whatsapp: {
             number: waNumber,
             messageFormat: waMessageFormat,
@@ -91,6 +117,32 @@ export default function ManageSettings() {
       toast.success("Settings saved successfully");
     } catch (e) {
       toast.error("Failed to save settings");
+    }
+  };
+
+  const toggleSelfVideoTool = async () => {
+    const next = !selfVideoEditingEnabled;
+    setSelfVideoEditingEnabled(next);
+    try {
+      localStorage.setItem('sigma_hide_self_video_editor', (!next).toString());
+      localStorage.setItem('sigma_self_video_editing_enabled', next.toString());
+      await setDoc(
+        doc(db, "settings", "config"),
+        {
+          selfVideoEditingEnabled: next,
+          hideSelfVideoEditor: !next,
+        },
+        { merge: true }
+      );
+      if (next) {
+        toast.success("Self Video Editing section is now LIVE on website!");
+      } else {
+        toast.success("Self Video Editing section is now completely HIDDEN from website.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to update visibility");
+      setSelfVideoEditingEnabled(!next);
     }
   };
 
@@ -176,6 +228,116 @@ export default function ManageSettings() {
       <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 md:p-8">
         {activeTab === "general" && (
           <div className="space-y-6 max-w-2xl">
+            {/* Self Video Editing Tool Visibility Toggle */}
+            <div className="pb-6 border-b border-gray-800 bg-gray-800/40 p-5 rounded-2xl border border-gray-700/50">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Video className="w-5 h-5 text-indigo-400" />
+                    <label className="text-base font-bold text-white">
+                      Self Video Editing Tool (Website Section)
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 max-w-lg">
+                    Show or completely hide the self video editing interactive tool from the website and homepage. When hidden, visitors will not see or access this section at all.
+                  </p>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    {selfVideoEditingEnabled ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <Eye className="w-3.5 h-3.5" /> Tool is LIVE on Website
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                        <EyeOff className="w-3.5 h-3.5" /> Tool is COMPLETELY HIDDEN
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={toggleSelfVideoTool}
+                  className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-sm shrink-0 self-start sm:self-auto cursor-pointer ${
+                    selfVideoEditingEnabled
+                      ? "bg-rose-600 hover:bg-rose-700 text-white"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  }`}
+                >
+                  {selfVideoEditingEnabled ? (
+                    <>
+                      <EyeOff className="w-4 h-4" /> Hide from Website
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4" /> Unhide to Website
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
+            {/* Template Timeline & Date Visibility Card */}
+            <div className="pb-6 border-b border-gray-800 bg-gray-800/40 p-5 rounded-2xl border border-gray-700/50">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Clock className="w-5 h-5 text-purple-400" />
+                    <label className="text-base font-bold text-white">
+                      Template Timeline & Creation Date/Time Visibility
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 max-w-lg">
+                    Control who can see the timeline filter column (All Releases, Newly Created, This Week, This Month) and template creation timestamps on the template selection page.
+                  </p>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    {timelineVisibility === "public" ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <Eye className="w-3.5 h-3.5" /> Visible to All Visitors (Public)
+                      </span>
+                    ) : timelineVisibility === "hidden" ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                        <EyeOff className="w-3.5 h-3.5" /> Completely Hidden
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                        <Eye className="w-3.5 h-3.5" /> Admin Only (Default - Hidden from Visitors)
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <div className="flex items-center gap-2 shrink-0">
+                  <select
+                    value={timelineVisibility}
+                    onChange={async (e) => {
+                      const val = e.target.value as any;
+                      setTimelineVisibility(val);
+                      localStorage.setItem("sigma_timeline_visibility", val);
+                      try {
+                        await setDoc(
+                          doc(db, "settings", "config"),
+                          {
+                            timelineVisibility: val,
+                            showTimelineToPublic: val === "public",
+                            hideTimeline: val === "hidden",
+                          },
+                          { merge: true }
+                        );
+                        toast.success(`Timeline visibility updated to ${val}`);
+                      } catch (err) {
+                        toast.error("Failed to update visibility");
+                      }
+                    }}
+                    className="bg-gray-900 border border-gray-700 text-white text-xs font-bold rounded-xl px-3 py-2.5 focus:outline-none focus:ring-2 focus:ring-purple-500 cursor-pointer"
+                  >
+                    <option value="admin">Admin Only (Default)</option>
+                    <option value="public">Unhide for Public (All Visitors)</option>
+                    <option value="hidden">Hide Completely</option>
+                  </select>
+                </div>
+              </div>
+            </div>
+
             <div className="pb-6 border-b border-gray-800">
               <label className="block text-sm font-medium text-gray-300 mb-2">
                 Base Online Users (Default is 50)

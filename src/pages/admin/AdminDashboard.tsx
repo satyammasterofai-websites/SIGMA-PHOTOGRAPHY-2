@@ -3,10 +3,11 @@ import { Routes, Route, Link, useNavigate, useLocation } from 'react-router-dom'
 import { useAuthStore } from '../../store/useAuthStore';
 import { auth, db } from '../../lib/firebase';
 import { signOut } from 'firebase/auth';
-import { getDocs, collection } from 'firebase/firestore';
+import { getDocs, collection, doc, onSnapshot, setDoc } from 'firebase/firestore';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts';
 import { LayoutDashboard, Users, ShoppingBag, Images, FileEdit, 
-  MessageSquare, HelpCircle, Bell, Settings, LogOut, Menu, X, ShieldAlert, ArrowLeft 
+  MessageSquare, HelpCircle, Bell, Settings, LogOut, Menu, X, ShieldAlert, ArrowLeft,
+  Eye, EyeOff
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TemplateManagement from './TemplateManagement';
@@ -35,6 +36,18 @@ export default function AdminDashboardLayout() {
   const navigate = useNavigate();
   const location = useLocation();
   const { unreadCount } = useChatStore();
+  const [isSelfVideoLive, setIsSelfVideoLive] = useState(true);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "settings", "config"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const enabled = data.selfVideoEditingEnabled !== false && !data.hideSelfVideoEditor;
+        setIsSelfVideoLive(enabled);
+      }
+    });
+    return () => unsub();
+  }, []);
 
   const handleLogout = async () => {
     try {
@@ -109,6 +122,15 @@ export default function AdminDashboardLayout() {
                   {item.name === 'Customers' && unreadCount > 0 && (
                     <span className="ml-auto bg-brand-rose text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
                       {unreadCount}
+                    </span>
+                  )}
+                  {item.name === 'Video Editor' && (
+                    <span className={`ml-auto text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                      isSelfVideoLive 
+                        ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                        : 'bg-rose-100 text-rose-800 border border-rose-200'
+                    }`}>
+                      {isSelfVideoLive ? 'Live' : 'Hidden'}
                     </span>
                   )}
                 </Link>
@@ -196,6 +218,48 @@ function AdminHome() {
   const [templateStats, setTemplateStats] = useState<{name: string, count: number}[]>([]);
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const [templateMap, setTemplateMap] = useState<Record<string, string>>({});
+  const [isSelfVideoLive, setIsSelfVideoLive] = useState(true);
+  const [togglingSelfVideo, setTogglingSelfVideo] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "settings", "config"), (docSnap) => {
+      if (docSnap.exists()) {
+        const data = docSnap.data();
+        const enabled = data.selfVideoEditingEnabled !== false && !data.hideSelfVideoEditor;
+        setIsSelfVideoLive(enabled);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const toggleSelfVideoVisibility = async () => {
+    setTogglingSelfVideo(true);
+    const newStatus = !isSelfVideoLive;
+    setIsSelfVideoLive(newStatus);
+    try {
+      localStorage.setItem('sigma_hide_self_video_editor', (!newStatus).toString());
+      localStorage.setItem('sigma_self_video_editing_enabled', newStatus.toString());
+      await setDoc(
+        doc(db, "settings", "config"),
+        {
+          selfVideoEditingEnabled: newStatus,
+          hideSelfVideoEditor: !newStatus,
+        },
+        { merge: true }
+      );
+      if (newStatus) {
+        toast.success("Self Video Editing section is now LIVE on website!");
+      } else {
+        toast.success("Self Video Editing section is now completely HIDDEN from website.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to update visibility");
+      setIsSelfVideoLive(!newStatus);
+    } finally {
+      setTogglingSelfVideo(false);
+    }
+  };
 
   const formatDate = (val: any) => {
      if (!val) return new Date().toLocaleDateString();
@@ -297,6 +361,59 @@ function AdminHome() {
       <div className="mb-8">
          <h1 className="text-2xl md:text-3xl font-display font-bold text-brand-navy">Dashboard Overview</h1>
          <p className="text-brand-slate mt-1">Real-time stats and metrics for SIGMAPHOTOGRAPHY.</p>
+      </div>
+
+      {/* Quick Self Video Editing Tool Visibility Control Card */}
+      <div className="mb-8 bg-white/80 backdrop-blur-sm border border-brand-purple/10 rounded-2xl p-5 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+        <div className="flex items-center gap-3.5">
+          <div className={`w-12 h-12 rounded-xl flex items-center justify-center shrink-0 ${
+            isSelfVideoLive ? 'bg-emerald-500/10 text-emerald-600' : 'bg-rose-500/10 text-rose-600'
+          }`}>
+            <FileEdit className="w-6 h-6" />
+          </div>
+          <div>
+            <div className="flex flex-wrap items-center gap-2">
+              <h3 className="font-bold text-brand-navy text-base">Self Video Editing Tool</h3>
+              <span className={`text-[10px] font-bold uppercase tracking-wider px-2.5 py-0.5 rounded-full ${
+                isSelfVideoLive 
+                  ? 'bg-emerald-100 text-emerald-800 border border-emerald-200' 
+                  : 'bg-rose-100 text-rose-800 border border-rose-200'
+              }`}>
+                {isSelfVideoLive ? 'Currently Live on Website' : 'Completely Hidden from Website'}
+              </span>
+            </div>
+            <p className="text-xs text-brand-slate mt-1">
+              {isSelfVideoLive 
+                ? 'The self video editing interactive tool is active on the homepage for all visitors.'
+                : 'The self video editing section is completely hidden from visitors across the website.'}
+            </p>
+          </div>
+        </div>
+        <div className="flex items-center gap-2.5 self-end md:self-auto shrink-0">
+          <Link
+            to="/admin/video-editor"
+            className="px-3.5 py-2 text-xs font-semibold rounded-xl bg-gray-100 text-gray-700 hover:bg-gray-200 transition-colors"
+          >
+            Manage Templates
+          </Link>
+          <button
+            onClick={toggleSelfVideoVisibility}
+            disabled={togglingSelfVideo}
+            className={`px-4 py-2 text-xs font-bold rounded-xl text-white shadow-xs transition-colors flex items-center gap-1.5 cursor-pointer ${
+              isSelfVideoLive ? 'bg-rose-600 hover:bg-rose-700' : 'bg-emerald-600 hover:bg-emerald-700'
+            }`}
+          >
+            {isSelfVideoLive ? (
+              <>
+                <EyeOff className="w-3.5 h-3.5" /> Hide from Website
+              </>
+            ) : (
+              <>
+                <Eye className="w-3.5 h-3.5" /> Unhide to Website
+              </>
+            )}
+          </button>
+        </div>
       </div>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-6 mb-8">

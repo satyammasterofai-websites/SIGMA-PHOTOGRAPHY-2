@@ -3,6 +3,7 @@ import { collection, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../lib/firebase';
 import { Play, Pause, RotateCcw, Maximize, Download, X, Edit3 } from 'lucide-react';
 import { motion, AnimatePresence } from 'motion/react';
+import { useSiteContent } from '../hooks/useSiteContent';
 
 
 const FILTERS = [
@@ -14,6 +15,19 @@ const FILTERS = [
 ];
 
 export default function SelfVideoEditing() {
+  const { settings } = useSiteContent();
+  const isLocallyHidden = typeof window !== 'undefined' && localStorage.getItem('sigma_hide_self_video_editor') === 'true';
+  const isLocallyEnabled = typeof window !== 'undefined' && localStorage.getItem('sigma_self_video_editing_enabled') === 'true';
+
+  let isVisible = true;
+  if (settings) {
+    isVisible = settings.selfVideoEditingEnabled !== false && !settings.hideSelfVideoEditor;
+  } else if (isLocallyHidden) {
+    isVisible = false;
+  } else if (isLocallyEnabled) {
+    isVisible = true;
+  }
+
   const [templates, setTemplates] = useState<any[]>([]);
   const [selectedTemplate, setSelectedTemplate] = useState<any | null>(null);
   const [userTexts, setUserTexts] = useState<Record<string, string>>({});
@@ -27,13 +41,18 @@ export default function SelfVideoEditing() {
   const containerRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
+    if (!isVisible) return;
     const fetchTemplates = async () => {
       const q = query(collection(db, 'settings', 'data', 'selfVideoTemplates'), where('published', '==', true));
       const snap = await getDocs(q);
       setTemplates(snap.docs.map(d => ({ id: d.id, ...d.data() })));
     };
     fetchTemplates();
-  }, []);
+  }, [isVisible]);
+
+  if (!isVisible) {
+    return null;
+  }
 
   const openEditor = (template: any) => {
     const defaultTexts: Record<string, string> = {};

@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import confetti from "canvas-confetti";
-import { collection, getDocs, query, where } from "firebase/firestore";
+import { collection, getDocs, query, where, doc, setDoc } from "firebase/firestore";
 import { db } from "../lib/firebase";
 import Navbar from "../components/Navbar";
 import Footer from "../components/Footer";
@@ -18,6 +18,8 @@ import {
   ExternalLink,
   Layers,
   ArrowRight,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { useNavigate, useLocation } from "react-router-dom";
 import VideoModal from "../components/VideoModal";
@@ -45,9 +47,65 @@ export default function PremiumGallery() {
   const queryParams = new URLSearchParams(location.search);
   const initialCategory = queryParams.get("category") || "All";
 
-  const { user } = useAuthStore();
+  const { user, role } = useAuthStore();
   const { categories: cmsCategories, settings, loading: cmsLoading } = useSiteContent();
   const [onlineUsersCount, setOnlineUsersCount] = useState(50);
+
+  const isAdmin =
+    role === "admin" ||
+    (user?.email &&
+      [
+        "satyammasterofai@gmail.com",
+        "jhahimanshukumar87@gmail.com",
+        "sigmaphotography0001@gmail.com",
+      ].includes(user.email.toLowerCase()));
+
+  // Timeline visibility: "admin" (default: only admin sees timeline and dates), "public" (unhidden for all), "hidden" (hidden completely)
+  const [timelineVisibility, setTimelineVisibility] = useState<"admin" | "public" | "hidden">("admin");
+
+  useEffect(() => {
+    if (settings?.timelineVisibility) {
+      setTimelineVisibility(settings.timelineVisibility);
+    } else if (settings?.showTimelineToPublic) {
+      setTimelineVisibility("public");
+    } else if (settings?.hideTimeline) {
+      setTimelineVisibility("hidden");
+    } else {
+      const saved = localStorage.getItem("sigma_timeline_visibility");
+      if (saved === "public" || saved === "hidden" || saved === "admin") {
+        setTimelineVisibility(saved as any);
+      }
+    }
+  }, [settings]);
+
+  const handleUpdateTimelineVisibility = async (newVal: "admin" | "public" | "hidden") => {
+    setTimelineVisibility(newVal);
+    try {
+      localStorage.setItem("sigma_timeline_visibility", newVal);
+      await setDoc(
+        doc(db, "settings", "config"),
+        {
+          timelineVisibility: newVal,
+          showTimelineToPublic: newVal === "public",
+          hideTimeline: newVal === "hidden",
+        },
+        { merge: true }
+      );
+      if (newVal === "public") {
+        toast.success("Timeline filter & dates unhidden for all visitors!");
+      } else if (newVal === "hidden") {
+        toast.success("Timeline filter & dates completely hidden.");
+      } else {
+        toast.success("Timeline filter & dates set to Admin-Only (Default).");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to update visibility");
+    }
+  };
+
+  const isTimelineVisible =
+    timelineVisibility === "public" || (isAdmin && timelineVisibility !== "hidden");
 
   const [templates, setTemplates] = useState<any[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<any[]>([]);
@@ -178,25 +236,122 @@ export default function PremiumGallery() {
 
   const newlyCreatedTemplates = templates.filter(t => isNewlyCreated(t.createdAt, 7));
 
-  const renderTemplateCard = (template: any) => {
+    const renderTemplateCard = (template: any) => {
     const isWebsite = (template.category || '').toLowerCase() === 'website invitation' || !!template.websiteUrl;
     const isNew = isNewlyCreated(template.createdAt);
+
+    if (isWebsite) {
+      return (
+        <div
+          key={template.id}
+          className="bg-white/80 backdrop-blur-sm rounded-3xl p-5 overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all border border-purple-200/60 group flex flex-col break-inside-avoid mb-8"
+        >
+          {/* Realistic Mobile Phone Frame Mockup */}
+          <div className="relative mx-auto w-[220px] sm:w-[240px] aspect-[9/18] bg-neutral-900 rounded-[2.5rem] p-2.5 shadow-xl border-[3px] border-neutral-700 ring-1 ring-black/40 flex flex-col group select-none">
+            {/* Top Dynamic Island / Notch */}
+            <div className="absolute top-3 left-1/2 -translate-x-1/2 w-16 h-3.5 bg-black rounded-full z-20 flex items-center justify-center pointer-events-none">
+              <div className="w-2 h-2 rounded-full bg-neutral-800 border border-neutral-700/50"></div>
+            </div>
+
+            {/* Inner Phone Screen with A4 Thumbnail */}
+            <div className="relative w-full h-full bg-neutral-50 rounded-[2rem] overflow-hidden flex flex-col shadow-inner">
+              {/* Status Bar */}
+              <div className="h-5 w-full flex items-center justify-between px-4 pt-1 text-[9px] text-gray-800 font-bold z-10 pointer-events-none">
+                <span>9:41</span>
+                <div className="flex items-center gap-1">
+                  <span className="text-[8px] font-semibold">5G</span>
+                  <div className="w-3.5 h-1.5 border border-gray-800 rounded-2xs p-0.5">
+                    <div className="w-full h-full bg-gray-800 rounded-3xs"></div>
+                  </div>
+                </div>
+              </div>
+
+              {/* Thumbnail */}
+              <div className="relative flex-1 overflow-hidden bg-white flex items-center justify-center">
+                <img
+                  src={template.thumbnailBase64 || template.image}
+                  alt={template.title}
+                  className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+                />
+                {/* Live Badge Overlay */}
+                <div className="absolute top-2 right-2 bg-purple-600/90 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1 pointer-events-none">
+                  <Globe className="w-2.5 h-2.5" /> Live Site
+                </div>
+
+                {/* Quick Interactive Hover Preview Overlay */}
+                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-xs text-white p-3 text-center">
+                  <Globe className="w-7 h-7 text-white mb-1.5 animate-bounce" />
+                  <span className="text-[11px] font-bold bg-white text-gray-900 px-3 py-1 rounded-full shadow-md">
+                    Click Preview Below ↗
+                  </span>
+                </div>
+              </div>
+
+              {/* Bottom Home Indicator */}
+              <div className="h-3 w-full flex items-center justify-center pointer-events-none">
+                <div className="w-20 h-1 bg-neutral-400 rounded-full"></div>
+              </div>
+            </div>
+
+            {/* Hardware buttons */}
+            <div className="absolute -left-[5px] top-14 w-[3px] h-6 bg-neutral-600 rounded-l-xs pointer-events-none"></div>
+            <div className="absolute -left-[5px] top-22 w-[3px] h-6 bg-neutral-600 rounded-l-xs pointer-events-none"></div>
+            <div className="absolute -right-[5px] top-18 w-[3px] h-9 bg-neutral-600 rounded-r-xs pointer-events-none"></div>
+          </div>
+
+          {/* Template Info & Fixed Buttons */}
+          <div className="mt-4 flex flex-col flex-1">
+            <h3 className="font-display font-bold text-lg text-gray-900 line-clamp-1 mb-1" title={template.title}>
+              {template.title}
+            </h3>
+
+            {/* Date & Time note (Only shown when timeline is visible) */}
+            {isTimelineVisible && (
+              <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-2">
+                <Calendar className="w-3.5 h-3.5 text-purple-600/70" />
+                <span>Created: {formatTemplateDateTime(template.createdAt)}</span>
+              </div>
+            )}
+
+            <div className="mt-auto pt-3 border-t border-purple-100 flex items-center justify-between">
+              <span className="text-lg font-black text-gray-900">
+                ₹{template.discountPrice || template.price}
+              </span>
+
+              <div className="flex items-center gap-2">
+                {template.websiteUrl && (
+                  <button
+                    onClick={() => window.open(template.websiteUrl, '_blank', 'noopener,noreferrer')}
+                    className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold rounded-xl text-xs transition-colors flex items-center gap-1 border border-purple-200 cursor-pointer"
+                    title="Open live preview website"
+                  >
+                    <Globe className="w-3.5 h-3.5" /> Preview ↗
+                  </button>
+                )}
+                <button
+                  onClick={() => navigate(`/checkout/${template.id}`)}
+                  className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm flex items-center gap-1 cursor-pointer"
+                >
+                  <ShoppingBag className="w-3.5 h-3.5" /> Order
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+      );
+    }
 
     return (
       <div
         key={template.id}
         className="bg-white rounded-2xl overflow-hidden shadow-sm hover:shadow-xl hover:-translate-y-1 transition-all border border-gray-100 group flex flex-col break-inside-avoid mb-8"
       >
-        <div className={`relative overflow-hidden bg-gray-100 flex items-center justify-center ${
-          isWebsite ? 'aspect-[1/1.414]' : ''
-        }`}>
+        <div className="relative overflow-hidden bg-gray-100 flex items-center justify-center">
           {template.thumbnailBase64 || template.image ? (
             <img
               src={template.thumbnailBase64 || template.image}
               alt={template.title}
-              className={`w-full h-auto object-contain bg-white ${
-                isWebsite ? 'max-h-[420px]' : ''
-              }`}
+              className="w-full h-auto object-contain bg-white"
             />
           ) : (
             <div className="w-full aspect-video flex items-center justify-center text-gray-400">
@@ -206,7 +361,7 @@ export default function PremiumGallery() {
 
           {/* Badges */}
           <div className="absolute top-3 left-3 z-20 flex flex-col gap-1.5 pointer-events-none">
-            {isNew && (
+            {isTimelineVisible && isNew && (
               <span className="bg-gradient-to-r from-emerald-500 to-teal-500 text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1">
                 <Sparkles className="w-3 h-3" /> Newly Added
               </span>
@@ -218,38 +373,17 @@ export default function PremiumGallery() {
             )}
           </div>
 
-          {isWebsite && (
-            <div className="absolute top-3 right-3 z-20 bg-purple-600/90 backdrop-blur-md text-white text-[11px] font-bold px-2.5 py-1 rounded-full shadow-lg flex items-center gap-1 pointer-events-none">
-              <Globe className="w-3 h-3" /> Website Invitation
-            </div>
-          )}
-
-          {/* Website Invitation Live Redirect Button OR Video Modal Button */}
-          {isWebsite && template.websiteUrl ? (
-            <button
-              onClick={(e) => {
-                e.stopPropagation();
-                window.open(template.websiteUrl, '_blank', 'noopener,noreferrer');
-              }}
-              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-sm z-10 w-full text-white cursor-pointer"
-            >
-              <div className="w-16 h-16 bg-purple-600/90 backdrop-blur border border-white/40 rounded-full flex items-center justify-center text-white transform scale-90 group-hover:scale-100 transition-transform shadow-xl mb-2">
-                <Globe className="w-8 h-8" />
-              </div>
-              <span className="text-xs font-bold bg-black/60 px-3.5 py-1.5 rounded-full flex items-center gap-1.5 shadow-md">
-                Preview Live Website <ExternalLink className="w-3.5 h-3.5" />
-              </span>
-            </button>
-          ) : template.videoUrl ? (
+          {/* Video Modal Button */}
+          {template.videoUrl && (
             <button
               onClick={() => setActiveVideo(template.videoUrl)}
-              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm z-10 w-full"
+              className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center backdrop-blur-sm z-10 w-full cursor-pointer"
             >
               <div className="w-16 h-16 bg-white/20 backdrop-blur border border-white/40 rounded-full flex items-center justify-center text-white transform scale-90 group-hover:scale-100 transition-transform">
                 <Play className="w-8 h-8 fill-white" />
               </div>
             </button>
-          ) : null}
+          )}
         </div>
 
         <div className="p-6 flex flex-col flex-1">
@@ -259,11 +393,13 @@ export default function PremiumGallery() {
             </h3>
           </div>
 
-          {/* Time & Date note on all templates */}
-          <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
-            <Calendar className="w-3.5 h-3.5 text-brand-purple/70" />
-            <span>Created: {formatTemplateDateTime(template.createdAt)}</span>
-          </div>
+          {/* Time & Date note on templates - Only visible when isTimelineVisible is true */}
+          {isTimelineVisible && (
+            <div className="flex items-center gap-1.5 text-xs text-gray-500 mb-3">
+              <Calendar className="w-3.5 h-3.5 text-brand-purple/70" />
+              <span>Created: {formatTemplateDateTime(template.createdAt)}</span>
+            </div>
+          )}
 
           <div className="mt-auto pt-4 border-t border-gray-100 flex items-center justify-between">
             <div>
@@ -288,20 +424,11 @@ export default function PremiumGallery() {
             </div>
 
             <div className="flex items-center gap-2">
-              {isWebsite && template.websiteUrl && (
-                <button
-                  onClick={() => window.open(template.websiteUrl, '_blank', 'noopener,noreferrer')}
-                  className="px-3 py-2 bg-purple-50 hover:bg-purple-100 text-purple-700 font-semibold rounded-xl text-xs transition-colors flex items-center gap-1 border border-purple-200"
-                  title="Redirect to live preview website"
-                >
-                  <Globe className="w-3.5 h-3.5" /> Preview ↗
-                </button>
-              )}
               <button
                 onClick={() => navigate(`/template/${template.id}`)}
-                className="px-5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-white font-medium rounded-xl transition-colors shadow-md text-sm"
+                className="px-5 py-2 bg-brand-purple hover:bg-brand-purple/90 text-white font-medium rounded-xl transition-colors shadow-md text-sm cursor-pointer"
               >
-                {isWebsite ? "Order Site" : "View Details"}
+                View Details
               </button>
             </div>
           </div>
@@ -352,6 +479,63 @@ export default function PremiumGallery() {
             </p>
           </div>
 
+          {/* Admin Timeline & Date Visibility Controls */}
+          {isAdmin && (
+            <div className="mb-8 p-4 md:p-5 rounded-3xl bg-neutral-900 text-white border border-purple-500/40 flex flex-col sm:flex-row sm:items-center justify-between gap-4 shadow-xl">
+              <div className="flex items-center gap-3.5">
+                <div className="w-11 h-11 rounded-2xl bg-purple-500/20 text-purple-400 flex items-center justify-center shrink-0 border border-purple-500/30">
+                  <Clock className="w-5 h-5" />
+                </div>
+                <div>
+                  <div className="flex flex-wrap items-center gap-2">
+                    <span className="text-xs font-bold uppercase tracking-wider text-purple-300">Admin Control</span>
+                    <span className={`text-[11px] font-bold px-2.5 py-0.5 rounded-full ${
+                      timelineVisibility === 'public'
+                        ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/40'
+                        : timelineVisibility === 'hidden'
+                        ? 'bg-rose-500/20 text-rose-300 border border-rose-500/40'
+                        : 'bg-amber-500/20 text-amber-300 border border-amber-500/40'
+                    }`}>
+                      {timelineVisibility === 'public' ? 'Timeline: Public (Visible to Visitors)' : timelineVisibility === 'hidden' ? 'Timeline: Completely Hidden' : 'Timeline: Admin Only (Default)'}
+                    </span>
+                  </div>
+                  <p className="text-xs text-neutral-300 mt-1">
+                    {timelineVisibility === 'public'
+                      ? 'Visitors can currently see the timeline filter column and template creation date/time.'
+                      : timelineVisibility === 'hidden'
+                      ? 'The timeline filter column and template creation date/time are completely hidden from all users.'
+                      : 'Only you (admin) can see the timeline filter column and template creation timestamps.'}
+                  </p>
+                </div>
+              </div>
+
+              <div className="flex items-center gap-2 self-end sm:self-auto shrink-0">
+                {timelineVisibility !== 'public' ? (
+                  <button
+                    onClick={() => handleUpdateTimelineVisibility('public')}
+                    className="px-4 py-2 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                  >
+                    <Eye className="w-3.5 h-3.5" /> Unhide for Public
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleUpdateTimelineVisibility('admin')}
+                    className="px-4 py-2 rounded-xl bg-amber-600 hover:bg-amber-700 text-white text-xs font-bold flex items-center gap-1.5 transition-colors cursor-pointer shadow-sm"
+                  >
+                    <EyeOff className="w-3.5 h-3.5" /> Set Admin-Only
+                  </button>
+                )}
+
+                <button
+                  onClick={() => handleUpdateTimelineVisibility(timelineVisibility === 'hidden' ? 'admin' : 'hidden')}
+                  className="px-4 py-2 rounded-xl bg-neutral-800 hover:bg-neutral-700 text-neutral-200 border border-neutral-700 text-xs font-semibold transition-colors cursor-pointer"
+                >
+                  {timelineVisibility === 'hidden' ? 'Unhide Timeline' : 'Hide Completely'}
+                </button>
+              </div>
+            </div>
+          )}
+
           {/* Search and Filters */}
           <div className="flex flex-col gap-6 mb-8">
             <div className="flex flex-col md:flex-row gap-4">
@@ -381,7 +565,9 @@ export default function PremiumGallery() {
                   onChange={(e) => setSortOrder(e.target.value as any)}
                   className="h-full bg-white border border-gray-200 rounded-xl px-4 py-4 focus:outline-none focus:ring-2 focus:ring-brand-purple shadow-sm font-medium text-gray-700"
                 >
-                  <option value="newest">✨ Newest First (Recently Added)</option>
+                  <option value="newest">
+                    {isTimelineVisible ? "✨ Newest First (Recently Added)" : "Newest First"}
+                  </option>
                   <option value="oldest">Oldest First</option>
                   <option value="priceAsc">Price: Low to High</option>
                   <option value="priceDesc">Price: High to Low</option>
@@ -389,59 +575,61 @@ export default function PremiumGallery() {
               </div>
             </div>
 
-            {/* Time-wise separation filter bar */}
-            <div className="bg-white/70 backdrop-blur-md p-2 rounded-2xl border border-brand-rose/20 shadow-sm flex flex-wrap items-center justify-between gap-3">
-              <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
-                <span className="text-xs font-bold text-gray-500 uppercase tracking-wider pl-2 flex items-center gap-1">
-                  <Clock className="w-3.5 h-3.5 text-brand-purple" /> Timeline:
-                </span>
-                <button
-                  onClick={() => setTimeFilter("all")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    timeFilter === "all"
-                      ? "bg-brand-purple text-white shadow-sm"
-                      : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-                  }`}
-                >
-                  All Releases ({templates.length})
-                </button>
-                <button
-                  onClick={() => setTimeFilter("new")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
-                    timeFilter === "new"
-                      ? "bg-emerald-600 text-white shadow-sm"
-                      : "bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200"
-                  }`}
-                >
-                  <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
-                  Newly Created ({newlyCreatedTemplates.length})
-                </button>
-                <button
-                  onClick={() => setTimeFilter("week")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    timeFilter === "week"
-                      ? "bg-brand-purple text-white shadow-sm"
-                      : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-                  }`}
-                >
-                  This Week
-                </button>
-                <button
-                  onClick={() => setTimeFilter("month")}
-                  className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
-                    timeFilter === "month"
-                      ? "bg-brand-purple text-white shadow-sm"
-                      : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
-                  }`}
-                >
-                  This Month
-                </button>
-              </div>
+            {/* Time-wise separation filter bar - Only visible when isTimelineVisible is true */}
+            {isTimelineVisible && (
+              <div className="bg-white/70 backdrop-blur-md p-2 rounded-2xl border border-brand-rose/20 shadow-sm flex flex-wrap items-center justify-between gap-3">
+                <div className="flex items-center gap-2 overflow-x-auto scrollbar-hide py-1">
+                  <span className="text-xs font-bold text-gray-500 uppercase tracking-wider pl-2 flex items-center gap-1">
+                    <Clock className="w-3.5 h-3.5 text-brand-purple" /> Timeline:
+                  </span>
+                  <button
+                    onClick={() => setTimeFilter("all")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      timeFilter === "all"
+                        ? "bg-brand-purple text-white shadow-sm"
+                        : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                    }`}
+                  >
+                    All Releases ({templates.length})
+                  </button>
+                  <button
+                    onClick={() => setTimeFilter("new")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all flex items-center gap-1.5 ${
+                      timeFilter === "new"
+                        ? "bg-emerald-600 text-white shadow-sm"
+                        : "bg-white text-emerald-700 hover:bg-emerald-50 border border-emerald-200"
+                    }`}
+                  >
+                    <Sparkles className="w-3.5 h-3.5 text-emerald-400" />
+                    Newly Created ({newlyCreatedTemplates.length})
+                  </button>
+                  <button
+                    onClick={() => setTimeFilter("week")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      timeFilter === "week"
+                        ? "bg-brand-purple text-white shadow-sm"
+                        : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                    }`}
+                  >
+                    This Week
+                  </button>
+                  <button
+                    onClick={() => setTimeFilter("month")}
+                    className={`px-4 py-2 rounded-xl text-xs font-bold transition-all ${
+                      timeFilter === "month"
+                        ? "bg-brand-purple text-white shadow-sm"
+                        : "bg-white text-gray-600 hover:bg-gray-100 border border-gray-200"
+                    }`}
+                  >
+                    This Month
+                  </button>
+                </div>
 
-              <div className="text-xs text-gray-500 pr-2">
-                Showing <strong className="text-brand-purple">{filteredTemplates.length}</strong> templates
+                <div className="text-xs text-gray-500 pr-2">
+                  Showing <strong className="text-brand-purple">{filteredTemplates.length}</strong> templates
+                </div>
               </div>
-            </div>
+            )}
 
             {/* Category tabs */}
             <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 scrollbar-hide">
@@ -468,8 +656,8 @@ export default function PremiumGallery() {
             </div>
           </div>
 
-          {/* Time-wise Separation Section: Highlight newly created templates when in default view */}
-          {timeFilter === "all" && !searchQuery && activeCategory === "All" && newlyCreatedTemplates.length > 0 && (
+          {/* Time-wise Separation Section: Highlight newly created templates when in default view (Only when isTimelineVisible is true) */}
+          {isTimelineVisible && timeFilter === "all" && !searchQuery && activeCategory === "All" && newlyCreatedTemplates.length > 0 && (
             <div className="mb-14 bg-gradient-to-r from-emerald-50 via-teal-50 to-purple-50 rounded-3xl p-6 md:p-8 border border-emerald-200/60 shadow-sm">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between mb-6 gap-2">
                 <div>
@@ -483,7 +671,7 @@ export default function PremiumGallery() {
                 </div>
                 <button
                   onClick={() => setTimeFilter("new")}
-                  className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1"
+                  className="text-xs font-bold text-emerald-700 hover:text-emerald-800 flex items-center gap-1 cursor-pointer"
                 >
                   View all new ({newlyCreatedTemplates.length}) <ArrowRight className="w-3.5 h-3.5" />
                 </button>
