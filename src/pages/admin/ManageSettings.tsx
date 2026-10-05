@@ -14,6 +14,11 @@ import {
   EyeOff,
   Video,
   Clock,
+  Globe,
+  Sparkles,
+  RotateCcw,
+  CheckCircle2,
+  PhoneCall,
 } from "lucide-react";
 import toast from "react-hot-toast";
 import { useChatSound } from "../../hooks/useChatSound";
@@ -32,12 +37,15 @@ export default function ManageSettings() {
   const [baseOnlineUsers, setBaseOnlineUsers] = useState(50);
   const [selfVideoEditingEnabled, setSelfVideoEditingEnabled] = useState(true);
   const [timelineVisibility, setTimelineVisibility] = useState<"admin" | "public" | "hidden">("admin");
+  const [websiteInvitationHidden, setWebsiteInvitationHidden] = useState(false);
   
   // Chat State
   const [welcomeMessage, setWelcomeMessage] = useState("Hello! How can we help you today?");
   
   // WhatsApp State
   const [waNumber, setWaNumber] = useState("9162478070");
+  const [waAlternativeNumber, setWaAlternativeNumber] = useState("9973482994");
+  const [waRoutingStats, setWaRoutingStats] = useState<any>(null);
   const [waMessageFormat, setWaMessageFormat] = useState(
     "*Booking Request*\n\nTemplate: {template}\nTemplate ID: {templateId}\nOrder ID: {orderId}\n\n*Customer Details*\nName: {name}\nPhone: {phone}\n\n{details}"
   );
@@ -75,7 +83,9 @@ export default function ManageSettings() {
         } else if (data.hideTimeline) {
           setTimelineVisibility("hidden");
         }
+        setWebsiteInvitationHidden(data.websiteInvitationHidden === true);
         setWaNumber(data.whatsapp?.number || "9162478070");
+        setWaAlternativeNumber(data.whatsapp?.alternativeNumber || "9973482994");
         setWaMessageFormat(
           data.whatsapp?.messageFormat ||
             "*Booking Request*\n\nTemplate: {template}\nTemplate ID: {templateId}\nOrder ID: {orderId}\n\n*Customer Details*\nName: {name}\nPhone: {phone}\n\n{details}"
@@ -90,6 +100,15 @@ export default function ManageSettings() {
     return () => unsub();
   }, []);
 
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "settings", "whatsapp_routing"), (snap) => {
+      if (snap.exists()) {
+        setWaRoutingStats(snap.data());
+      }
+    });
+    return () => unsub();
+  }, []);
+
   const saveSettings = async (updatedCoupons?: any[]) => {
     try {
       const finalCoupons = Array.isArray(updatedCoupons) ? updatedCoupons : coupons;
@@ -99,11 +118,13 @@ export default function ManageSettings() {
           baseOnlineUsers: Number(baseOnlineUsers),
           selfVideoEditingEnabled,
           hideSelfVideoEditor: !selfVideoEditingEnabled,
+          websiteInvitationHidden,
           timelineVisibility,
           showTimelineToPublic: timelineVisibility === "public",
           hideTimeline: timelineVisibility === "hidden",
           whatsapp: {
             number: waNumber,
+            alternativeNumber: waAlternativeNumber,
             messageFormat: waMessageFormat,
             enabled: waOrderingEnabled,
           },
@@ -117,6 +138,30 @@ export default function ManageSettings() {
       toast.success("Settings saved successfully");
     } catch (e) {
       toast.error("Failed to save settings");
+    }
+  };
+
+  const toggleWebsiteInvitationCategory = async () => {
+    const next = !websiteInvitationHidden;
+    setWebsiteInvitationHidden(next);
+    try {
+      localStorage.setItem("sigma_hide_website_invitation", next.toString());
+      await setDoc(
+        doc(db, "settings", "config"),
+        {
+          websiteInvitationHidden: next,
+        },
+        { merge: true }
+      );
+      if (!next) {
+        toast.success("Website Invitation category is now LIVE & visible on website!");
+      } else {
+        toast.success("Website Invitation category is now HIDDEN from visitors.");
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to update website category visibility");
+      setWebsiteInvitationHidden(!next);
     }
   };
 
@@ -276,6 +321,54 @@ export default function ManageSettings() {
               </div>
             </div>
 
+            {/* Website Invitation Category Visibility Card */}
+            <div className="pb-6 border-b border-gray-800 bg-gray-800/40 p-5 rounded-2xl border border-gray-700/50">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <div className="flex items-center gap-2">
+                    <Globe className="w-5 h-5 text-purple-400" />
+                    <label className="text-base font-bold text-white">
+                      Website Invitation Category Visibility
+                    </label>
+                  </div>
+                  <p className="text-xs text-gray-400 mt-1 max-w-lg">
+                    Show or completely hide the Website Invitation Category from the website homepage and gallery. When hidden, regular visitors will not see this category or its interactive templates.
+                  </p>
+                  <div className="mt-2.5 flex items-center gap-2">
+                    {!websiteInvitationHidden ? (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20">
+                        <Eye className="w-3.5 h-3.5" /> Category is LIVE on Website
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-bold bg-rose-500/10 text-rose-400 border border-rose-500/20">
+                        <EyeOff className="w-3.5 h-3.5" /> Category is COMPLETELY HIDDEN
+                      </span>
+                    )}
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={toggleWebsiteInvitationCategory}
+                  className={`px-4 py-2.5 rounded-xl font-bold text-xs flex items-center gap-2 transition-all shadow-sm shrink-0 self-start sm:self-auto cursor-pointer ${
+                    !websiteInvitationHidden
+                      ? "bg-rose-600 hover:bg-rose-700 text-white"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  }`}
+                >
+                  {!websiteInvitationHidden ? (
+                    <>
+                      <EyeOff className="w-4 h-4" /> Hide Category
+                    </>
+                  ) : (
+                    <>
+                      <Eye className="w-4 h-4" /> Unhide Category
+                    </>
+                  )}
+                </button>
+              </div>
+            </div>
+
             {/* Template Timeline & Date Visibility Card */}
             <div className="pb-6 border-b border-gray-800 bg-gray-800/40 p-5 rounded-2xl border border-gray-700/50">
               <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
@@ -394,17 +487,119 @@ export default function ManageSettings() {
               </label>
             </div>
             
-            <div>
-              <label className="block text-sm font-medium text-gray-300 mb-2">
-                WhatsApp Business Number (with country code)
-              </label>
-              <input
-                type="text"
-                value={waNumber}
-                onChange={(e) => setWaNumber(e.target.value)}
-                placeholder="9162478070"
-                className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3"
-              />
+            {/* Alternating WhatsApp Redirect Routing Settings */}
+            <div className="bg-gray-800/40 border border-gray-700/60 rounded-2xl p-5 space-y-4">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <PhoneCall className="w-5 h-5 text-emerald-400" />
+                  <label className="text-base font-bold text-white">
+                    WhatsApp Order Redirection (Alternating Numbers)
+                  </label>
+                </div>
+                <span className="px-3 py-1 rounded-full text-xs font-bold bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 flex items-center gap-1">
+                  <Sparkles className="w-3.5 h-3.5" /> Alternating Load Balancing Active
+                </span>
+              </div>
+
+              <p className="text-xs text-gray-400">
+                When a user places an order, the website redirects them to the Official WhatsApp number. When the simultaneous or next 2nd user orders after the 1st person, they are automatically redirected to the Alternative WhatsApp number (<strong>9973482994</strong>), alternating seamlessly on every order.
+              </p>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2">
+                <div className="bg-gray-900/80 border border-gray-700/80 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-emerald-500"></span>
+                      1st WhatsApp Number (Official)
+                    </label>
+                    <span className="text-[10px] bg-emerald-500/10 text-emerald-400 font-semibold px-2 py-0.5 rounded">
+                      Orders 1, 3, 5, 7...
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={waNumber}
+                    onChange={(e) => setWaNumber(e.target.value)}
+                    placeholder="9162478070"
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-emerald-500"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1.5">
+                    Official primary booking phone number.
+                  </p>
+                </div>
+
+                <div className="bg-gray-900/80 border border-purple-500/40 rounded-xl p-4">
+                  <div className="flex items-center justify-between mb-2">
+                    <label className="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                      <span className="w-2.5 h-2.5 rounded-full bg-purple-500"></span>
+                      2nd WhatsApp Number (Alternative)
+                    </label>
+                    <span className="text-[10px] bg-purple-500/10 text-purple-400 font-semibold px-2 py-0.5 rounded">
+                      Orders 2, 4, 6, 8...
+                    </span>
+                  </div>
+                  <input
+                    type="text"
+                    value={waAlternativeNumber}
+                    onChange={(e) => setWaAlternativeNumber(e.target.value)}
+                    placeholder="9973482994"
+                    className="w-full bg-gray-800 border border-gray-700 text-white rounded-lg px-3 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-purple-500"
+                  />
+                  <p className="text-[11px] text-gray-400 mt-1.5">
+                    Alternative redirect phone number for simultaneous/alternate orders.
+                  </p>
+                </div>
+              </div>
+
+              {/* Real-time Rotation Status Bar */}
+              <div className="bg-gray-900/90 border border-gray-800 rounded-xl p-3 flex flex-col sm:flex-row items-start sm:items-center justify-between gap-3 text-xs text-gray-300">
+                <div className="flex flex-wrap items-center gap-3">
+                  <div>
+                    <span className="text-gray-500">Total orders routed:</span>{" "}
+                    <strong className="text-white font-mono text-sm">
+                      {waRoutingStats?.totalOrdersCount || 0}
+                    </strong>
+                  </div>
+                  <div className="hidden sm:block text-gray-700">|</div>
+                  <div>
+                    <span className="text-gray-500">Last routed to:</span>{" "}
+                    <span className="font-semibold text-purple-300">
+                      {waRoutingStats?.lastRoutingSlot === "alternative"
+                        ? `Alternative (${waRoutingStats?.lastAssignedNumber || waAlternativeNumber})`
+                        : `Official (${waRoutingStats?.lastAssignedNumber || waNumber})`}
+                    </span>
+                  </div>
+                  <div className="hidden sm:block text-gray-700">|</div>
+                  <div>
+                    <span className="text-gray-500">Next order will route to:</span>{" "}
+                    <span className="font-bold text-emerald-400">
+                      {(Number(waRoutingStats?.totalOrdersCount) || 0) % 2 === 0
+                        ? `Official Line (${waNumber})`
+                        : `Alternative Line (${waAlternativeNumber})`}
+                    </span>
+                  </div>
+                </div>
+
+                <button
+                  type="button"
+                  onClick={async () => {
+                    try {
+                      await setDoc(
+                        doc(db, "settings", "whatsapp_routing"),
+                        { totalOrdersCount: 0, lastRoutingSlot: "Reset", updatedAt: new Date().toISOString() },
+                        { merge: true }
+                      );
+                      toast.success("Routing rotation reset to 1st Official number");
+                    } catch (e) {
+                      toast.error("Failed to reset rotation");
+                    }
+                  }}
+                  className="px-2.5 py-1 rounded-lg bg-gray-800 hover:bg-gray-700 text-gray-300 text-[11px] flex items-center gap-1 transition-colors border border-gray-700 cursor-pointer shrink-0"
+                  title="Reset rotation to start with 1st Official number"
+                >
+                  <RotateCcw className="w-3 h-3" /> Reset Rotation
+                </button>
+              </div>
             </div>
             
             <div>

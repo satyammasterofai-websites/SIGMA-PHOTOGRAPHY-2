@@ -38,6 +38,8 @@ import {
   Star,
 } from "lucide-react";
 import { FormatOrderData } from "../components/FormatOrderData";
+import { assignNextWhatsAppNumber } from "../lib/whatsappRouting";
+import { formatWhatsAppNumber } from "../lib/utils";
 import toast from "react-hot-toast";
 import VideoModal from "../components/VideoModal";
 import TemplateReviewsModal from "../components/TemplateReviewsModal";
@@ -343,6 +345,10 @@ export default function Checkout() {
     viaMethod: string,
   ) => {
     try {
+      const displayId = String(Math.floor(100000 + Math.random() * 900000));
+      // Alternate WhatsApp number: 1st person -> Official, 2nd person -> Alternative (9973482994), 3rd person -> Official, etc.
+      const routingResult = await assignNextWhatsAppNumber(settings, displayId);
+
       const cleanData = JSON.parse(
         JSON.stringify({
           createdAt: new Date().toISOString(),
@@ -363,7 +369,10 @@ export default function Checkout() {
           filesCount: files.length || 0,
           viaMethod: viaMethod || "Direct",
           couponApplied: appliedCoupon ? appliedCoupon.code : null,
-          displayId: String(Math.floor(100000 + Math.random() * 900000)),
+          displayId,
+          whatsappTargetNumber: routingResult.assignedNumber,
+          whatsappRoutingSlot: routingResult.routingSlot,
+          whatsappOrderIndex: routingResult.orderIndex,
         }),
       );
       const orderRef = await addDoc(collection(db, "orders"), cleanData);
@@ -392,10 +401,24 @@ export default function Checkout() {
         }
       }
 
-      return { id: orderRef.id, displayId: cleanData.displayId };
+      return {
+        id: orderRef.id,
+        displayId: cleanData.displayId,
+        targetNumber: routingResult.assignedNumber,
+        routingSlot: routingResult.routingSlot,
+        orderIndex: routingResult.orderIndex,
+        formattedDisplay: routingResult.formattedDisplay,
+      };
     } catch (e) {
       console.error(e);
-      return { id: "ORDER_ERR", displayId: "ORDER_ERR" };
+      return {
+        id: "ORDER_ERR",
+        displayId: "ORDER_ERR",
+        targetNumber: formatWhatsAppNumber(settings?.whatsapp?.number || "9162478070"),
+        routingSlot: "official",
+        orderIndex: 1,
+        formattedDisplay: "Official WhatsApp",
+      };
     }
   };
 
@@ -436,8 +459,9 @@ export default function Checkout() {
     return labeled;
   };
 
-  const getWaUrl = (orderId: string, displayId: string) => {
-    const number = settings?.whatsapp?.number || "9162478070";
+  const getWaUrl = (orderId: string, displayId: string, targetNumber?: string) => {
+    const rawNumber = targetNumber || settings?.whatsapp?.number || "9162478070";
+    const number = formatWhatsAppNumber(rawNumber);
     const displayOrderId = orderId === "ORDER_ERR" ? `REQ-${Math.floor(Math.random() * 100000)}` : (displayId || orderId);
 
     let customFieldsText = "";
@@ -540,15 +564,23 @@ export default function Checkout() {
   const proceedToWhatsApp = async (viaMethod: string) => {
     setPaymentSuccessPopup({ show: true, msg: "Saving order details..." });
     const orderData = await createOrderRecord("Pending", viaMethod);
-    const url = getWaUrl(orderData.id, orderData.displayId);
+    const url = getWaUrl(orderData.id, orderData.displayId, orderData.targetNumber);
     setWaUrlToOpen(url);
     const advanceMsg = template?.advancePayment
       ? ` Note: An advance payment of ₹${template.advancePayment} is required.`
       : "";
+    const routeMsg = orderData.routingSlot === "alternative"
+      ? " Routing to Alternative WhatsApp (9973482994)."
+      : " Routing to Official WhatsApp.";
     setPaymentSuccessPopup({
       show: true,
-      msg: `Order saved (ID: ${orderData.displayId})! Please click below to send us your details on WhatsApp.${advanceMsg}`,
+      msg: `Order saved (ID: ${orderData.displayId})!${routeMsg} Please click below to send us your details on WhatsApp.${advanceMsg}`,
     });
+    try {
+      window.open(url, "_blank");
+    } catch {
+      // browser popup blocker fallback
+    }
   };
 
     const initiatePayment = async () => {
@@ -563,12 +595,18 @@ export default function Checkout() {
         const advanceMsg = template?.advancePayment
           ? ` Note: An advance payment of ₹${template.advancePayment} is required.`
           : "";
+        const routeMsg = orderData.routingSlot === "alternative"
+          ? " Routing to Alternative WhatsApp (9973482994)."
+          : " Routing to Official WhatsApp.";
         setPaymentSuccessPopup({
           show: true,
-          msg: `Payment successful (Order ID: ${orderData.displayId})! Redirecting to WhatsApp to send assets.${advanceMsg}`,
+          msg: `Payment successful (Order ID: ${orderData.displayId})!${routeMsg} Redirecting to WhatsApp to send assets.${advanceMsg}`,
         });
-        const url = getWaUrl(orderData.id, orderData.displayId);
+        const url = getWaUrl(orderData.id, orderData.displayId, orderData.targetNumber);
         setWaUrlToOpen(url);
+        try {
+          window.open(url, "_blank");
+        } catch {}
       }, 2000);
       return;
     }
@@ -583,15 +621,21 @@ export default function Checkout() {
       msg: "Saving order details...",
     });
     const orderData = await createOrderRecord("Pending Verification", "Online Payment");
-        const advanceMsg = template?.advancePayment
+    const advanceMsg = template?.advancePayment
       ? ` Note: An advance payment of ₹${template.advancePayment} is required.`
       : "";
+    const routeMsg = orderData.routingSlot === "alternative"
+      ? " Routing to Alternative WhatsApp (9973482994)."
+      : " Routing to Official WhatsApp.";
     setPaymentSuccessPopup({
       show: true,
-      msg: `Order saved (ID: ${orderData.displayId})! Please send us the payment screenshot on WhatsApp.${advanceMsg}`,
+      msg: `Order saved (ID: ${orderData.displayId})!${routeMsg} Please send us the payment screenshot on WhatsApp.${advanceMsg}`,
     });
-    const url = getWaUrl(orderData.id, orderData.displayId);
+    const url = getWaUrl(orderData.id, orderData.displayId, orderData.targetNumber);
     setWaUrlToOpen(url);
+    try {
+      window.open(url, "_blank");
+    } catch {}
   };
 
   // --- Dynamic Form Steps Logic ---

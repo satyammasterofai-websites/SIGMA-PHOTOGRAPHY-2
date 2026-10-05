@@ -17,6 +17,7 @@ export default function TemplateManagement() {
   // Form State
   const [title, setTitle] = useState('');
   const [category, setCategory] = useState('Wedding');
+  const [subCategory, setSubCategory] = useState('Website');
   const [price, setPrice] = useState('');
   const [discountPrice, setDiscountPrice] = useState('');
   const [description, setDescription] = useState('');
@@ -125,14 +126,17 @@ export default function TemplateManagement() {
           }
         });
 
-        // Ensure "Website Invitation" is included as a prominent unique category
+        // Ensure "E-Cards" and "Website Invitation" are included as prominent unique categories
+        if (!seenNames.has('e-cards') && !seenNames.has('e-card')) {
+          list.splice(0, 0, 'E-Cards');
+        }
         if (!seenNames.has('website invitation')) {
           list.splice(1, 0, 'Website Invitation');
         }
 
         // Ensure standard categories exist if empty
         if (list.length === 0) {
-          list.push('Wedding', 'Website Invitation', 'Engagement', 'Birthday', 'Reception', 'Anniversary', 'Baby Shower', 'Corporate Events');
+          list.push('E-Cards', 'Website Invitation', 'Wedding', 'Engagement', 'Birthday', 'Reception', 'Anniversary', 'Baby Shower', 'Corporate Events');
         }
 
         setCategories(list);
@@ -219,10 +223,12 @@ export default function TemplateManagement() {
       setLanguage(template.language || 'None');
       setCustomFields(template.customFields || []);
       setFormId(template.formId || '');
+      setSubCategory(template.subCategory || (template.category === 'Website Invitation' ? 'Website' : 'Hindu'));
     } else {
       setEditingId(null);
       setTitle('');
       setCategory(activeTab !== 'All' ? activeTab : (categories.length > 0 ? categories[0] : 'Wedding'));
+      setSubCategory('Website');
       setPrice('');
       setDiscountPrice('');
       setDescription('');
@@ -265,12 +271,14 @@ export default function TemplateManagement() {
       return;
     }
 
-    if (category === 'Website Invitation' && !(websiteUrl || '').trim()) {
-      toast.error('Please enter the Website Invitation URL (Live Demo Link)');
+    const isWebOrECard = category === 'Website Invitation' || category === 'E-Cards';
+
+    if (isWebOrECard && !(websiteUrl || '').trim() && !(videoUrl || '').trim()) {
+      toast.error('Please enter the Website / Demo URL or Video URL');
       return;
     }
 
-    if (category !== 'Website Invitation' && !(videoUrl || '').trim()) {
+    if (!isWebOrECard && !(videoUrl || '').trim()) {
       toast.error('Please enter the Video URL');
       return;
     }
@@ -298,6 +306,7 @@ export default function TemplateManagement() {
       const data = { 
         title, 
         category: finalCategory, 
+        subCategory: subCategory || (finalCategory === 'Website Invitation' ? 'Website' : 'Hindu'),
         price, 
         discountPrice, 
         description, 
@@ -758,6 +767,20 @@ export default function TemplateManagement() {
                       {categories.length === 0 && <option value="Wedding">Wedding</option>}
                     </select>
                   </div>
+                  {(category === 'Website Invitation' || category === 'E-Cards') && (
+                    <div>
+                      <label className="block text-sm font-medium text-purple-300 mb-2">Section Filter (E-Cards Carousel)</label>
+                      <select 
+                        value={subCategory} onChange={(e) => setSubCategory(e.target.value)}
+                        className="w-full bg-gray-800 border border-purple-500/50 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-purple-500"
+                      >
+                        <option value="Website">Website (Interactive Wedding Website)</option>
+                        <option value="Hindu">Hindu Templates</option>
+                        <option value="Muslim">Muslim Templates</option>
+                        <option value="English">English Templates</option>
+                      </select>
+                    </div>
+                  )}
                   <div>
                     <label className="block text-sm font-medium text-gray-300 mb-2">Base Price (₹)</label>
                     <input 
@@ -847,12 +870,12 @@ export default function TemplateManagement() {
                       <option value="Hidden">Hidden</option>
                     </select>
                   </div>
-                  {category === 'Website Invitation' ? (
+                  {(category === 'Website Invitation' || category === 'E-Cards') ? (
                     <div className="col-span-1 md:col-span-2 bg-purple-950/30 border border-purple-500/40 rounded-2xl p-4">
                       <div className="flex items-center justify-between mb-1">
                         <label className="text-sm font-bold text-purple-300 flex items-center gap-2">
                           <Globe className="w-4 h-4 text-purple-400" />
-                          Website Invitation Link (Live URL) <span className="text-red-400">*</span>
+                          Website Invitation / Live Demo Link {category === 'Website Invitation' && <span className="text-red-400">*</span>}
                         </label>
                         {websiteUrl && (
                           <a 
@@ -861,23 +884,23 @@ export default function TemplateManagement() {
                             rel="noopener noreferrer" 
                             className="text-xs text-purple-300 hover:text-white flex items-center gap-1 underline font-semibold"
                           >
-                            Test Live Redirect <ExternalLink className="w-3 h-3" />
+                            Test Live Demo Link <ExternalLink className="w-3 h-3" />
                           </a>
                         )}
                       </div>
                       <p className="text-xs text-purple-200/70 mb-3">
-                        When someone clicks to preview this template in the gallery, they will be redirected to this linked website.
+                        Loads automatically inside the 3D phone mockup and full-screen live demo preview modal.
                       </p>
                       <input 
                         type="url" 
-                        required
+                        required={category === 'Website Invitation'}
                         value={websiteUrl} 
                         onChange={(e) => setWebsiteUrl(e.target.value)}
                         className="w-full bg-gray-900 border border-purple-500/40 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
                         placeholder="https://your-invitation-website.com"
                       />
                       <div className="mt-3">
-                        <label className="block text-xs font-medium text-gray-400 mb-1">Optional Walkthrough / Teaser Video URL</label>
+                        <label className="block text-xs font-medium text-gray-400 mb-1">Optional Walkthrough / Video URL</label>
                         <input 
                           type="url" 
                           value={videoUrl} 

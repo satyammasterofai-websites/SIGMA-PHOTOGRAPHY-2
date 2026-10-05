@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { collection, onSnapshot, doc, setDoc, deleteDoc, addDoc, updateDoc, query, where, getDocs } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Trash2, Plus, Image as ImageIcon, Edit2, X, Search, ArrowUp, ArrowDown } from 'lucide-react';
+import { Trash2, Plus, Image as ImageIcon, Edit2, X, Search, ArrowUp, ArrowDown, Eye, EyeOff, Globe } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { fileToBase64 } from '../../lib/utils';
 import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
@@ -19,6 +19,33 @@ export default function ManageCategories() {
   const [editCatOrder, setEditCatOrder] = useState('');
 
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [websiteInvitationHidden, setWebsiteInvitationHidden] = useState(false);
+
+  useEffect(() => {
+    const unsub = onSnapshot(doc(db, "settings", "config"), (doc) => {
+      if (doc.exists()) {
+        setWebsiteInvitationHidden(doc.data().websiteInvitationHidden === true);
+      }
+    });
+    return () => unsub();
+  }, []);
+
+  const toggleWebsiteInvitation = async () => {
+    const next = !websiteInvitationHidden;
+    setWebsiteInvitationHidden(next);
+    try {
+      localStorage.setItem("sigma_hide_website_invitation", next.toString());
+      await setDoc(doc(db, "settings", "config"), { websiteInvitationHidden: next }, { merge: true });
+      toast.success(
+        next
+          ? "Website Invitation category is now HIDDEN from visitors"
+          : "Website Invitation category is now UNHIDDEN and visible to visitors",
+        { icon: next ? "👁️‍🗨️" : "✨" }
+      );
+    } catch (e) {
+      toast.error("Failed to update visibility");
+    }
+  };
 
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'content', 'template_categories', 'items'), async (snapshot) => {
@@ -371,8 +398,36 @@ export default function ManageCategories() {
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-        {(categories || []).filter(cat => searchQuery === '' || (cat.name || '').toLowerCase().includes((searchQuery || '').toLowerCase())).map((cat, index) => (
+        {(categories || []).filter(cat => searchQuery === '' || (cat.name || '').toLowerCase().includes((searchQuery || '').toLowerCase())).map((cat, index) => {
+          const isWebsiteCat = (cat.name || '').trim().toLowerCase() === 'website invitation';
+
+          return (
           <div key={`${cat.id}-${index}`} className="bg-gray-900 border border-gray-800 rounded-xl p-4 relative group">
+            {/* For Website Invitation: Show visibility badge & Hide/Unhide button */}
+            {isWebsiteCat && (
+              <div className="mb-3 p-2 rounded-lg bg-gray-800/80 border border-gray-700/60 flex items-center justify-between">
+                <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                  !websiteInvitationHidden
+                    ? "bg-emerald-500/10 text-emerald-400 border border-emerald-500/20"
+                    : "bg-rose-500/10 text-rose-400 border border-rose-500/20"
+                }`}>
+                  {!websiteInvitationHidden ? <Eye className="w-3 h-3" /> : <EyeOff className="w-3 h-3" />}
+                  {!websiteInvitationHidden ? "LIVE on Website" : "HIDDEN from Visitors"}
+                </span>
+                <button
+                  onClick={toggleWebsiteInvitation}
+                  className={`text-xs px-2.5 py-1 rounded-lg font-bold flex items-center gap-1 transition-all cursor-pointer ${
+                    !websiteInvitationHidden
+                      ? "bg-rose-600 hover:bg-rose-700 text-white"
+                      : "bg-emerald-600 hover:bg-emerald-700 text-white"
+                  }`}
+                  title={!websiteInvitationHidden ? "Hide from website" : "Unhide and show on website"}
+                >
+                  {!websiteInvitationHidden ? <EyeOff className="w-3 h-3" /> : <Eye className="w-3 h-3" />}
+                  {!websiteInvitationHidden ? "Hide" : "Unhide"}
+                </button>
+              </div>
+            )}
             
             <div className="absolute top-4 right-4 z-10 flex gap-2">
               {searchQuery === '' && (
@@ -443,7 +498,8 @@ export default function ManageCategories() {
               </>
             )}
           </div>
-        ))}
+          );
+        })}
         {(!categories || categories.length === 0) && <p className="text-gray-500 col-span-3 text-center py-8">No categories added yet.</p>}
       </div>
     </div>

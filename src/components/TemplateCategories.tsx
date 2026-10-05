@@ -1,10 +1,9 @@
-import { useState, useRef, useEffect } from "react";
-import { motion, AnimatePresence } from "motion/react";
-import { PlayCircle, ChevronLeft, ChevronRight, Globe, ShoppingBag, Sparkles, ExternalLink } from "lucide-react";
+import { useState, useEffect } from "react";
+import { motion } from "motion/react";
+import { ChevronRight } from "lucide-react";
 import { useSiteContent } from "../hooks/useSiteContent";
 import { Link } from "react-router-dom";
 import { useAuthStore } from "../store/useAuthStore";
-import toast from "react-hot-toast";
 
 const defaultCategories = [
   {
@@ -79,75 +78,6 @@ const defaultCategories = [
   },
 ];
 
-const fallbackWebsiteTemplates = [
-  {
-    id: "web-sample-1",
-    title: "Royal Rajputana Palace Wedding Website",
-    category: "Website Invitation",
-    price: "2,999",
-    discountPrice: "2,499",
-    thumbnailBase64:
-      "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=600&q=80",
-    websiteUrl: "https://preview.themeforest.net/item/wedding-invitation-website-template/full_screen_preview/24560783",
-    description: "Interactive digital royal wedding invitation featuring RSVP tracker, Google Maps venue directions, bridal party, countdown timer, and love story timeline.",
-  },
-  {
-    id: "web-sample-2",
-    title: "Blush Floral Ivory Interactive RSVP Invite",
-    category: "Website Invitation",
-    price: "2,499",
-    discountPrice: "1,999",
-    thumbnailBase64:
-      "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=600&q=80",
-    websiteUrl: "https://preview.themeforest.net/item/wedding-responsive-invitation-template/full_screen_preview/25893420",
-    description: "Elegant pastel floral mobile-first invitation website with live RSVP guestbook, event calendar sync, and photo gallery.",
-  },
-  {
-    id: "web-sample-3",
-    title: "Golden Euphoria Luxury Gala Invitation",
-    category: "Website Invitation",
-    price: "3,299",
-    discountPrice: "2,699",
-    thumbnailBase64:
-      "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&q=80&w=600&q=80",
-    websiteUrl: "https://preview.themeforest.net/item/event-and-wedding-invitation-theme/full_screen_preview/22810984",
-    description: "Grand gold and emerald digital experience with ambient background music player, venue navigation, and custom dress code guide.",
-  },
-  {
-    id: "web-sample-4",
-    title: "Modern Minimalist Couple Story Portal",
-    category: "Website Invitation",
-    price: "2,199",
-    discountPrice: "1,799",
-    thumbnailBase64:
-      "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=600&q=80",
-    websiteUrl: "https://preview.themeforest.net/item/wedding-invitation-website-template/full_screen_preview/24560783",
-    description: "Clean aesthetic typography with smooth parallax scrolling, Google Maps live pins, and guest dietary requirement forms.",
-  },
-  {
-    id: "web-sample-5",
-    title: "Sangeet & Mehendi Celebration Hub",
-    category: "Website Invitation",
-    price: "2,499",
-    discountPrice: "1,999",
-    thumbnailBase64:
-      "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80&w=600&q=80",
-    websiteUrl: "https://preview.themeforest.net/item/wedding-responsive-invitation-template/full_screen_preview/25893420",
-    description: "Festive colorful mobile invitation website with Spotify playlist integration, event timeline, and instant WhatsApp share.",
-  },
-  {
-    id: "web-sample-6",
-    title: "Destination Beachfront Wedding Experience",
-    category: "Website Invitation",
-    price: "2,999",
-    discountPrice: "2,399",
-    thumbnailBase64:
-      "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&q=80&w=600&q=80",
-    websiteUrl: "https://preview.themeforest.net/item/event-and-wedding-invitation-theme/full_screen_preview/22810984",
-    description: "Tropical coastal theme with flight/hotel accommodation guide for out-of-town guests and itinerary countdown.",
-  },
-];
-
 export default function TemplateCategories() {
   const { categories, settings, templates } = useSiteContent();
   const { user } = useAuthStore();
@@ -179,55 +109,16 @@ export default function TemplateCategories() {
   const allCategoryList =
     uniqueCategories.length > 0 ? uniqueCategories : defaultCategories;
 
-  // Filter out "Website Invitation" from video categories list so all video categories appear first
-  const videoCategories = allCategoryList.filter(
-    (c) => (c.name || "").trim().toLowerCase() !== "website invitation"
-  );
-
-  // Website Invitation templates (created by admin or fallback samples)
-  const rawWebsiteTemplates = (templates || []).filter(
-    (t: any) =>
-      (t.category || "").trim().toLowerCase() === "website invitation" ||
-      (t.type || "").trim().toLowerCase() === "website" ||
-      !!t.websiteUrl
-  );
-
-  // Sort newest first
-  rawWebsiteTemplates.sort((a: any, b: any) => {
-    const timeA = new Date(a.createdAt || 0).getTime();
-    const timeB = new Date(b.createdAt || 0).getTime();
-    return timeB - timeA;
+  // Filter out "Website Invitation" and "E-Cards" from video categories list so all video categories appear first
+  const videoCategories = allCategoryList.filter((c) => {
+    const name = (c.name || "").trim().toLowerCase();
+    return (
+      name !== "website invitation" &&
+      name !== "e-card" &&
+      name !== "e-cards" &&
+      name !== "ecard"
+    );
   });
-
-  // If admin has created website templates, show them; pad with fallbacks if fewer than 3
-  const websiteTemplates =
-    rawWebsiteTemplates.length >= 3
-      ? rawWebsiteTemplates
-      : rawWebsiteTemplates.length > 0
-      ? [
-          ...rawWebsiteTemplates,
-          ...fallbackWebsiteTemplates.slice(0, 3 - rawWebsiteTemplates.length),
-        ]
-      : fallbackWebsiteTemplates;
-
-  // Pagination for Website Invitation Templates: Each page consists of 3 templates
-  const pageSize = 3;
-  const totalPages = Math.max(1, Math.ceil(websiteTemplates.length / pageSize));
-  const [pageIndex, setPageIndex] = useState(0);
-  const [direction, setDirection] = useState(0);
-
-  const paginate = (newDirection: number) => {
-    const next = pageIndex + newDirection;
-    if (next >= 0 && next < totalPages) {
-      setDirection(newDirection);
-      setPageIndex(next);
-    }
-  };
-
-  const currentWebsitePage = websiteTemplates.slice(
-    pageIndex * pageSize,
-    (pageIndex + 1) * pageSize
-  );
 
   return (
     <section id="templates" className="py-24 w-full overflow-hidden">
@@ -302,237 +193,6 @@ export default function TemplateCategories() {
               </div>
             </motion.div>
           ))}
-        </div>
-
-        {/* 2. Just after all the video categories appear: Website Invitation Category Section */}
-        <div id="website-invitations" className="pt-8 pb-12 border-t-2 border-purple-200/60 relative">
-          <div className="text-center mb-12">
-            <div className="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-purple-100 text-purple-800 text-xs font-bold uppercase tracking-wider mb-3">
-              <Globe className="w-3.5 h-3.5" /> Interactive RSVP & Digital Experience
-            </div>
-            {/* User-requested Heading */}
-            <h2 className="text-3xl md:text-5xl font-display font-bold text-brand-navy">
-              Heading - Website Invitation Template
-            </h2>
-            <p className="text-brand-slate text-base md:text-lg mt-3 max-w-2xl mx-auto">
-              Interactive mobile-first digital website invitations featuring live RSVP, Google Maps venue directions, love story gallery, and countdown.
-            </p>
-          </div>
-
-          {/* Carousel Controls Header */}
-          <div className="flex items-center justify-between mb-8 max-w-5xl mx-auto">
-            <div className="flex items-center gap-2">
-              <span className="text-xs font-bold text-gray-500 uppercase tracking-wider">
-                Page {pageIndex + 1} of {totalPages}
-              </span>
-              <span className="text-xs text-purple-700 bg-purple-100/70 px-2.5 py-0.5 rounded-full font-bold">
-                {websiteTemplates.length} Website Templates
-              </span>
-            </div>
-
-            {/* Navigation Buttons */}
-            <div className="flex items-center gap-2">
-              <button
-                onClick={() => paginate(-1)}
-                disabled={pageIndex === 0}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                  pageIndex === 0
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
-                    : "bg-white text-gray-800 hover:bg-purple-600 hover:text-white shadow-md border border-gray-200 cursor-pointer"
-                }`}
-                title="Previous 3 Templates"
-              >
-                <ChevronLeft className="w-5 h-5" />
-              </button>
-              <button
-                onClick={() => paginate(1)}
-                disabled={pageIndex >= totalPages - 1}
-                className={`w-10 h-10 rounded-full flex items-center justify-center transition-all ${
-                  pageIndex >= totalPages - 1
-                    ? "bg-gray-100 text-gray-400 cursor-not-allowed border border-gray-200"
-                    : "bg-white text-gray-800 hover:bg-purple-600 hover:text-white shadow-md border border-gray-200 cursor-pointer"
-                }`}
-                title="Next 3 Templates"
-              >
-                <ChevronRight className="w-5 h-5" />
-              </button>
-            </div>
-          </div>
-
-          {/* Smooth Transition Draggable Carousel Container (3 Templates Per Single Page) */}
-          <div className="relative overflow-hidden w-full py-4 min-h-[640px]">
-            <AnimatePresence initial={false} custom={direction} mode="wait">
-              <motion.div
-                key={pageIndex}
-                custom={direction}
-                variants={{
-                  enter: (dir: number) => ({
-                    x: dir > 0 ? 350 : -350,
-                    opacity: 0,
-                  }),
-                  center: {
-                    x: 0,
-                    opacity: 1,
-                  },
-                  exit: (dir: number) => ({
-                    x: dir < 0 ? 350 : -350,
-                    opacity: 0,
-                  }),
-                }}
-                initial="enter"
-                animate="center"
-                exit="exit"
-                transition={{
-                  x: { type: "spring", stiffness: 280, damping: 28 },
-                  opacity: { duration: 0.25 },
-                }}
-                drag="x"
-                dragConstraints={{ left: 0, right: 0 }}
-                dragElastic={0.25}
-                onDragEnd={(e, { offset }) => {
-                  if (offset.x < -40 && pageIndex < totalPages - 1) {
-                    paginate(1);
-                  } else if (offset.x > 40 && pageIndex > 0) {
-                    paginate(-1);
-                  }
-                }}
-                className="grid grid-cols-1 md:grid-cols-3 gap-8 cursor-grab active:cursor-grabbing w-full select-none"
-              >
-                {currentWebsitePage.map((template: any) => (
-                  <div
-                    key={template.id}
-                    className="flex flex-col items-center p-4 bg-white/70 backdrop-blur-md rounded-3xl border border-purple-200/50 shadow-sm hover:shadow-xl transition-all duration-300"
-                  >
-                    {/* Realistic Mobile Phone Frame Mockup */}
-                    <div className="relative mx-auto w-[240px] sm:w-[260px] aspect-[9/18.5] bg-neutral-900 rounded-[2.75rem] p-3 shadow-2xl border-[3px] border-neutral-700 ring-1 ring-black/40 flex flex-col group select-none">
-                      {/* Top Dynamic Island / Notch */}
-                      <div className="absolute top-3.5 left-1/2 -translate-x-1/2 w-20 h-4 bg-black rounded-full z-20 flex items-center justify-center pointer-events-none">
-                        <div className="w-2.5 h-2.5 rounded-full bg-neutral-800 border border-neutral-700/50"></div>
-                      </div>
-
-                      {/* Speaker Ear Piece */}
-                      <div className="absolute top-2 left-1/2 -translate-x-1/2 w-12 h-1 bg-neutral-700/60 rounded-full z-20 pointer-events-none"></div>
-
-                      {/* Inner Phone Screen with A4 Thumbnail */}
-                      <div className="relative w-full h-full bg-neutral-50 rounded-[2.1rem] overflow-hidden flex flex-col shadow-inner">
-                        {/* Status Bar Mock */}
-                        <div className="h-6 w-full flex items-center justify-between px-5 pt-1 text-[10px] text-gray-800 font-bold z-10 pointer-events-none">
-                          <span>9:41</span>
-                          <div className="flex items-center gap-1.5">
-                            <span className="text-[9px] font-semibold">5G</span>
-                            <div className="w-4 h-2 border border-gray-800 rounded-xs p-0.5">
-                              <div className="w-full h-full bg-gray-800 rounded-2xs"></div>
-                            </div>
-                          </div>
-                        </div>
-
-                        {/* Thumbnail in Portrait Mobile Frame */}
-                        <div className="relative flex-1 overflow-hidden bg-white flex items-center justify-center">
-                          <img
-                            src={template.thumbnailBase64 || template.image}
-                            alt={template.title}
-                            className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105 pointer-events-none"
-                          />
-                          {/* Live Badge Overlay */}
-                          <div className="absolute top-2 right-2 bg-purple-600/90 backdrop-blur-md text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1 pointer-events-none">
-                            <Globe className="w-2.5 h-2.5" /> Live Site
-                          </div>
-
-                          {/* Quick Interactive Hover Preview Overlay */}
-                          <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-xs text-white p-3 text-center">
-                            <Globe className="w-8 h-8 text-white mb-2 animate-bounce" />
-                            <span className="text-xs font-bold bg-white text-gray-900 px-3 py-1.5 rounded-full shadow-md">
-                              Click Preview Below ↗
-                            </span>
-                          </div>
-                        </div>
-
-                        {/* Bottom Home Indicator */}
-                        <div className="h-4 w-full flex items-center justify-center pointer-events-none">
-                          <div className="w-24 h-1 bg-neutral-400 rounded-full"></div>
-                        </div>
-                      </div>
-
-                      {/* Volume & Power hardware buttons */}
-                      <div className="absolute -left-[5px] top-16 w-[3px] h-7 bg-neutral-600 rounded-l-xs pointer-events-none"></div>
-                      <div className="absolute -left-[5px] top-26 w-[3px] h-7 bg-neutral-600 rounded-l-xs pointer-events-none"></div>
-                      <div className="absolute -right-[5px] top-20 w-[3px] h-10 bg-neutral-600 rounded-r-xs pointer-events-none"></div>
-                    </div>
-
-                    {/* Template Info & Fixed Buttons Just Below Phone Frame */}
-                    <div className="mt-5 w-full max-w-[270px] mx-auto flex flex-col items-center">
-                      <h4
-                        className="font-display font-bold text-lg text-brand-navy text-center line-clamp-1 mb-1"
-                        title={template.title}
-                      >
-                        {template.title}
-                      </h4>
-                      <div className="flex items-center justify-center gap-2 mb-3">
-                        <span className="text-base font-black text-gray-900">
-                          ₹{template.discountPrice || template.price}
-                        </span>
-                        {template.discountPrice && (
-                          <span className="text-xs text-gray-400 line-through">
-                            ₹{template.price}
-                          </span>
-                        )}
-                      </div>
-
-                      {/* Fixed Just Below: Preview and Order now buttons */}
-                      <div className="grid grid-cols-2 gap-2.5 w-full">
-                        <button
-                          onClick={() => {
-                            if (template.websiteUrl) {
-                              window.open(template.websiteUrl, "_blank", "noopener,noreferrer");
-                            } else {
-                              toast.success("Opening live website preview...");
-                            }
-                          }}
-                          className="py-2.5 px-3 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors border border-purple-200 shadow-xs cursor-pointer"
-                        >
-                          <Globe className="w-3.5 h-3.5" /> Preview
-                        </button>
-                        <Link
-                          to={
-                            template.id && !template.id.startsWith("web-sample-")
-                              ? `/checkout/${template.id}`
-                              : `/gallery?category=Website%20Invitation`
-                          }
-                          className="py-2.5 px-3 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs flex items-center justify-center gap-1.5 transition-colors shadow-md shadow-purple-600/20"
-                        >
-                          <ShoppingBag className="w-3.5 h-3.5" /> Order now
-                        </Link>
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </motion.div>
-            </AnimatePresence>
-          </div>
-
-          {/* Pagination Indicators & Dragging Hint */}
-          <div className="flex flex-col items-center gap-3 mt-4">
-            <div className="flex items-center justify-center gap-2">
-              {Array.from({ length: totalPages }).map((_, i) => (
-                <button
-                  key={i}
-                  onClick={() => {
-                    setDirection(i > pageIndex ? 1 : -1);
-                    setPageIndex(i);
-                  }}
-                  className={`h-2.5 rounded-full transition-all cursor-pointer ${
-                    i === pageIndex
-                      ? "w-8 bg-purple-600"
-                      : "w-2.5 bg-gray-300 hover:bg-gray-400"
-                  }`}
-                  title={`Go to page ${i + 1}`}
-                />
-              ))}
-            </div>
-            <p className="text-xs text-gray-500 font-medium">
-              ← Drag or swipe left / right to browse templates →
-            </p>
-          </div>
         </div>
       </div>
     </section>

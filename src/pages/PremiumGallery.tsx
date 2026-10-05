@@ -28,10 +28,12 @@ import { useAuthStore } from "../store/useAuthStore";
 import toast from "react-hot-toast";
 import TemplateReviewsModal from "../components/TemplateReviewsModal";
 import { formatTemplateDate, formatTemplateTime, formatTemplateDateTime, isNewlyCreated } from "../lib/utils";
+import InteractiveWebsiteInvitationPreview from "../components/InteractiveWebsiteInvitationPreview";
+import ECardsSection from "../components/ECardsSection";
 
 const defaultCategories = [
   "Wedding",
-  "Website Invitation",
+  "E-Cards",
   "Engagement",
   "Birthday",
   "Anniversary",
@@ -107,6 +109,31 @@ export default function PremiumGallery() {
   const isTimelineVisible =
     timelineVisibility === "public" || (isAdmin && timelineVisibility !== "hidden");
 
+  // Website Invitation category visibility
+  const isWebsiteInvitationHidden = settings?.websiteInvitationHidden === true;
+  const [galleryPreviewTemplateId, setGalleryPreviewTemplateId] = useState<string | null>(null);
+
+  const handleToggleWebsiteCategoryVisibility = async () => {
+    const nextHidden = !isWebsiteInvitationHidden;
+    try {
+      localStorage.setItem("sigma_hide_website_invitation", nextHidden.toString());
+      await setDoc(
+        doc(db, "settings", "config"),
+        { websiteInvitationHidden: nextHidden },
+        { merge: true }
+      );
+      toast.success(
+        nextHidden
+          ? "Website Invitation Category is now HIDDEN for all visitors"
+          : "Website Invitation Category is now UNHIDDEN and visible to all visitors",
+        { icon: nextHidden ? "👁️‍🗨️" : "✨" }
+      );
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to update category visibility");
+    }
+  };
+
   const [templates, setTemplates] = useState<any[]>([]);
   const [filteredTemplates, setFilteredTemplates] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
@@ -118,6 +145,7 @@ export default function PremiumGallery() {
   const languages = ["All", "English", "Hindi"];
   const [activeVideo, setActiveVideo] = useState<string | null>(null);
   const [reviewsTemplateId, setReviewsTemplateId] = useState<string | null>(null);
+  const [websiteViewMode, setWebsiteViewMode] = useState<"carousel" | "grid">("carousel");
 
   useEffect(() => {
     const baseNum = settings?.baseOnlineUsers ?? 50;
@@ -139,11 +167,11 @@ export default function PremiumGallery() {
           .filter((name, idx, arr) => arr.findIndex(n => n.trim().toLowerCase() === name.trim().toLowerCase()) === idx)
       : defaultCategories;
       
-  // Ensure Website Invitation is in categories
-  if (!dynamicCategories.some(c => c.toLowerCase() === 'website invitation')) {
-    dynamicCategories.splice(1, 0, 'Website Invitation');
+  // Ensure E-Cards is in categories
+  if (!dynamicCategories.some(c => c.toLowerCase() === 'e-cards' || c.toLowerCase() === 'e-card')) {
+    dynamicCategories.splice(1, 0, 'E-Cards');
   }
-  const categories = ["All", ...dynamicCategories];
+  const categories = ["All", ...dynamicCategories.filter(c => c.toLowerCase() !== 'website invitation')];
 
   useEffect(() => {
     setActiveCategory(initialCategory);
@@ -241,6 +269,8 @@ export default function PremiumGallery() {
     const isNew = isNewlyCreated(template.createdAt);
 
     if (isWebsite) {
+      const isPreviewing = galleryPreviewTemplateId === template.id;
+
       return (
         <div
           key={template.id}
@@ -253,44 +283,65 @@ export default function PremiumGallery() {
               <div className="w-2 h-2 rounded-full bg-neutral-800 border border-neutral-700/50"></div>
             </div>
 
-            {/* Inner Phone Screen with A4 Thumbnail */}
-            <div className="relative w-full h-full bg-neutral-50 rounded-[2rem] overflow-hidden flex flex-col shadow-inner">
-              {/* Status Bar */}
-              <div className="h-5 w-full flex items-center justify-between px-4 pt-1 text-[9px] text-gray-800 font-bold z-10 pointer-events-none">
-                <span>9:41</span>
-                <div className="flex items-center gap-1">
-                  <span className="text-[8px] font-semibold">5G</span>
-                  <div className="w-3.5 h-1.5 border border-gray-800 rounded-2xs p-0.5">
-                    <div className="w-full h-full bg-gray-800 rounded-3xs"></div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Thumbnail */}
-              <div className="relative flex-1 overflow-hidden bg-white flex items-center justify-center">
-                <img
-                  src={template.thumbnailBase64 || template.image}
-                  alt={template.title}
-                  className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+            {/* Inner Phone Screen with Live Mobile Preview or A4 Thumbnail */}
+            <div className="relative w-full h-full bg-neutral-950 rounded-[2rem] overflow-hidden flex flex-col shadow-inner">
+              {isPreviewing ? (
+                <InteractiveWebsiteInvitationPreview
+                  template={template}
+                  onClose={() => setGalleryPreviewTemplateId(null)}
+                  isMiddle={true}
                 />
-                {/* Live Badge Overlay */}
-                <div className="absolute top-2 right-2 bg-purple-600/90 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1 pointer-events-none">
-                  <Globe className="w-2.5 h-2.5" /> Live Site
-                </div>
+              ) : (
+                <>
+                  {/* Status Bar */}
+                  <div className="h-5 w-full flex items-center justify-between px-4 pt-1 text-[9px] text-gray-800 font-bold z-10 pointer-events-none bg-neutral-50/80 backdrop-blur-xs">
+                    <span>9:41</span>
+                    <div className="flex items-center gap-1">
+                      <span className="text-[8px] font-semibold">5G</span>
+                      <div className="w-3.5 h-1.5 border border-gray-800 rounded-2xs p-0.5">
+                        <div className="w-full h-full bg-gray-800 rounded-3xs"></div>
+                      </div>
+                    </div>
+                  </div>
 
-                {/* Quick Interactive Hover Preview Overlay */}
-                <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-xs text-white p-3 text-center">
-                  <Globe className="w-7 h-7 text-white mb-1.5 animate-bounce" />
-                  <span className="text-[11px] font-bold bg-white text-gray-900 px-3 py-1 rounded-full shadow-md">
-                    Click Preview Below ↗
-                  </span>
-                </div>
-              </div>
+                  {/* Thumbnail */}
+                  <div className="relative flex-1 overflow-hidden bg-white flex items-center justify-center">
+                    <img
+                      src={template.thumbnailBase64 || template.image}
+                      alt={template.title}
+                      className="w-full h-full object-cover object-top transition-transform duration-700 group-hover:scale-105 pointer-events-none"
+                    />
+                    {/* Live Badge Overlay */}
+                    <div className="absolute top-2 right-2 bg-purple-600/90 text-white text-[9px] font-extrabold px-2 py-0.5 rounded-full shadow-sm flex items-center gap-1 pointer-events-none">
+                      <Globe className="w-2.5 h-2.5" /> Live Site
+                    </div>
 
-              {/* Bottom Home Indicator */}
-              <div className="h-3 w-full flex items-center justify-center pointer-events-none">
-                <div className="w-20 h-1 bg-neutral-400 rounded-full"></div>
-              </div>
+                    {/* Quick Interactive Hover Preview Overlay */}
+                    <div
+                      onClick={(e) => {
+                        e.stopPropagation();
+                        setGalleryPreviewTemplateId(template.id);
+                        toast.success(`Loading live preview for ${template.title}...`, {
+                          icon: "📱",
+                        });
+                      }}
+                      className="absolute inset-0 bg-black/45 opacity-0 group-hover:opacity-100 transition-opacity flex flex-col items-center justify-center backdrop-blur-xs text-white p-3 text-center cursor-pointer"
+                    >
+                      <div className="w-9 h-9 rounded-full bg-purple-600 text-white flex items-center justify-center mb-1.5 shadow-lg">
+                        <Play className="w-4 h-4 ml-0.5 fill-white" />
+                      </div>
+                      <span className="text-[11px] font-bold bg-white text-gray-900 px-3 py-1 rounded-full shadow-md">
+                        Preview in Phone ↗
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Bottom Home Indicator */}
+                  <div className="h-3 w-full flex items-center justify-center pointer-events-none bg-neutral-100">
+                    <div className="w-20 h-1 bg-neutral-400 rounded-full"></div>
+                  </div>
+                </>
+              )}
             </div>
 
             {/* Hardware buttons */}
@@ -319,15 +370,34 @@ export default function PremiumGallery() {
               </span>
 
               <div className="flex items-center gap-2">
-                {template.websiteUrl && (
-                  <button
-                    onClick={() => window.open(template.websiteUrl, '_blank', 'noopener,noreferrer')}
-                    className="px-3 py-1.5 bg-purple-50 hover:bg-purple-100 text-purple-700 font-bold rounded-xl text-xs transition-colors flex items-center gap-1 border border-purple-200 cursor-pointer"
-                    title="Open live preview website"
-                  >
-                    <Globe className="w-3.5 h-3.5" /> Preview ↗
-                  </button>
-                )}
+                <button
+                  onClick={() => {
+                    if (isPreviewing) {
+                      setGalleryPreviewTemplateId(null);
+                    } else {
+                      setGalleryPreviewTemplateId(template.id);
+                      toast.success(`Loading live preview for ${template.title}...`, {
+                        icon: "📱",
+                      });
+                    }
+                  }}
+                  className={`px-3 py-1.5 font-bold rounded-xl text-xs transition-colors flex items-center gap-1 border shadow-xs cursor-pointer ${
+                    isPreviewing
+                      ? "bg-rose-50 text-rose-700 border-rose-200"
+                      : "bg-purple-50 hover:bg-purple-100 text-purple-700 border-purple-200"
+                  }`}
+                  title={isPreviewing ? "Close phone preview" : "Preview website in mobile frame"}
+                >
+                  {isPreviewing ? (
+                    <>
+                      <EyeOff className="w-3.5 h-3.5 text-rose-600" /> Close
+                    </>
+                  ) : (
+                    <>
+                      <Globe className="w-3.5 h-3.5" /> Preview
+                    </>
+                  )}
+                </button>
                 <button
                   onClick={() => navigate(`/checkout/${template.id}`)}
                   className="px-3.5 py-1.5 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-700 hover:to-indigo-700 text-white font-bold rounded-xl text-xs transition-colors shadow-sm flex items-center gap-1 cursor-pointer"
@@ -634,10 +704,13 @@ export default function PremiumGallery() {
             {/* Category tabs */}
             <div className="flex overflow-x-auto pb-2 md:pb-0 gap-2 scrollbar-hide">
               {categories.map((cat) => {
+                const isWebsite = cat.toLowerCase() === 'website invitation';
+                if (isWebsite && isWebsiteInvitationHidden && !isAdmin) {
+                  return null;
+                }
                 const isActive =
                   (activeCategory || "").trim().toLowerCase().replace(/\s+/g, " ") ===
                   (cat || "").trim().toLowerCase().replace(/\s+/g, " ");
-                const isWebsite = cat.toLowerCase() === 'website invitation';
                 return (
                   <button
                     key={cat}
@@ -650,6 +723,11 @@ export default function PremiumGallery() {
                   >
                     {isWebsite && <Globe className="w-4 h-4" />}
                     {cat}
+                    {isWebsite && isWebsiteInvitationHidden && (
+                      <span className="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded-md font-bold flex items-center gap-0.5">
+                        <EyeOff className="w-3 h-3" /> Hidden
+                      </span>
+                    )}
                   </button>
                 );
               })}
@@ -683,44 +761,51 @@ export default function PremiumGallery() {
             </div>
           )}
 
-          {/* Main Template Grid */}
-          <div className="space-y-6 w-full">
-            <div className="flex items-center justify-between">
-              <h2 className="text-2xl font-display font-bold text-gray-900">
-                {timeFilter === "new" ? "Newly Created Templates" : activeCategory === "All" ? "All Templates" : `${activeCategory} Templates`}
-              </h2>
-              <span className="text-xs text-gray-500 font-medium">
-                {filteredTemplates.length} Available
-              </span>
+          {/* E-Cards Interactive 3D Phone Mockup Showcase Stage */}
+          {activeCategory.toLowerCase() === "e-cards" || activeCategory.toLowerCase() === "e-card" || activeCategory.toLowerCase() === "website invitation" ? (
+            <div className="w-full">
+              <ECardsSection />
             </div>
+          ) : (
+            /* Main Template Grid for other categories */
+            <div className="space-y-6 w-full">
+              <div className="flex items-center justify-between">
+                <h2 className="text-2xl font-display font-bold text-gray-900">
+                  {timeFilter === "new" ? "Newly Created Templates" : activeCategory === "All" ? "All Templates" : `${activeCategory} Templates`}
+                </h2>
+                <span className="text-xs text-gray-500 font-medium">
+                  {filteredTemplates.length} Available
+                </span>
+              </div>
 
-            {loading ? (
-              <div className="flex justify-center py-20">
-                <div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin"></div>
-              </div>
-            ) : filteredTemplates.length > 0 ? (
-              <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-8">
-                {filteredTemplates.map(template => renderTemplateCard(template))}
-              </div>
-            ) : (
-              <div className="col-span-full py-20 text-center w-full bg-white rounded-2xl border border-gray-100">
-                <p className="text-gray-500 text-lg">
-                  No templates found matching your criteria.
-                </p>
-                <button
-                  onClick={() => {
-                    setSearchQuery("");
-                    setActiveCategory("All");
-                    setActiveLanguage("All");
-                    setTimeFilter("all");
-                  }}
-                  className="mt-4 text-brand-purple font-medium hover:underline"
-                >
-                  Clear Filters
-                </button>
-              </div>
-            )}
-          </div>
+              {loading ? (
+                <div className="flex justify-center py-20">
+                  <div className="w-12 h-12 border-4 border-brand-purple border-t-transparent rounded-full animate-spin"></div>
+                </div>
+              ) : filteredTemplates.length > 0 ? (
+                <div className="columns-1 md:columns-2 lg:columns-3 xl:columns-4 gap-8">
+                  {filteredTemplates.map(template => renderTemplateCard(template))}
+                </div>
+              ) : (
+                <div className="col-span-full py-20 text-center w-full bg-white rounded-2xl border border-gray-100">
+                  <p className="text-gray-500 text-lg">
+                    No templates found matching your criteria.
+                  </p>
+                  <button
+                    onClick={() => {
+                      setSearchQuery("");
+                      setActiveCategory("All");
+                      setActiveLanguage("All");
+                      setTimeFilter("all");
+                    }}
+                    className="mt-4 text-brand-purple font-medium hover:underline"
+                  >
+                    Clear Filters
+                  </button>
+                </div>
+              )}
+            </div>
+          )}
         </div>
       </main>
 

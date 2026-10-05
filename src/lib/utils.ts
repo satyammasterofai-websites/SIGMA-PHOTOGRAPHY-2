@@ -181,3 +181,18 @@ export function isNewlyCreated(dateVal: any, daysThreshold = 7): boolean {
     return false;
   }
 }
+
+/**
+ * Clean and format a WhatsApp phone number with country code.
+ * Defaults to India (+91) if 10 digits are provided without country code.
+ */
+export function formatWhatsAppNumber(phone: string, defaultNumber = "9162478070"): string {
+  if (!phone) return defaultNumber;
+  const digits = String(phone).replace(/[^0-9]/g, "");
+  if (!digits) return defaultNumber;
+  if (digits.length === 10) {
+    return `91${digits}`;
+  }
+  return digits;
+}
+

@@ -2,6 +2,7 @@ import Navbar from '../components/Navbar';
 import Hero from '../components/Hero';
 import HomeBanners from '../components/HomeBanners';
 import TemplateCategories from '../components/TemplateCategories';
+import ECardsSection from '../components/ECardsSection';
 import ContactAndTestimonials from '../components/ContactAndTestimonials';
 import SelfVideoEditing from '../components/SelfVideoEditing';
 import Footer from '../components/Footer';
@@ -57,6 +58,9 @@ export default function Home() {
         </FadeInSection>
         <FadeInSection>
           <TemplateCategories />
+        </FadeInSection>
+        <FadeInSection>
+          <ECardsSection />
         </FadeInSection>
         {isSelfVideoVisible && (
           <FadeInSection>
