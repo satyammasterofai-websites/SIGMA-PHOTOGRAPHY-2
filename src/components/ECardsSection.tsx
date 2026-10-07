@@ -20,6 +20,7 @@ import { motion, AnimatePresence } from "motion/react";
 import { useNavigate } from "react-router-dom";
 import { useSiteContent } from "../hooks/useSiteContent";
 import toast from "react-hot-toast";
+import { isWebsiteOrECardTemplate, isValidWebsiteUrl, isVideoUrl } from "../lib/templateUtils";
 
 export interface ECard {
   id: string;
@@ -28,6 +29,8 @@ export interface ECard {
   price: number;
   discountPrice?: number;
   link?: string;
+  websiteUrl?: string;
+  type?: "website" | "ecard" | string;
   subCategory?: string;
   description?: string;
   tags?: string[];
@@ -226,117 +229,6 @@ export const defaultECardsData: {
     },
   ],
 };
-
-export const defaultWebsiteTemplates: ECard[] = [
-  {
-    id: "web-sample-1",
-    name: "Royal Rajputana Palace Wedding Website",
-    image:
-      "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=800",
-    price: 2999,
-    discountPrice: 2499,
-    link: "https://preview.themeforest.net/item/wedding-invitation-website-template/full_screen_preview/24560783",
-    subCategory: "Website Templates",
-    description:
-      "Interactive digital royal wedding invitation website featuring RSVP tracker, Google Maps venue directions, bridal party, countdown timer, and love story timeline.",
-    features: [
-      "Live Interactive RSVP Tracker",
-      "Google Maps Live Navigation",
-      "Love Story & Photo Gallery",
-      "Event Countdown & Music Player",
-    ],
-  },
-  {
-    id: "web-sample-2",
-    name: "Blush Floral Ivory Interactive RSVP Invite",
-    image:
-      "https://images.unsplash.com/photo-1519741497674-611481863552?auto=format&fit=crop&q=80&w=800",
-    price: 2499,
-    discountPrice: 1999,
-    link: "https://preview.themeforest.net/item/wedding-responsive-invitation-template/full_screen_preview/25893420",
-    subCategory: "Website Templates",
-    description:
-      "Elegant pastel floral mobile-first invitation website with live RSVP guestbook, event calendar sync, and photo gallery.",
-    features: [
-      "Guestbook & Live RSVP Form",
-      "Mobile-First Responsive Layout",
-      "Calendar Add-to-Phone Sync",
-      "Custom Audio & Couple Itinerary",
-    ],
-  },
-  {
-    id: "web-sample-3",
-    name: "Golden Euphoria Luxury Gala Invitation",
-    image:
-      "https://images.unsplash.com/photo-1465495976277-4387d4b0b4c6?auto=format&fit=crop&q=80&w=800",
-    price: 3299,
-    discountPrice: 2699,
-    link: "https://preview.themeforest.net/item/event-and-wedding-invitation-theme/full_screen_preview/22810984",
-    subCategory: "Website Templates",
-    description:
-      "Grand gold and emerald digital experience with ambient background music player, venue navigation, and custom dress code guide.",
-    features: [
-      "Royal Gold & Emerald Aesthetics",
-      "Background Symphony Music Player",
-      "Interactive Venue Directions",
-      "Custom Dress Code & Notes",
-    ],
-  },
-  {
-    id: "web-sample-4",
-    name: "Modern Minimalist Couple Story Portal",
-    image:
-      "https://images.unsplash.com/photo-1511285560929-80b456fea0bc?auto=format&fit=crop&q=80&w=800",
-    price: 2199,
-    discountPrice: 1799,
-    link: "https://preview.themeforest.net/item/wedding-invitation-website-template/full_screen_preview/24560783",
-    subCategory: "Website Templates",
-    description:
-      "Clean aesthetic typography with smooth parallax scrolling, Google Maps live pins, and guest dietary requirement forms.",
-    features: [
-      "Parallax Scrolling & Timeline",
-      "Guest RSVP with Dietary Options",
-      "Directions & Transport Guide",
-      "Fast 24-Hour Customization",
-    ],
-  },
-  {
-    id: "web-sample-5",
-    name: "Sangeet & Mehendi Celebration Hub",
-    image:
-      "https://images.unsplash.com/photo-1583337130417-3346a1be7dee?auto=format&fit=crop&q=80&w=800",
-    price: 2499,
-    discountPrice: 1999,
-    link: "https://preview.themeforest.net/item/wedding-responsive-invitation-template/full_screen_preview/25893420",
-    subCategory: "Website Templates",
-    description:
-      "Festive colorful mobile invitation website with Spotify playlist integration, event timeline, and instant WhatsApp share.",
-    features: [
-      "Spotify Playlist Player Link",
-      "Event-by-Event Interactive Itinerary",
-      "One-Click WhatsApp Sharing",
-      "High Speed Cloud Hosting",
-    ],
-  },
-  {
-    id: "web-sample-6",
-    name: "Destination Beachfront Wedding Experience",
-    image:
-      "https://images.unsplash.com/photo-1532712938310-34cb3982ef74?auto=format&fit=crop&q=80&w=800",
-    price: 2999,
-    discountPrice: 2399,
-    link: "https://preview.themeforest.net/item/event-and-wedding-invitation-theme/full_screen_preview/22810984",
-    subCategory: "Website Templates",
-    description:
-      "Tropical coastal theme with flight/hotel accommodation guide for out-of-town guests and itinerary countdown.",
-    features: [
-      "Flight & Accommodation Guide",
-      "Multi-Day Event Countdown",
-      "Full Mobile & Desktop Responsive",
-      "Direct WhatsApp RSVP Sync",
-    ],
-  },
-];
 
 export function ECardCarouselGroup({
   title,
@@ -579,7 +471,7 @@ export function ECardCarouselGroup({
 }
 
 export default function ECardsSection({ ecards }: { ecards?: ECard[] }) {
-  const { templates } = useSiteContent();
+  const { templates, ecards: storeEcards } = useSiteContent();
   const navigate = useNavigate();
 
   const [selectedPreview, setSelectedPreview] = useState<{
@@ -594,33 +486,51 @@ export default function ECardsSection({ ecards }: { ecards?: ECard[] }) {
   const [quickViewCard, setQuickViewCard] = useState<ECard | null>(null);
   const [activeTabFilter, setActiveTabFilter] = useState<string>("All");
 
-  // Derive templates from Firestore templates
+  // Helper to deduplicate cards by unique ID or Name
+  const dedupeCards = (cards: ECard[]) => {
+    const seen = new Set<string>();
+    return cards.filter((c) => {
+      const key = (c.id || c.name || "").trim().toLowerCase();
+      if (!key || seen.has(key)) return false;
+      seen.add(key);
+      return true;
+    });
+  };
+
+  // Derive templates from Firestore templates: strictly requires a genuine website link (never video invitations)
   const customTemplates: ECard[] = (templates || [])
-    .filter((t: any) => {
-      const cat = (t.category || "").toLowerCase();
-      const hasWebUrl = !!(t.websiteUrl && t.websiteUrl.trim());
-      return (
-        cat === "e-card" ||
-        cat === "ecard" ||
-        cat === "e-cards" ||
-        cat === "website invitation" ||
-        cat === "website" ||
-        t.type === "ecard" ||
-        t.type === "website" ||
-        hasWebUrl
-      );
-    })
+    .filter((t: any) => isWebsiteOrECardTemplate(t))
     .map((t: any) => {
       const cat = (t.category || "").toLowerCase();
-      const isWebsite =
-        cat.includes("website") || !!t.websiteUrl || t.type === "website";
-      const subCat =
-        t.subCategory ||
-        (isWebsite
-          ? "Website Templates"
-          : t.language === "Hindi"
-          ? "Hindu Templates"
-          : "Hindu Templates");
+      const subCatRaw = (t.subCategory || "").toLowerCase();
+      const titleLower = (t.title || "").toLowerCase();
+      const webUrl = (t.websiteUrl || t.link || "").trim();
+
+      let subCat = "Website Templates";
+      if (
+        subCatRaw.includes("muslim") ||
+        cat.includes("muslim") ||
+        titleLower.includes("muslim") ||
+        titleLower.includes("nikah") ||
+        titleLower.includes("walima")
+      ) {
+        subCat = "Muslim Templates";
+      } else if (
+        subCatRaw.includes("english") ||
+        cat.includes("english") ||
+        titleLower.includes("english") ||
+        t.language === "English"
+      ) {
+        subCat = "English Templates";
+      } else if (
+        subCatRaw.includes("hindu") ||
+        cat.includes("hindu") ||
+        titleLower.includes("hindu")
+      ) {
+        subCat = "Hindu Templates";
+      } else {
+        subCat = "Website Templates";
+      }
 
       return {
         id: t.id,
@@ -631,16 +541,14 @@ export default function ECardsSection({ ecards }: { ecards?: ECard[] }) {
           "https://images.unsplash.com/photo-1544717305-2782549b5136?auto=format&fit=crop&q=80&w=800",
         price: Number(t.price) || 1499,
         discountPrice: t.discountPrice ? Number(t.discountPrice) : undefined,
-        link:
-          t.websiteUrl ||
-          t.videoUrl ||
-          `https://demo.sigmainvitations.com/template/${t.id}`,
+        link: webUrl,
+        websiteUrl: webUrl,
         subCategory: subCat,
+        type: t.type || "website",
         description: t.description,
-        features: [
-          isWebsite
-            ? "Live Interactive Website Experience"
-            : "High-Resolution 300 DPI Format",
+        features: t.features || [
+          "Live Interactive Website Experience",
+          "High-Resolution 300 DPI Format",
           "Personalized Names & Event Details",
           "WhatsApp & Social Media Ready",
           "24-Hour Express Turnaround",
@@ -648,39 +556,105 @@ export default function ECardsSection({ ecards }: { ecards?: ECard[] }) {
       };
     });
 
-  const allWebsiteCards = [
-    ...defaultWebsiteTemplates,
+  // Cards loaded directly from the 'ecards' collection/store: strictly requires a genuine website link
+  const firestoreCollectionCards: ECard[] = (storeEcards || [])
+    .filter((c: any) => isWebsiteOrECardTemplate(c))
+    .map((c: any) => {
+      const webUrl = (c.websiteUrl || c.link || "").trim();
+      return {
+        id: c.id,
+        name: c.name || c.title || "E-Card",
+        image: c.image || c.thumbnailBase64 || "",
+        price: Number(c.price) || 1499,
+        discountPrice: c.discountPrice ? Number(c.discountPrice) : undefined,
+        link: webUrl,
+        websiteUrl: webUrl,
+        subCategory: c.subCategory || "Website Templates",
+        type: c.type || "website",
+        description: c.description || "",
+        features: c.features || [
+          "Live RSVP Online Form & Guest Management",
+          "Google Maps Venue Directions & Live Navigation",
+          "Couple Love Story & Event Timeline",
+          "Real-Time Wedding Countdown Timer",
+          "Photo Gallery & Background Music Player",
+        ],
+      };
+    });
+
+  const allWebsiteCards = dedupeCards([
     ...customTemplates.filter(
       (c) =>
-        c.subCategory?.toLowerCase().includes("web") ||
-        (c.link && c.link.includes("preview"))
+        (c.subCategory === "Website Templates" ||
+          c.subCategory?.toLowerCase().includes("web") ||
+          c.type === "website" ||
+          !!c.websiteUrl) &&
+        isValidWebsiteUrl(c.websiteUrl || c.link)
     ),
-  ];
-  const allHinduCards = [
-    ...defaultECardsData.hindu,
-    ...customTemplates.filter((c) =>
-      c.subCategory?.toLowerCase().includes("hindu")
+    ...firestoreCollectionCards.filter(
+      (c) =>
+        (c.subCategory === "Website Templates" ||
+          c.subCategory?.toLowerCase().includes("web") ||
+          c.type === "website" ||
+          !!c.websiteUrl) &&
+        isValidWebsiteUrl(c.websiteUrl || c.link)
     ),
-  ];
-  const allMuslimCards = [
-    ...defaultECardsData.muslim,
-    ...customTemplates.filter((c) =>
-      c.subCategory?.toLowerCase().includes("muslim")
-    ),
-  ];
-  const allEnglishCards = [
-    ...defaultECardsData.english,
-    ...customTemplates.filter((c) =>
-      c.subCategory?.toLowerCase().includes("english")
-    ),
-  ];
+  ]);
 
-  const allCards = [
+  const allHinduCards = dedupeCards([
+    ...defaultECardsData.hindu,
+    ...customTemplates.filter(
+      (c) =>
+        (c.subCategory === "Hindu Templates" ||
+          c.subCategory?.toLowerCase().includes("hindu")) &&
+        isValidWebsiteUrl(c.websiteUrl || c.link)
+    ),
+    ...firestoreCollectionCards.filter(
+      (c) =>
+        (c.subCategory === "Hindu Templates" ||
+          c.subCategory?.toLowerCase().includes("hindu")) &&
+        isValidWebsiteUrl(c.websiteUrl || c.link)
+    ),
+  ]);
+
+  const allMuslimCards = dedupeCards([
+    ...defaultECardsData.muslim,
+    ...customTemplates.filter(
+      (c) =>
+        (c.subCategory === "Muslim Templates" ||
+          c.subCategory?.toLowerCase().includes("muslim")) &&
+        isValidWebsiteUrl(c.websiteUrl || c.link)
+    ),
+    ...firestoreCollectionCards.filter(
+      (c) =>
+        (c.subCategory === "Muslim Templates" ||
+          c.subCategory?.toLowerCase().includes("muslim")) &&
+        isValidWebsiteUrl(c.websiteUrl || c.link)
+    ),
+  ]);
+
+  const allEnglishCards = dedupeCards([
+    ...defaultECardsData.english,
+    ...customTemplates.filter(
+      (c) =>
+        (c.subCategory === "English Templates" ||
+          c.subCategory?.toLowerCase().includes("english")) &&
+        isValidWebsiteUrl(c.websiteUrl || c.link)
+    ),
+    ...firestoreCollectionCards.filter(
+      (c) =>
+        (c.subCategory === "English Templates" ||
+          c.subCategory?.toLowerCase().includes("english")) &&
+        isValidWebsiteUrl(c.websiteUrl || c.link)
+    ),
+  ]);
+
+  const allCards = dedupeCards([
     ...allWebsiteCards,
     ...allHinduCards,
     ...allMuslimCards,
     ...allEnglishCards,
-  ];
+  ]);
 
   const displayedCards = (() => {
     if (activeTabFilter === "Website" || activeTabFilter === "Website Templates") {
@@ -703,7 +677,7 @@ export default function ECardsSection({ ecards }: { ecards?: ECard[] }) {
 
   const handleOrder = (card: ECard) => {
     // If it's a Firestore template, navigate directly to checkout
-    if (card.id && !card.id.startsWith("ecard-") && !card.id.startsWith("web-sample-")) {
+    if (card.id && !card.id.startsWith("ecard-")) {
       navigate(`/checkout/${card.id}`);
     } else {
       // Find matching template in Firestore or navigate to checkout with state
@@ -804,13 +778,25 @@ export default function ECardsSection({ ecards }: { ecards?: ECard[] }) {
         </div>
 
         {/* Single Unified 3D Phone-Mockup E-Card Showcase Carousel */}
-        <ECardCarouselGroup
-          key={activeTabFilter}
-          ecards={providedCards || displayedCards}
-          onOrder={handleOrder}
-          onQuickView={handleQuickView}
-          onLivePreview={handleLivePreview}
-        />
+        {displayedCards.length === 0 ? (
+          <div className="max-w-md mx-auto my-12 p-8 bg-gray-50/80 backdrop-blur-sm rounded-3xl border border-dashed border-gray-200 text-center">
+            <Smartphone className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+            <h4 className="font-display font-bold text-gray-800 text-lg mb-1">
+              No {activeTabFilter === "All" ? "" : activeTabFilter} Templates Yet
+            </h4>
+            <p className="text-gray-500 text-xs">
+              Templates added in the Admin Panel with this category will appear here.
+            </p>
+          </div>
+        ) : (
+          <ECardCarouselGroup
+            key={activeTabFilter}
+            ecards={providedCards || displayedCards}
+            onOrder={handleOrder}
+            onQuickView={handleQuickView}
+            onLivePreview={handleLivePreview}
+          />
+        )}
       </div>
 
       {/* FULLSCREEN LIVE DEMO PREVIEW MODAL */}

@@ -7,10 +7,11 @@ import { getDocs, collection, doc, onSnapshot, setDoc } from 'firebase/firestore
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts';
 import { LayoutDashboard, Users, ShoppingBag, Images, FileEdit, 
   MessageSquare, HelpCircle, Bell, Settings, LogOut, Menu, X, ShieldAlert, ArrowLeft,
-  Eye, EyeOff
+  Eye, EyeOff, Smartphone
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TemplateManagement from './TemplateManagement';
+import ManageECards from './ManageECards';
 import SiteContentManagement from './SiteContentManagement';
 import ManageOrders from './ManageOrders';
 import ManageBanners from './ManageBanners';
@@ -64,6 +65,7 @@ export default function AdminDashboardLayout() {
     { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
     { name: 'Categories', path: '/admin/categories', icon: Images },
     { name: 'Templates', path: '/admin/templates', icon: FileEdit },
+    { name: 'E-Cards', path: '/admin/ecards', icon: Smartphone },
     { name: 'Forms', path: '/admin/forms', icon: FileEdit },
     { name: 'Settings', path: '/admin/settings', icon: Settings },
     { name: 'Splash Video', path: '/admin/splash-video', icon: Images },
@@ -185,6 +187,7 @@ export default function AdminDashboardLayout() {
               <Route path="/orders" element={<ManageOrders />} />
               <Route path="/categories" element={<ManageCategories />} />
               <Route path="/templates" element={<TemplateManagement />} />
+              <Route path="/ecards" element={<ManageECards />} />
               <Route path="/forms" element={<ManageForms />} />
               <Route path="/splash-video" element={<ManageSplashVideo />} />
               <Route path="/services" element={<ManageCustomServices />} />

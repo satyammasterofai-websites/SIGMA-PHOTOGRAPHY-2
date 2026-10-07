@@ -1,6 +1,7 @@
 import { create } from 'zustand';
 import { doc, onSnapshot, collection } from 'firebase/firestore';
 import { db } from '../lib/firebase';
+import { isWebsiteOrECardTemplate } from '../lib/templateUtils';
 
 interface SiteContentState {
   logoBase64: string;
@@ -14,6 +15,7 @@ interface SiteContentState {
   testimonials: any[];
   faqs: any[];
   banners: any[];
+  ecards: any[];
   settings: any;
   loading: boolean;
   initialized: boolean;
@@ -32,6 +34,7 @@ export const useSiteStore = create<SiteContentState>((set, get) => ({
   testimonials: [],
   faqs: [],
   banners: [],
+  ecards: [],
   settings: null,
   loading: true,
   initialized: false,
@@ -82,8 +85,13 @@ export const useSiteStore = create<SiteContentState>((set, get) => ({
     }, () => checkLoaded());
 
     onSnapshot(collection(db, 'content', 'template_categories', 'items'), (snapshot) => {
-      const list = [];
-      snapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
+      const list: any[] = [];
+      snapshot.forEach((doc) => {
+        const data = doc.data();
+        if (data.name && String(data.name).trim() !== '' && String(data.name) !== 'undefined') {
+          list.push({ id: doc.id, ...data });
+        }
+      });
       list.sort((a, b) => {
         const orderA = typeof a.order === 'number' ? a.order : 9999;
         const orderB = typeof b.order === 'number' ? b.order : 9999;
@@ -97,6 +105,10 @@ export const useSiteStore = create<SiteContentState>((set, get) => ({
       const list: any[] = [];
       snapshot.forEach((doc) => list.push({ id: doc.id, ...doc.data() }));
       set({ templates: list });
+
+      // Automatically derive e-cards and website templates: strictly requires a website link and excludes video templates
+      const derivedECards = list.filter((t: any) => isWebsiteOrECardTemplate(t));
+      set({ ecards: derivedECards });
       checkLoaded();
     }, () => checkLoaded());
 

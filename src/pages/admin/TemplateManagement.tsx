@@ -1,10 +1,11 @@
 import React, { useState, useEffect } from 'react';
-import { collection, getDocs, addDoc, deleteDoc, updateDoc, doc, getDoc } from 'firebase/firestore';
+import { collection, getDocs, addDoc, deleteDoc, updateDoc, setDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { fileToBase64, formatTemplateDate, formatTemplateTime, formatTemplateDateTime, isNewlyCreated } from '../../lib/utils';
-import { Plus, Edit, Trash2, ImagePlus, Eye, Star, TrendingUp, Play, ShoppingBag, X, Search, Globe, Calendar, Clock, ExternalLink, Sparkles, Layers, Check, FileText } from 'lucide-react';
+import { Plus, Edit, Trash2, ImagePlus, Eye, Star, TrendingUp, Play, ShoppingBag, X, Search, Globe, Calendar, Clock, ExternalLink, Sparkles, Layers, Check, FileText, ArrowRightLeft, Smartphone } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
+import { isVideoUrl, isValidWebsiteUrl } from '../../lib/templateUtils';
 
 export default function TemplateManagement() {
   const [templates, setTemplates] = useState<any[]>([]);
@@ -35,6 +36,7 @@ export default function TemplateManagement() {
   const [language, setLanguage] = useState('None');
   const [activeTab, setActiveTab] = useState('All');
   const [searchQuery, setSearchQuery] = useState('');
+  const [formMode, setFormMode] = useState<'video' | 'website'>('video');
   
   // Custom Fields
   const [customFields, setCustomFields] = useState<any[]>([]);
@@ -203,17 +205,75 @@ export default function TemplateManagement() {
     }
   };
 
+  const openWebsiteForm = () => {
+    setFormMode('website');
+    setEditingId(null);
+    setTitle('');
+    setCategory('Website Invitation');
+    setSubCategory('Website Templates');
+    setPrice('2999');
+    setDiscountPrice('2499');
+    setDescription('Interactive mobile-first digital wedding invitation website with RSVP, Google Maps, and couple love story.');
+    setThumbnailBase64('');
+    setVideoUrl('');
+    setWebsiteUrl('');
+    setStatus('Active');
+    setIsFeatured(false);
+    setIsTrending(false);
+    setAdvancePayment('500');
+    setCouponOverrides({});
+    setBaseOrdersCount(100);
+    setLanguage('None');
+    setCustomFields([]);
+    setFormId('');
+    setNewFieldName('');
+    setIsModalOpen(true);
+  };
+
+  const openVideoForm = () => {
+    setFormMode('video');
+    setEditingId(null);
+    setTitle('');
+    const defaultCat = activeTab !== 'All' && activeTab !== 'Website Invitation' ? activeTab : 'Wedding';
+    setCategory(defaultCat);
+    setSubCategory('');
+    setPrice('1499');
+    setDiscountPrice('999');
+    setDescription('Cinematic digital wedding video invitation customized with your couple portraits, music, and royal event itinerary.');
+    setThumbnailBase64('');
+    setVideoUrl('');
+    setWebsiteUrl('');
+    setStatus('Active');
+    setIsFeatured(false);
+    setIsTrending(false);
+    setAdvancePayment('');
+    setCouponOverrides({});
+    setBaseOrdersCount(100);
+    setLanguage('Hindi');
+    setCustomFields([]);
+    setFormId('');
+    setNewFieldName('');
+    setIsModalOpen(true);
+  };
+
   const openForm = (template: any = null) => {
     if (template) {
+      const isWebsite =
+        template.type === 'website' ||
+        template.category === 'Website Invitation' ||
+        (template.subCategory || '').toLowerCase().includes('web') ||
+        !!template.websiteUrl;
+
+      setFormMode(isWebsite ? 'website' : 'video');
       setEditingId(template.id);
       setTitle(template.title || '');
-      setCategory(template.category || 'Wedding');
+      setCategory(template.category || (isWebsite ? 'Website Invitation' : 'Wedding'));
       setPrice(template.price || '');
       setDiscountPrice(template.discountPrice || '');
       setDescription(template.description || '');
       setThumbnailBase64(template.thumbnailBase64 || '');
-      setVideoUrl(template.videoUrl || '');
-      setWebsiteUrl(template.websiteUrl || '');
+      setVideoUrl(isWebsite ? '' : (template.videoUrl || ''));
+      setWebsiteUrl(isWebsite ? (template.websiteUrl || template.link || '') : '');
       setStatus(template.status || 'Active');
       setIsFeatured(template.isFeatured || false);
       setIsTrending(template.isTrending || false);
@@ -223,27 +283,10 @@ export default function TemplateManagement() {
       setLanguage(template.language || 'None');
       setCustomFields(template.customFields || []);
       setFormId(template.formId || '');
-      setSubCategory(template.subCategory || (template.category === 'Website Invitation' ? 'Website' : 'Hindu'));
+      setSubCategory(template.subCategory || (isWebsite ? 'Website Templates' : ''));
     } else {
-      setEditingId(null);
-      setTitle('');
-      setCategory(activeTab !== 'All' ? activeTab : (categories.length > 0 ? categories[0] : 'Wedding'));
-      setSubCategory('Website');
-      setPrice('');
-      setDiscountPrice('');
-      setDescription('');
-      setThumbnailBase64('');
-      setVideoUrl('');
-      setWebsiteUrl('');
-      setStatus('Active');
-      setIsFeatured(false);
-      setIsTrending(false);
-      setAdvancePayment('');
-      setCouponOverrides({});
-      setBaseOrdersCount(100);
-      setLanguage('None');
-      setCustomFields([]);
-      setFormId('');
+      openVideoForm();
+      return;
     }
     setNewFieldName('');
     setIsModalOpen(true);
@@ -271,16 +314,16 @@ export default function TemplateManagement() {
       return;
     }
 
-    const isWebOrECard = category === 'Website Invitation' || category === 'E-Cards';
-
-    if (isWebOrECard && !(websiteUrl || '').trim() && !(videoUrl || '').trim()) {
-      toast.error('Please enter the Website / Demo URL or Video URL');
-      return;
-    }
-
-    if (!isWebOrECard && !(videoUrl || '').trim()) {
-      toast.error('Please enter the Video URL');
-      return;
+    if (formMode === 'website') {
+      if (!(websiteUrl || '').trim()) {
+        toast.error('Please enter the Live Website Demo URL');
+        return;
+      }
+    } else {
+      if (!(videoUrl || '').trim()) {
+        toast.error('Please enter the Video URL');
+        return;
+      }
     }
     
     // Check for duplicate template name/title
@@ -294,10 +337,9 @@ export default function TemplateManagement() {
     }
     
     try {
-      let finalCategory = category;
-      if (!categories.includes(category) && categories.length > 0) {
-        finalCategory = categories[0];
-      }
+      const isWebsite = formMode === 'website';
+      const finalCategory = isWebsite ? 'Website Invitation' : category;
+      const finalSubCategory = isWebsite ? 'Website Templates' : (subCategory || '');
 
       const now = new Date().toISOString();
       const existing = editingId ? templates.find(t => t.id === editingId) : null;
@@ -306,20 +348,21 @@ export default function TemplateManagement() {
       const data = { 
         title, 
         category: finalCategory, 
-        subCategory: subCategory || (finalCategory === 'Website Invitation' ? 'Website' : 'Hindu'),
+        subCategory: finalSubCategory,
+        type: isWebsite ? 'website' : 'video',
         price, 
         discountPrice, 
         description, 
         thumbnailBase64, 
-        videoUrl: videoUrl || '', 
-        websiteUrl: websiteUrl || '',
+        videoUrl: isWebsite ? '' : (videoUrl || ''), 
+        websiteUrl: isWebsite ? (websiteUrl || '') : '',
         status, 
         isFeatured, 
         isTrending, 
         advancePayment: advancePayment ? Number(advancePayment) : 0, 
         couponOverrides,
         baseOrdersCount: Number(baseOrdersCount), 
-        language, 
+        language: isWebsite ? 'None' : language, 
         customFields, 
         formId,
         createdAt,
@@ -339,6 +382,11 @@ export default function TemplateManagement() {
         const nextId = String(maxId + 1).padStart(5, '0');
         await addDoc(collection(db, 'templates'), { ...data, displayId: nextId });
       }
+
+      // Website templates are safely kept in templates collection with Website Invitation category
+      if (isWebsite) {
+        // Tagged for official Website & E-Card section
+      }
       
       setIsModalOpen(false);
       setShowSuccessPopup(true);
@@ -350,6 +398,48 @@ export default function TemplateManagement() {
     } catch (error) {
       console.error(error);
       toast.error("Failed to save template");
+    }
+  };
+
+  const [transferringId, setTransferringId] = useState<string | null>(null);
+
+  // Transfer template to official E-Cards & Website section
+  const handleTransferToECards = async (template: any) => {
+    setTransferringId(template.id);
+    const toastId = toast.loading(`Transferring "${template.title || 'Template'}" to official E-Cards section...`);
+    try {
+      const now = new Date().toISOString();
+      const rawWebUrl = (template.websiteUrl || template.link || '').trim();
+
+      if (!rawWebUrl || isVideoUrl(rawWebUrl) || !isValidWebsiteUrl(rawWebUrl)) {
+        toast.error('This template does not have a valid website link. E-Card/Website templates must have a responsive website link (videos cannot be transferred without a website link).', { id: toastId });
+        return;
+      }
+
+      const isWebsite =
+        template.type === 'website' ||
+        template.category === 'Website Invitation' ||
+        (template.subCategory || '').toLowerCase().includes('web') ||
+        !!template.websiteUrl;
+
+      // Update the template in templates collection to reflect official Website Invitation / E-Card
+      await updateDoc(doc(db, 'templates', template.id), {
+        category: 'Website Invitation',
+        subCategory: isWebsite ? 'Website Templates' : (template.subCategory || 'Hindu Templates'),
+        type: 'website',
+        showInECards: true,
+        videoUrl: '', // strictly clear videoUrl when transferred to e-card/website
+        websiteUrl: rawWebUrl,
+        updatedAt: now,
+      });
+
+      toast.success(`Transferred to official E-Cards section!`, { id: toastId });
+      fetchTemplates();
+    } catch (err: any) {
+      console.error('Error transferring template:', err);
+      toast.error(`Transfer failed: ${err.message || 'Unknown error'}`, { id: toastId });
+    } finally {
+      setTransferringId(null);
     }
   };
 
@@ -417,12 +507,22 @@ export default function TemplateManagement() {
            <h1 className="text-2xl md:text-3xl font-display font-bold text-brand-navy">Template Management</h1>
            <p className="text-brand-slate mt-1">Manage standard invitation packages and themes.</p>
         </div>
-        <button 
-          onClick={() => openForm()}
-          className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded-xl transition-colors font-medium text-sm"
-        >
-          <Plus className="w-4 h-4" /> Add Template
-        </button>
+        <div className="flex flex-wrap items-center gap-3">
+          <button 
+            onClick={() => openWebsiteForm()}
+            className="flex items-center gap-2 bg-purple-600 hover:bg-purple-700 text-white px-4 py-2.5 rounded-xl transition-all shadow-md shadow-purple-600/20 font-bold text-sm cursor-pointer"
+            title="Create an interactive digital wedding website template"
+          >
+            <Globe className="w-4 h-4" /> Add Website Template
+          </button>
+          <button 
+            onClick={() => openVideoForm()}
+            className="flex items-center gap-2 bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2.5 rounded-xl transition-all shadow-md font-medium text-sm cursor-pointer"
+            title="Create a video invitation template"
+          >
+            <Plus className="w-4 h-4" /> Add Video Template
+          </button>
+        </div>
       </div>
 
       {loading ? (
@@ -463,7 +563,7 @@ export default function TemplateManagement() {
               </button>
 
               {/* Individual Category Cards with Count */}
-              {categories.map(cat => {
+              {categories.map((cat, idx) => {
                 const count = templates.filter(t => (t.category || '').trim().toLowerCase() === cat.trim().toLowerCase()).length;
                 const isWebsite = cat.toLowerCase() === 'website invitation';
                 const isSelected = activeTab === cat;
@@ -481,7 +581,10 @@ export default function TemplateManagement() {
                     }`}
                   >
                     <div className="flex items-center justify-between text-xs text-gray-400 mb-1">
-                      <span className="truncate font-medium">{cat}</span>
+                      <span className="truncate font-medium flex items-center gap-1.5">
+                        <span className="text-[10px] font-mono text-indigo-400 font-bold">#{idx + 1}</span>
+                        {cat}
+                      </span>
                       {isWebsite && <Globe className="w-3.5 h-3.5 text-purple-400 flex-shrink-0" />}
                     </div>
                     <div className="flex items-baseline gap-1.5">
@@ -535,7 +638,7 @@ export default function TemplateManagement() {
                 {templates.length}
               </span>
             </button>
-            {categories.map(cat => {
+            {categories.map((cat, idx) => {
               const count = templates.filter(t => (t.category || '').trim().toLowerCase() === cat.trim().toLowerCase()).length;
               const isSelected = activeTab === cat;
               const isWebsite = cat.toLowerCase() === 'website invitation';
@@ -550,6 +653,9 @@ export default function TemplateManagement() {
                   }`}
                 >
                   {isWebsite && <Globe className="w-3.5 h-3.5 text-purple-300" />}
+                  <span className={`text-[10px] font-mono font-bold px-1.5 py-0.5 rounded ${isSelected ? 'bg-white/20 text-white' : 'bg-gray-800 text-indigo-400'}`}>
+                    #{idx + 1}
+                  </span>
                   <span>{cat}</span>
                   <span className={`px-2 py-0.5 rounded-full text-xs font-bold ${
                     isSelected ? 'bg-white/20 text-white' : 'bg-gray-800 text-gray-400'
@@ -663,10 +769,18 @@ export default function TemplateManagement() {
                            </div>
                         </td>
                         <td className="px-6 py-4 text-right whitespace-nowrap">
-                          <button onClick={() => openForm(template)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors mr-2">
+                          <button
+                            onClick={() => handleTransferToECards(template)}
+                            disabled={transferringId === template.id}
+                            className="p-2 text-purple-400 hover:bg-purple-400/10 rounded-lg transition-colors mr-2 cursor-pointer"
+                            title="Transfer this template to official E-Cards & Website section"
+                          >
+                            <ArrowRightLeft className={`w-4 h-4 ${transferringId === template.id ? 'animate-spin' : ''}`} />
+                          </button>
+                          <button onClick={() => openForm(template)} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg transition-colors mr-2 cursor-pointer">
                             <Edit className="w-4 h-4" />
                           </button>
-                          <button onClick={() => setDeleteTemplateId(template.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors">
+                          <button onClick={() => setDeleteTemplateId(template.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg transition-colors cursor-pointer">
                             <Trash2 className="w-4 h-4" />
                           </button>
                         </td>
@@ -691,9 +805,32 @@ export default function TemplateManagement() {
       {isModalOpen && (
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm">
            <div className="bg-gray-900 border border-gray-800 rounded-3xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl p-6 md:p-8">
-              <h2 className="text-2xl font-bold text-white mb-6">
-                {editingId ? `Edit Template #${templates.find(t => t.id === editingId)?.displayId || editingId.slice(-8)}` : 'Add New Template'}
-              </h2>
+              <div className="mb-6">
+                <h2 className="text-2xl font-bold text-white flex items-center gap-2.5">
+                  {formMode === 'website' ? (
+                    <>
+                      <div className="w-9 h-9 rounded-xl bg-purple-500/20 text-purple-400 flex items-center justify-center">
+                        <Globe className="w-5 h-5" />
+                      </div>
+                      <span>{editingId ? 'Edit Wedding Website Template' : 'Add Wedding Website Template'}</span>
+                      <span className="text-xs bg-purple-500/20 text-purple-300 px-2 py-0.5 rounded font-extrabold uppercase">Website Mode</span>
+                    </>
+                  ) : (
+                    <>
+                      <div className="w-9 h-9 rounded-xl bg-indigo-500/20 text-indigo-400 flex items-center justify-center">
+                        <Play className="w-5 h-5" />
+                      </div>
+                      <span>{editingId ? 'Edit Video Invitation Template' : 'Add Video Invitation Template'}</span>
+                      <span className="text-xs bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded font-extrabold uppercase">Video Mode</span>
+                    </>
+                  )}
+                </h2>
+                <p className="text-xs text-gray-400 mt-1">
+                  {formMode === 'website'
+                    ? 'Completely separate process for interactive wedding websites (Live URL, RSVP & Map integration).'
+                    : 'Standard video invitation upload with YouTube/Vimeo link and orientation.'}
+                </p>
+              </div>
               
               <form onSubmit={handleSubmit} className="space-y-6">
                 <div className="flex flex-col items-start gap-2 mb-4">
@@ -757,27 +894,23 @@ export default function TemplateManagement() {
                       placeholder="e.g. Royal Emerald Wedding"
                     />
                   </div>
-                  <div>
-                    <label className="block text-sm font-medium text-gray-300 mb-2">Category</label>
-                    <select 
-                      value={category} onChange={(e) => setCategory(e.target.value)}
-                      className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500"
-                    >
-                      {categories.map(cat => <option key={cat} value={cat}>{cat}</option>)}
-                      {categories.length === 0 && <option value="Wedding">Wedding</option>}
-                    </select>
-                  </div>
-                  {(category === 'Website Invitation' || category === 'E-Cards') && (
+                  {formMode === 'website' ? (
                     <div>
-                      <label className="block text-sm font-medium text-purple-300 mb-2">Section Filter (E-Cards Carousel)</label>
+                      <label className="block text-sm font-medium text-purple-300 mb-2">Template Format</label>
+                      <div className="w-full bg-purple-950/40 border border-purple-500/50 text-purple-200 rounded-xl px-4 py-3 text-sm flex items-center gap-2">
+                        <Globe className="w-4 h-4 text-purple-400" />
+                        <span>Interactive Wedding Website</span>
+                      </div>
+                    </div>
+                  ) : (
+                    <div>
+                      <label className="block text-sm font-medium text-gray-300 mb-2">Video Category</label>
                       <select 
-                        value={subCategory} onChange={(e) => setSubCategory(e.target.value)}
-                        className="w-full bg-gray-800 border border-purple-500/50 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-purple-500"
+                        value={category} onChange={(e) => setCategory(e.target.value)}
+                        className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-3 focus:outline-none focus:border-indigo-500"
                       >
-                        <option value="Website">Website (Interactive Wedding Website)</option>
-                        <option value="Hindu">Hindu Templates</option>
-                        <option value="Muslim">Muslim Templates</option>
-                        <option value="English">English Templates</option>
+                        {categories.filter(c => c.toLowerCase() !== 'website invitation').map(cat => <option key={cat} value={cat}>{cat}</option>)}
+                        {categories.length === 0 && <option value="Wedding">Wedding</option>}
                       </select>
                     </div>
                   )}
@@ -899,16 +1032,6 @@ export default function TemplateManagement() {
                         className="w-full bg-gray-900 border border-purple-500/40 text-white rounded-xl px-4 py-3 focus:outline-none focus:ring-2 focus:ring-purple-500"
                         placeholder="https://your-invitation-website.com"
                       />
-                      <div className="mt-3">
-                        <label className="block text-xs font-medium text-gray-400 mb-1">Optional Walkthrough / Video URL</label>
-                        <input 
-                          type="url" 
-                          value={videoUrl} 
-                          onChange={(e) => setVideoUrl(e.target.value)}
-                          className="w-full bg-gray-900/80 border border-gray-700 text-white rounded-xl px-4 py-2.5 text-sm focus:outline-none focus:border-purple-500"
-                          placeholder="https://youtube.com/... (optional)"
-                        />
-                      </div>
                     </div>
                   ) : (
                     <div>
