@@ -16,26 +16,35 @@ import {
   GripVertical, 
   Move, 
   Sparkles, 
-  CheckCircle2, 
-  RotateCcw 
+  RotateCcw,
+  Upload,
+  Check,
+  Loader2
 } from 'lucide-react';
 import toast from 'react-hot-toast';
-import { fileToBase64 } from '../../lib/utils';
-import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 
 export default function ManageCategories() {
   const [categories, setCategories] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState("");
+  
+  // Add Category State
   const [newCatName, setNewCatName] = useState('');
   const [newCatImage, setNewCatImage] = useState('');
   const [newCatOrder, setNewCatOrder] = useState('');
+  const [isAdding, setIsAdding] = useState(false);
   
-  const [editingCatId, setEditingCatId] = useState<string | null>(null);
+  // Edit Category Modal State
+  const [editingCategory, setEditingCategory] = useState<any | null>(null);
   const [editCatName, setEditCatName] = useState('');
   const [editCatImage, setEditCatImage] = useState('');
   const [editCatOrder, setEditCatOrder] = useState('');
+  const [isSavingEdit, setIsSavingEdit] = useState(false);
 
+  // Delete State
   const [deleteId, setDeleteId] = useState<string | null>(null);
+  const [isDeleting, setIsDeleting] = useState(false);
+
+  // Website Invitation Visibility
   const [websiteInvitationHidden, setWebsiteInvitationHidden] = useState(false);
 
   // Free Drag and Drop / Press and Hold States
@@ -49,11 +58,17 @@ export default function ManageCategories() {
   const holdTimerRef = useRef<NodeJS.Timeout | null>(null);
   const holdProgressIntervalRef = useRef<NodeJS.Timeout | null>(null);
   const isPointerDownRef = useRef(false);
+  const startXRef = useRef(0);
+  const startYRef = useRef(0);
+  const isDraggingRef = useRef(false);
+  const draggedIndexRef = useRef<number | null>(null);
+  const dragOverIndexRef = useRef<number | null>(null);
 
+  // Sync website invitation visibility setting
   useEffect(() => {
-    const unsub = onSnapshot(doc(db, "settings", "config"), (doc) => {
-      if (doc.exists()) {
-        setWebsiteInvitationHidden(doc.data().websiteInvitationHidden === true);
+    const unsub = onSnapshot(doc(db, "settings", "config"), (docSnap) => {
+      if (docSnap.exists()) {
+        setWebsiteInvitationHidden(docSnap.data().websiteInvitationHidden === true);
       }
     });
     return () => unsub();
@@ -76,13 +91,14 @@ export default function ManageCategories() {
     }
   };
 
+  // Sync Categories from Firestore
   useEffect(() => {
     const unsub = onSnapshot(collection(db, 'content', 'template_categories', 'items'), async (snapshot) => {
       const list: any[] = [];
-      snapshot.forEach(doc => {
-        const data = doc.data();
+      snapshot.forEach(docSnap => {
+        const data = docSnap.data();
         if (data.name && String(data.name).trim() !== '' && String(data.name) !== 'undefined') {
-          list.push({ id: doc.id, ...data });
+          list.push({ id: docSnap.id, ...data });
         }
       });
       list.sort((a, b) => {
@@ -92,7 +108,7 @@ export default function ManageCategories() {
       });
       setCategories(list);
 
-      // Auto-recover missing categories from templates
+      // Auto-recover missing categories from templates if needed
       try {
         const tSnap = await getDocs(collection(db, 'templates'));
         const templateCats = new Set<string>();
@@ -103,7 +119,6 @@ export default function ManageCategories() {
         
         for (const tc of templateCats) {
            if (tc && !existingCats.has(tc.toLowerCase())) {
-              // Recover it
               await addDoc(collection(db, 'content', 'template_categories', 'items'), {
                  name: tc,
                  order: list.length + 1,
@@ -136,56 +151,10 @@ export default function ManageCategories() {
     }
   };
 
-  const startHoldTimer = (index: number, e: React.PointerEvent | React.TouchEvent | React.MouseEvent) => {
-    // If clicking action buttons or inputs, do not start drag
-    const target = e.target as HTMLElement;
-    if (target.closest('button, input, textarea, a, select, [data-no-drag="true"]')) {
-      return;
-    }
-
-    clearHoldTimers();
-    isPointerDownRef.current = true;
-    setHoldingIndex(index);
-    setHoldProgress(0);
-
-    const startTime = Date.now();
-    const HOLD_DURATION = 200; // 200ms quick response threshold
-
-    holdProgressIntervalRef.current = setInterval(() => {
-      const elapsed = Date.now() - startTime;
-      const progress = Math.min(100, Math.round((elapsed / HOLD_DURATION) * 100));
-      setHoldProgress(progress);
-      if (progress >= 100) {
-        if (holdProgressIntervalRef.current) {
-          clearInterval(holdProgressIntervalRef.current);
-          holdProgressIntervalRef.current = null;
-        }
-      }
-    }, 20);
-
-    holdTimerRef.current = setTimeout(() => {
-      if (isPointerDownRef.current) {
-        setIsDragging(true);
-        setDraggedIndex(index);
-        setHoldingIndex(null);
-        setHoldProgress(100);
-
-        if (typeof navigator !== 'undefined' && navigator.vibrate) {
-          navigator.vibrate(35);
-        }
-        toast('Ready to reposition! Drag and drop to any place.', {
-          id: 'drag-active-toast',
-          icon: '✋',
-          duration: 2000,
-        });
-      }
-    }, HOLD_DURATION);
-  };
-
   const cancelHold = () => {
     isPointerDownRef.current = false;
     clearHoldTimers();
-    if (!isDragging) {
+    if (!isDraggingRef.current) {
       setHoldingIndex(null);
       setHoldProgress(0);
     }
@@ -194,66 +163,142 @@ export default function ManageCategories() {
   const resetDragState = () => {
     isPointerDownRef.current = false;
     clearHoldTimers();
+    isDraggingRef.current = false;
+    draggedIndexRef.current = null;
+    dragOverIndexRef.current = null;
+    setIsDragging(false);
     setDraggedIndex(null);
     setDragOverIndex(null);
-    setIsDragging(false);
     setHoldingIndex(null);
     setHoldProgress(0);
   };
 
-  // HTML5 Drag Handlers
-  const handleDragStart = (e: React.DragEvent, index: number) => {
-    e.dataTransfer.effectAllowed = 'move';
-    e.dataTransfer.setData('text/plain', index.toString());
-    setDraggedIndex(index);
+  const activateDrag = (index: number) => {
+    clearHoldTimers();
+    isDraggingRef.current = true;
+    draggedIndexRef.current = index;
+    dragOverIndexRef.current = index;
     setIsDragging(true);
-  };
+    setDraggedIndex(index);
+    setDragOverIndex(index);
+    setHoldingIndex(null);
+    setHoldProgress(100);
 
-  const handleDragOver = (e: React.DragEvent, index: number) => {
-    e.preventDefault();
-    e.dataTransfer.dropEffect = 'move';
-    if (dragOverIndex !== index) {
-      setDragOverIndex(index);
+    if (typeof navigator !== 'undefined' && navigator.vibrate) {
+      navigator.vibrate(35);
     }
   };
 
-  const handleDrop = (e: React.DragEvent, dropTargetIndex: number) => {
-    e.preventDefault();
-    const sourceIndex = draggedIndex !== null ? draggedIndex : parseInt(e.dataTransfer.getData('text/plain'), 10);
-    if (!isNaN(sourceIndex) && sourceIndex !== dropTargetIndex) {
-      reorderCategories(sourceIndex, dropTargetIndex);
-    } else {
-      resetDragState();
+  // Called when user presses on the card body
+  const handleCardPointerDown = (index: number, e: React.PointerEvent) => {
+    if (searchQuery !== '') return;
+    const target = e.target as HTMLElement;
+    // Don't drag if clicking buttons, inputs, links, or controls
+    if (target.closest('button, input, textarea, a, select, [data-no-drag="true"]')) {
+      return;
     }
-  };
 
-  const handleDragEnd = () => {
-    resetDragState();
-  };
+    clearHoldTimers();
+    isPointerDownRef.current = true;
+    startXRef.current = e.clientX;
+    startYRef.current = e.clientY;
+    setHoldingIndex(index);
+    setHoldProgress(0);
 
-  // Touch Drag Handlers (for mobile/tablet touch screens)
-  const handleTouchMove = (e: React.TouchEvent) => {
-    if (!isDragging || draggedIndex === null) return;
-    const touch = e.touches[0];
-    const elem = document.elementFromPoint(touch.clientX, touch.clientY);
-    const card = elem?.closest('[data-category-index]');
-    if (card) {
-      const idx = parseInt(card.getAttribute('data-category-index') || '-1', 10);
-      if (idx >= 0 && idx !== dragOverIndex) {
-        setDragOverIndex(idx);
+    const startTime = Date.now();
+    const HOLD_DURATION = 200; // 200ms hold threshold
+
+    holdProgressIntervalRef.current = setInterval(() => {
+      const elapsed = Date.now() - startTime;
+      const progress = Math.min(100, Math.round((elapsed / HOLD_DURATION) * 100));
+      setHoldProgress(progress);
+      if (progress >= 100 && holdProgressIntervalRef.current) {
+        clearInterval(holdProgressIntervalRef.current);
+        holdProgressIntervalRef.current = null;
       }
-    }
+    }, 20);
+
+    holdTimerRef.current = setTimeout(() => {
+      if (isPointerDownRef.current && !isDraggingRef.current) {
+        activateDrag(index);
+      }
+    }, HOLD_DURATION);
   };
 
-  const handleTouchEnd = () => {
-    if (isDragging && draggedIndex !== null && dragOverIndex !== null && draggedIndex !== dragOverIndex) {
-      reorderCategories(draggedIndex, dragOverIndex);
-    } else {
-      resetDragState();
-    }
+  // Immediate drag via Grip Handle
+  const handleGripPointerDown = (index: number, e: React.PointerEvent) => {
+    if (searchQuery !== '') return;
+    e.stopPropagation();
+    e.preventDefault();
+    isPointerDownRef.current = true;
+    startXRef.current = e.clientX;
+    startYRef.current = e.clientY;
+    activateDrag(index);
   };
 
-  // Reorder categories array and sync sequence to Firestore
+  // Global Pointer Events Listener for seamless dragging across all devices
+  useEffect(() => {
+    const handleGlobalPointerMove = (e: PointerEvent) => {
+      // If holding but not yet dragging, cancel if pointer moved > 12px (user is scrolling)
+      if (isPointerDownRef.current && !isDraggingRef.current) {
+        const dx = Math.abs(e.clientX - startXRef.current);
+        const dy = Math.abs(e.clientY - startYRef.current);
+        if (dx > 12 || dy > 12) {
+          cancelHold();
+          return;
+        }
+      }
+
+      // If active dragging:
+      if (isDraggingRef.current && draggedIndexRef.current !== null) {
+        const elements = document.elementsFromPoint(e.clientX, e.clientY);
+        let foundIndex: number | null = null;
+        for (const el of elements) {
+          const card = el.closest('[data-category-index]');
+          if (card) {
+            const idxStr = card.getAttribute('data-category-index');
+            if (idxStr !== null) {
+              const parsed = parseInt(idxStr, 10);
+              if (!isNaN(parsed)) {
+                foundIndex = parsed;
+                break;
+              }
+            }
+          }
+        }
+        if (foundIndex !== null && foundIndex !== dragOverIndexRef.current) {
+          dragOverIndexRef.current = foundIndex;
+          setDragOverIndex(foundIndex);
+        }
+      }
+    };
+
+    const handleGlobalPointerUp = () => {
+      if (isDraggingRef.current && draggedIndexRef.current !== null && dragOverIndexRef.current !== null) {
+        const from = draggedIndexRef.current;
+        const to = dragOverIndexRef.current;
+        if (from !== to) {
+          reorderCategories(from, to);
+        } else {
+          resetDragState();
+        }
+      } else {
+        cancelHold();
+      }
+    };
+
+    window.addEventListener('pointermove', handleGlobalPointerMove);
+    window.addEventListener('pointerup', handleGlobalPointerUp);
+    window.addEventListener('pointercancel', handleGlobalPointerUp);
+
+    return () => {
+      window.removeEventListener('pointermove', handleGlobalPointerMove);
+      window.removeEventListener('pointerup', handleGlobalPointerUp);
+      window.removeEventListener('pointercancel', handleGlobalPointerUp);
+    };
+  }, [categories]);
+
+  // Reorder categories array and sync sequential numbering to Firestore
   const reorderCategories = async (fromIndex: number, toIndex: number) => {
     if (fromIndex === toIndex || fromIndex < 0 || toIndex < 0) {
       resetDragState();
@@ -270,13 +315,12 @@ export default function ManageCategories() {
       order: idx + 1
     }));
 
-    // Instant UI update for zero latency
+    // Instant UI update for zero lag
     setCategories(updatedList);
     setIsSavingOrder(true);
     resetDragState();
 
     try {
-      // Save all orders to Firestore
       const updatePromises = updatedList.map((cat, idx) =>
         setDoc(
           doc(db, 'content', 'template_categories', 'items', cat.id),
@@ -296,7 +340,20 @@ export default function ManageCategories() {
     }
   };
 
-  const handleImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+  const moveUp = async (index: number) => {
+    if (index === 0) return;
+    reorderCategories(index, index - 1);
+  };
+
+  const moveDown = async (index: number) => {
+    if (index === categories.length - 1) return;
+    reorderCategories(index, index + 1);
+  };
+
+  // -------------------------------------------------------------
+  // ADD NEW CATEGORY
+  // -------------------------------------------------------------
+  const handleNewImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
     if (e.target.files && e.target.files[0]) {
       const file = e.target.files[0];
       const reader = new FileReader();
@@ -306,7 +363,6 @@ export default function ManageCategories() {
           const canvas = document.createElement('canvas');
           let width = img.width;
           let height = img.height;
-          
           const MAX_WIDTH = 1920;
           const MAX_HEIGHT = 1920;
           if (width > height) {
@@ -317,9 +373,7 @@ export default function ManageCategories() {
           canvas.width = width; canvas.height = height;
           const ctx = canvas.getContext('2d');
           ctx?.drawImage(img, 0, 0, width, height);
-          
-          const compressedBase64 = canvas.toDataURL("image/jpeg", 0.85);
-          setNewCatImage(compressedBase64);
+          setNewCatImage(canvas.toDataURL("image/jpeg", 0.85));
           toast.success("Image selected and compressed");
         };
         img.src = event.target?.result as string;
@@ -330,83 +384,58 @@ export default function ManageCategories() {
 
   const addCategory = async (e: React.FormEvent) => {
     e.preventDefault();
-    if (!(newCatName || "").trim()) {
+    const trimmed = (newCatName || "").trim();
+    if (!trimmed) {
       toast.error("Category name required");
       return;
     }
     
     // Check for duplicate category name
     const isDuplicate = (categories || []).some(
-      (cat: any) => (cat.name || '').toLowerCase() === (newCatName || '').toLowerCase().trim()
+      (cat: any) => (cat.name || '').toLowerCase() === trimmed.toLowerCase()
     );
-    
     if (isDuplicate) {
       toast.error("A category with this exact name already exists.");
       return;
     }
 
-    const parsedNewOrder = newCatOrder !== '' ? parseInt(newCatOrder, 10) : null;
-    if (parsedNewOrder !== null) {
-      const isOrderDuplicate = (categories || []).some(
-        (cat: any) => cat.order === parsedNewOrder
-      );
-      if (isOrderDuplicate) {
-        toast.error("This order number already exists. Please choose a different order.");
-        return;
-      }
-    }
+    setIsAdding(true);
+    const parsedNewOrder = newCatOrder !== '' ? parseInt(newCatOrder, 10) : (categories.length + 1);
 
     try {
       const newCat = {
-        name: (newCatName || "").trim(),
+        name: trimmed,
         image: newCatImage,
-        order: parsedNewOrder !== null ? parsedNewOrder : (categories.length > 0 ? Math.max(...categories.map(c => c.order || 0)) + 1 : 1)
+        order: !isNaN(parsedNewOrder) ? parsedNewOrder : categories.length + 1
       };
       await addDoc(collection(db, 'content', 'template_categories', 'items'), newCat);
-      toast.success("Sub Template Category added");
+      toast.success("Category added successfully!");
       setNewCatName('');
       setNewCatImage('');
       setNewCatOrder('');
     } catch (err: any) {
       console.error(err);
       toast.error(err.message || "Failed to add category");
+    } finally {
+      setIsAdding(false);
     }
   };
 
-  const confirmDelete = async () => {
-    if(!deleteId) return;
-    const catToDelete = categories.find(c => c.id === deleteId);
-    if (!catToDelete) return;
-
-    try {
-      const q = query(collection(db, 'templates'), where('category', '==', catToDelete.name));
-      const sn = await getDocs(q);
-      if (!sn.empty) {
-        toast.error(`Cannot delete! ${sn.docs.length} templates are using this category.`);
-        setDeleteId(null);
-        return;
-      }
-
-      await deleteDoc(doc(db, 'content', 'template_categories', 'items', deleteId));
-      toast.success("Category deleted");
-      setDeleteId(null);
-    } catch (err: any) {
-      toast.error("Failed to delete category");
-      setDeleteId(null);
-    }
-  };
-
+  // -------------------------------------------------------------
+  // EDIT CATEGORY (MODAL-BASED FOR 100% RELIABILITY)
+  // -------------------------------------------------------------
   const startEdit = (cat: any) => {
-    setEditCatOrder(cat.order?.toString() || '0');
-    setEditingCatId(cat.id);
-    setEditCatName(cat.name);
+    setEditingCategory(cat);
+    setEditCatName(cat.name || '');
     setEditCatImage(cat.image || '');
+    setEditCatOrder((cat.order ?? (categories.indexOf(cat) + 1)).toString());
   };
 
   const cancelEdit = () => {
-    setEditingCatId(null);
+    setEditingCategory(null);
     setEditCatName('');
     setEditCatImage('');
+    setEditCatOrder('');
   };
 
   const handleEditImageUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -439,73 +468,248 @@ export default function ManageCategories() {
   };
 
   const saveEdit = async () => {
-    if (!(editCatName || "").trim() || !editingCatId) return;
-    
-    const isDuplicate = (categories || []).some(
-      (cat: any) => cat.id !== editingCatId && (cat.name || '').toLowerCase() === (editCatName || '').toLowerCase().trim()
-    );
-    if (isDuplicate) {
-      toast.error("Another category with this name already exists.");
+    if (!editingCategory) return;
+    const trimmedName = (editCatName || "").trim();
+    if (!trimmedName) {
+      toast.error("Category name is required");
       return;
     }
 
-    const parsedOrder = editCatOrder !== '' ? parseInt(editCatOrder, 10) : null;
-    if (parsedOrder !== null) {
-      const isOrderDuplicate = (categories || []).some(
-        (cat: any) => cat.id !== editingCatId && cat.order === parsedOrder
-      );
-      if (isOrderDuplicate) {
-        toast.error("This order number already exists. Please choose a different order.");
-        return;
-      }
+    const isDuplicate = (categories || []).some(
+      (cat: any) => cat.id !== editingCategory.id && (cat.name || '').toLowerCase() === trimmedName.toLowerCase()
+    );
+    if (isDuplicate) {
+      toast.error("Another category with this exact name already exists.");
+      return;
     }
+
+    setIsSavingEdit(true);
+    const oldName = editingCategory.name;
+    const oldOrder = editingCategory.order ?? (categories.findIndex(c => c.id === editingCategory.id) + 1);
+    const newOrderNum = editCatOrder !== '' ? parseInt(editCatOrder, 10) : oldOrder;
 
     try {
-      await setDoc(doc(db, 'content', 'template_categories', 'items', editingCatId), {
-        name: (editCatName || "").trim(),
+      // 1. Update category in content/template_categories/items
+      await setDoc(doc(db, 'content', 'template_categories', 'items', editingCategory.id), {
+        name: trimmedName,
         image: editCatImage,
-        order: parsedOrder !== null ? parsedOrder : (categories.find(c => c.id === editingCatId)?.order || 0)
+        order: newOrderNum
       }, { merge: true });
-      toast.success("Category updated");
+
+      // 2. If name changed, update all templates using this category to keep consistency
+      if (oldName && oldName.trim().toLowerCase() !== trimmedName.toLowerCase()) {
+        try {
+          const q = query(collection(db, 'templates'), where('category', '==', oldName));
+          const snap = await getDocs(q);
+          const updatePromises = snap.docs.map(tDoc =>
+            updateDoc(doc(db, 'templates', tDoc.id), { category: trimmedName })
+          );
+          await Promise.all(updatePromises);
+        } catch (tErr) {
+          console.warn("Could not sync template categories:", tErr);
+        }
+      }
+
+      // 3. If position / order was changed, smoothly move to that position and re-sequence
+      if (!isNaN(newOrderNum) && newOrderNum !== oldOrder) {
+        const currIdx = categories.findIndex(c => c.id === editingCategory.id);
+        const targetIdx = Math.max(0, Math.min(categories.length - 1, newOrderNum - 1));
+        if (currIdx !== -1 && currIdx !== targetIdx) {
+          const list = [...categories];
+          const [moved] = list.splice(currIdx, 1);
+          list.splice(targetIdx, 0, { ...moved, name: trimmedName, image: editCatImage });
+          const reordered = list.map((item, idx) => ({ ...item, order: idx + 1 }));
+          setCategories(reordered);
+
+          // Save new sequential orders
+          const orderPromises = reordered.map((item, idx) =>
+            setDoc(doc(db, 'content', 'template_categories', 'items', item.id), { order: idx + 1 }, { merge: true })
+          );
+          await Promise.all(orderPromises);
+        }
+      }
+
+      toast.success(`Category "${trimmedName}" updated successfully!`, { icon: '✨' });
       cancelEdit();
     } catch (e: any) {
+      console.error(e);
       toast.error(e.message || "Failed to update category");
+    } finally {
+      setIsSavingEdit(false);
     }
   };
 
-  const moveUp = async (index: number) => {
-    if (index === 0) return;
-    reorderCategories(index, index - 1);
-  };
+  // -------------------------------------------------------------
+  // DELETE CATEGORY
+  // -------------------------------------------------------------
+  const confirmDelete = async () => {
+    if (!deleteId) return;
+    const catToDelete = categories.find(c => c.id === deleteId);
+    if (!catToDelete) return;
 
-  const moveDown = async (index: number) => {
-    if (index === categories.length - 1) return;
-    reorderCategories(index, index + 1);
+    setIsDeleting(true);
+    try {
+      const q = query(collection(db, 'templates'), where('category', '==', catToDelete.name));
+      const sn = await getDocs(q);
+      if (!sn.empty) {
+        toast.error(`Cannot delete! ${sn.docs.length} templates are using this category.`);
+        setDeleteId(null);
+        return;
+      }
+
+      await deleteDoc(doc(db, 'content', 'template_categories', 'items', deleteId));
+      toast.success("Category deleted");
+      setDeleteId(null);
+    } catch (err: any) {
+      toast.error("Failed to delete category");
+      setDeleteId(null);
+    } finally {
+      setIsDeleting(false);
+    }
   };
 
   return (
-    <div 
-      className="w-full"
-      onTouchMove={handleTouchMove}
-      onTouchEnd={handleTouchEnd}
-    >
+    <div className="w-full">
+      {/* Delete Confirmation Modal */}
       {deleteId && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/50 px-4">
-          <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 w-full max-w-sm">
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm px-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
             <h3 className="text-xl font-bold text-white mb-2">Delete Sub Template</h3>
-            <p className="text-gray-400 mb-6">Are you sure you want to delete this sub template? This action cannot be undone.</p>
+            <p className="text-gray-400 mb-6 text-sm">
+              Are you sure you want to delete this category? This action cannot be undone.
+            </p>
             <div className="flex justify-end gap-3">
               <button 
                 onClick={() => setDeleteId(null)}
-                className="px-4 py-2 bg-gray-800 text-white rounded-lg hover:bg-gray-700"
+                className="px-4 py-2 bg-gray-800 text-gray-300 hover:text-white rounded-xl hover:bg-gray-700 transition-colors cursor-pointer text-sm font-medium"
               >
                 Cancel
               </button>
               <button 
                 onClick={confirmDelete}
-                className="px-4 py-2 bg-red-500 text-white rounded-lg hover:bg-red-600"
+                disabled={isDeleting}
+                className="px-4 py-2 bg-red-600 hover:bg-red-700 text-white rounded-xl transition-colors cursor-pointer text-sm font-semibold flex items-center gap-1.5"
               >
+                {isDeleting ? <Loader2 className="w-4 h-4 animate-spin" /> : <Trash2 className="w-4 h-4" />}
                 Delete
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* DEDICATED EDIT CATEGORY MODAL */}
+      {editingCategory && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 backdrop-blur-sm px-4">
+          <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 w-full max-w-lg shadow-2xl relative">
+            <div className="flex items-center justify-between pb-4 border-b border-gray-800 mb-5">
+              <div>
+                <h3 className="text-xl font-bold text-white flex items-center gap-2">
+                  <Edit2 className="w-5 h-5 text-indigo-400" /> Edit Category
+                </h3>
+                <p className="text-xs text-gray-400 mt-0.5">
+                  Update category title, position, and thumbnail image.
+                </p>
+              </div>
+              <button 
+                onClick={cancelEdit}
+                className="p-1.5 rounded-lg text-gray-400 hover:text-white hover:bg-gray-800 transition-colors"
+              >
+                <X className="w-5 h-5" />
+              </button>
+            </div>
+
+            <div className="space-y-4">
+              {/* Category Name */}
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
+                  Category Name <span className="text-red-400">*</span>
+                </label>
+                <input 
+                  type="text" 
+                  value={editCatName} 
+                  onChange={e => setEditCatName(e.target.value)} 
+                  className="w-full bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
+                  placeholder="e.g. Wedding, Engagement, etc."
+                />
+              </div>
+
+              {/* Position / Order Number */}
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
+                  Position / Order Number
+                </label>
+                <div className="flex items-center gap-3">
+                  <input 
+                    type="number" 
+                    value={editCatOrder} 
+                    onChange={e => setEditCatOrder(e.target.value)} 
+                    className="w-28 bg-gray-800 border border-gray-700 rounded-xl px-4 py-2.5 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent font-mono"
+                    placeholder="1"
+                    min="1"
+                  />
+                  <span className="text-xs text-gray-400">
+                    Enter target position (e.g. 1 for first). It will automatically shift others.
+                  </span>
+                </div>
+              </div>
+
+              {/* Category Thumbnail Image */}
+              <div>
+                <label className="block text-xs font-bold text-gray-300 mb-1.5 uppercase tracking-wider">
+                  Category Thumbnail Image
+                </label>
+                <div className="flex items-center gap-4">
+                  <div className="w-28 h-24 bg-gray-800 border border-gray-700 rounded-xl flex items-center justify-center overflow-hidden relative shrink-0">
+                    {editCatImage ? (
+                      <img src={editCatImage} alt="Preview" className="max-w-full max-h-full object-contain" />
+                    ) : (
+                      <ImageIcon className="w-8 h-8 text-gray-500" />
+                    )}
+                  </div>
+                  <div className="flex flex-col gap-2">
+                    <label className="px-4 py-2 bg-indigo-600/80 hover:bg-indigo-600 text-white rounded-xl text-xs font-semibold cursor-pointer transition-colors inline-flex items-center gap-2">
+                      <Upload className="w-4 h-4" /> Change Image
+                      <input type="file" accept="image/*" onChange={handleEditImageUpload} className="hidden" />
+                    </label>
+                    {editCatImage && (
+                      <button 
+                        type="button"
+                        onClick={() => setEditCatImage('')}
+                        className="text-xs text-red-400 hover:text-red-300 text-left transition-colors"
+                      >
+                        Remove Image
+                      </button>
+                    )}
+                    <span className="text-[11px] text-gray-500">
+                      Auto-compressed for fast loading
+                    </span>
+                  </div>
+                </div>
+              </div>
+            </div>
+
+            <div className="flex justify-end gap-3 mt-6 pt-4 border-t border-gray-800">
+              <button 
+                onClick={cancelEdit}
+                className="px-4 py-2.5 bg-gray-800 text-gray-300 hover:text-white rounded-xl text-sm font-medium hover:bg-gray-700 transition-colors cursor-pointer"
+              >
+                Cancel
+              </button>
+              <button 
+                onClick={saveEdit}
+                disabled={isSavingEdit}
+                className="px-6 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl text-sm font-semibold transition-colors cursor-pointer flex items-center gap-2 shadow-lg shadow-indigo-900/30"
+              >
+                {isSavingEdit ? (
+                  <>
+                    <Loader2 className="w-4 h-4 animate-spin" /> Saving...
+                  </>
+                ) : (
+                  <>
+                    <Check className="w-4 h-4" /> Save Changes
+                  </>
+                )}
               </button>
             </div>
           </div>
@@ -516,7 +720,9 @@ export default function ManageCategories() {
       <div className="mb-6 flex flex-col md:flex-row justify-between md:items-center gap-4">
         <div>
           <h1 className="text-2xl font-bold text-brand-navy">Manage Sub Templates (Categories)</h1>
-          <p className="text-brand-slate">Add, reorder, and position category sections. Drag & drop to freely change positions.</p>
+          <p className="text-brand-slate text-sm">
+            Freely drag & drop to reposition categories. Positions and numbering are managed only in admin panel.
+          </p>
         </div>
         <div className="flex items-center gap-3">
           <button 
@@ -535,16 +741,16 @@ export default function ManageCategories() {
                 setIsSavingOrder(false);
               }
             }}
-            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm"
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-xl text-sm font-semibold transition-colors flex items-center gap-2 shadow-sm cursor-pointer"
             title="Reset orders to 1, 2, 3... sequentially"
           >
             <RotateCcw className="w-4 h-4" />
-            Reset All Orders (1, 2, 3...)
+            Reset Orders (1, 2, 3...)
           </button>
         </div>
       </div>
 
-      {/* Interactive Free Drag & Drop Notice Banner */}
+      {/* Interactive Free Drag & Drop Info Banner */}
       <div className="bg-gradient-to-r from-indigo-950/60 via-purple-950/50 to-indigo-950/60 border border-indigo-500/30 rounded-2xl p-4 mb-8 shadow-md">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-start gap-3">
@@ -554,64 +760,70 @@ export default function ManageCategories() {
             <div>
               <div className="flex items-center gap-2">
                 <h3 className="text-white font-bold text-sm">
-                  Free Drag & Drop Categorization Active
+                  Free Drag & Drop Positioning Active
                 </h3>
                 {isSavingOrder && (
                   <span className="text-[11px] font-bold px-2 py-0.5 bg-emerald-500/20 text-emerald-300 rounded-full animate-pulse border border-emerald-500/30 flex items-center gap-1">
-                    <Sparkles className="w-3 h-3" /> Syncing to website...
+                    <Sparkles className="w-3 h-3" /> Syncing positions...
                   </span>
                 )}
               </div>
               <p className="text-gray-300 text-xs mt-1">
-                <strong className="text-indigo-300">Press & hold</strong> any category card for 0.2s (or grab the grip handle) and freely drag it to any position you want. The position and numbering (<span className="text-indigo-300 font-bold">#1, #2, #3...</span>) will immediately update and show on the live website!
+                <strong className="text-indigo-300">Press & hold</strong> any category card for 0.2s (or grab the grip handle) and freely drag it to any position you want. The numbering & position (<span className="text-indigo-300 font-bold">#1, #2, #3...</span>) are tracked here in admin panel while the website renders clean categories in this exact order.
               </p>
             </div>
           </div>
           <div className="flex items-center gap-2 self-start sm:self-center">
             <span className="text-xs font-bold text-indigo-300 bg-indigo-900/50 px-3 py-1.5 rounded-lg border border-indigo-500/30">
-              Total {categories.length} Categories
+              Total: {categories.length} Categories
             </span>
           </div>
         </div>
       </div>
 
       {/* Add New Category Card */}
-      <div className="bg-gray-900 border border-gray-800 rounded-xl p-6 mb-8">
-        <h2 className="text-lg font-medium text-white mb-4">Add New Category</h2>
+      <div className="bg-gray-900 border border-gray-800 rounded-2xl p-6 mb-8 shadow-lg">
+        <h2 className="text-lg font-bold text-white mb-4 flex items-center gap-2">
+          <Plus className="w-5 h-5 text-indigo-400" /> Add New Category
+        </h2>
         <form onSubmit={addCategory} className="flex flex-col md:flex-row gap-4 items-end">
           <div className="w-24">
-            <label className="block text-sm text-gray-400 mb-1">Order #</label>
+            <label className="block text-xs font-bold text-gray-400 mb-1">Position #</label>
             <input 
               type="number" 
               value={newCatOrder} 
               onChange={e => setNewCatOrder(e.target.value)} 
-              placeholder="e.g. 1"
-              className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg"
+              placeholder={(categories.length + 1).toString()}
+              className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-xl text-sm font-mono"
             />
           </div>
           <div className="flex-1">
-            <label className="block text-sm text-gray-400 mb-1">Category Name</label>
+            <label className="block text-xs font-bold text-gray-400 mb-1">Category Name</label>
             <input 
               type="text" 
               value={newCatName} 
               onChange={e => setNewCatName(e.target.value)} 
               placeholder="e.g. Wedding"
-              className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-lg"
+              className="w-full bg-gray-800 border border-gray-700 text-white px-4 py-2 rounded-xl text-sm"
             />
           </div>
           <div className="w-full md:w-auto">
-            <label className="block text-sm text-gray-400 mb-1">Thumbnail Preview</label>
-            <div className="relative h-10 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center overflow-hidden w-40 cursor-pointer">
+            <label className="block text-xs font-bold text-gray-400 mb-1">Thumbnail Preview</label>
+            <div className="relative h-10 bg-gray-800 border border-gray-700 rounded-xl flex items-center justify-center overflow-hidden w-40 cursor-pointer">
               {newCatImage ? (
                 <img src={newCatImage} alt="Preview" className="max-w-full max-h-full object-contain" />
               ) : (
                 <span className="text-xs text-gray-500">Upload Image</span>
               )}
-              <input type="file" accept="image/*" onChange={handleImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
+              <input type="file" accept="image/*" onChange={handleNewImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
             </div>
           </div>
-          <button type="submit" className="bg-indigo-500 hover:bg-indigo-600 text-white px-6 py-2 h-10 rounded-lg font-medium transition-colors flex items-center gap-1.5 cursor-pointer">
-            <Plus className="w-4 h-4" /> Add
+          <button 
+            type="submit" 
+            disabled={isAdding}
+            className="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 h-10 rounded-xl font-semibold transition-colors flex items-center gap-1.5 cursor-pointer shadow-md shadow-indigo-900/20"
+          >
+            {isAdding ? <Loader2 className="w-4 h-4 animate-spin" /> : <Plus className="w-4 h-4" />} Add
           </button>
         </form>
       </div>
@@ -619,13 +831,13 @@ export default function ManageCategories() {
       {/* Search Bar */}
       <div className="mb-6">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
+          <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 w-5 h-5 text-gray-400" />
           <input
             type="text"
             placeholder="Search categories..."
             value={searchQuery}
             onChange={(e) => setSearchQuery(e.target.value)}
-            className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-10 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
+            className="w-full bg-gray-900 border border-gray-800 rounded-xl pl-11 pr-4 py-3 text-white focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent placeholder-gray-500"
           />
         </div>
         {searchQuery !== '' && (
@@ -647,21 +859,9 @@ export default function ManageCategories() {
 
             return (
               <div
-                key={`${cat.id}-${index}`}
+                key={cat.id || index}
                 data-category-index={index}
-                draggable={searchQuery === ''}
-                onPointerDown={(e) => searchQuery === '' && startHoldTimer(index, e)}
-                onPointerUp={cancelHold}
-                onPointerCancel={cancelHold}
-                onPointerLeave={cancelHold}
-                onDragStart={(e) => searchQuery === '' && handleDragStart(e, index)}
-                onDragOver={(e) => searchQuery === '' && handleDragOver(e, index)}
-                onDragEnter={(e) => {
-                  e.preventDefault();
-                  if (searchQuery === '' && dragOverIndex !== index) setDragOverIndex(index);
-                }}
-                onDrop={(e) => searchQuery === '' && handleDrop(e, index)}
-                onDragEnd={handleDragEnd}
+                onPointerDown={(e) => handleCardPointerDown(index, e)}
                 className={`bg-gray-900 border rounded-2xl p-4 relative group transition-all duration-200 select-none ${
                   isItemDragged
                     ? 'opacity-40 border-dashed border-2 border-indigo-400 scale-95 shadow-inner'
@@ -717,10 +917,11 @@ export default function ManageCategories() {
 
                 {/* Top Action Bar: Drag Grip + Position # + Action Buttons */}
                 <div className="flex items-center justify-between mb-3 pt-1">
-                  {/* Grip & Position Numbering Badge */}
+                  {/* Grip & Position Numbering Badge (IN ADMIN PANEL ONLY) */}
                   <div 
+                    onPointerDown={(e) => handleGripPointerDown(index, e)}
                     className="flex items-center gap-2 cursor-grab active:cursor-grabbing p-1 -ml-1 rounded-lg hover:bg-gray-800/80 transition-colors"
-                    title="Press and hold or drag to replace position"
+                    title="Drag grip or press & hold anywhere on card to reorder"
                   >
                     <GripVertical className="w-5 h-5 text-indigo-400 group-hover:text-indigo-300" />
                     <div className="flex items-center gap-1.5">
@@ -740,7 +941,7 @@ export default function ManageCategories() {
                         <button 
                           onClick={() => moveUp(index)} 
                           disabled={index === 0} 
-                          className={`p-1.5 rounded-lg transition-colors ${
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                             index === 0 
                               ? 'bg-gray-800/50 text-gray-600 cursor-not-allowed' 
                               : 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white'
@@ -752,7 +953,7 @@ export default function ManageCategories() {
                         <button 
                           onClick={() => moveDown(index)} 
                           disabled={index === categories.length - 1} 
-                          className={`p-1.5 rounded-lg transition-colors ${
+                          className={`p-1.5 rounded-lg transition-colors cursor-pointer ${
                             index === categories.length - 1 
                               ? 'bg-gray-800/50 text-gray-600 cursor-not-allowed' 
                               : 'bg-gray-800 hover:bg-gray-700 text-gray-300 hover:text-white'
@@ -764,90 +965,59 @@ export default function ManageCategories() {
                       </>
                     )}
 
+                    {/* Edit Category Button */}
                     <button 
                       onClick={() => startEdit(cat)} 
-                      className="bg-indigo-600/80 hover:bg-indigo-600 text-white p-1.5 rounded-lg transition-colors shadow-sm" 
-                      title="Edit Category"
+                      className="bg-indigo-600/80 hover:bg-indigo-600 text-white p-1.5 rounded-lg transition-colors shadow-sm cursor-pointer" 
+                      title="Edit Category Name, Image, & Position"
                     >
                       <Edit2 className="w-3.5 h-3.5" />
                     </button>
+
+                    {/* Delete Category Button */}
                     <button 
                       onClick={() => setDeleteId(cat.id)} 
-                      className="bg-red-500/80 hover:bg-red-600 text-white p-1.5 rounded-lg transition-colors shadow-sm" 
-                      title="Delete Sub Template"
+                      className="bg-red-500/80 hover:bg-red-600 text-white p-1.5 rounded-lg transition-colors shadow-sm cursor-pointer" 
+                      title="Delete Category"
                     >
                       <Trash2 className="w-3.5 h-3.5" />
                     </button>
                   </div>
                 </div>
 
-                {editingCatId === cat.id ? (
-                  <div data-no-drag="true" className="flex flex-col gap-3 mt-4 relative z-30">
-                    <div className="flex gap-2">
-                      <input 
-                        type="number" 
-                        value={editCatOrder} 
-                        onChange={e => setEditCatOrder(e.target.value)} 
-                        className="w-20 bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-lg text-sm"
-                        placeholder="Order"
-                      />
-                      <input 
-                        type="text" 
-                        value={editCatName} 
-                        onChange={e => setEditCatName(e.target.value)} 
-                        className="flex-1 bg-gray-800 border border-gray-700 text-white px-3 py-2 rounded-lg text-sm"
-                      />
-                    </div>
-                    <div className="flex items-center gap-3">
-                      <div className="relative h-10 bg-gray-800 border border-gray-700 rounded-lg flex items-center justify-center overflow-hidden w-20 cursor-pointer">
-                        {editCatImage ? (
-                          <img src={editCatImage} alt="Preview" className="max-w-full max-h-full object-contain" />
-                        ) : (
-                          <span className="text-[10px] text-gray-500">Image</span>
-                        )}
-                        <input type="file" accept="image/*" onChange={handleEditImageUpload} className="absolute inset-0 opacity-0 cursor-pointer" />
-                      </div>
-                      <div className="flex gap-2 flex-1">
-                        <button onClick={saveEdit} className="bg-green-500 hover:bg-green-600 text-white px-3 py-1.5 rounded text-sm flex-1">Save</button>
-                        <button onClick={cancelEdit} className="bg-gray-700 hover:bg-gray-600 text-white px-3 py-1.5 rounded text-sm"><X className="w-4 h-4"/></button>
-                      </div>
-                    </div>
+                {/* Card Thumbnail */}
+                <div className="h-40 w-full mb-3 bg-gray-800/80 rounded-xl overflow-hidden flex items-center justify-center relative mt-1 border border-gray-700/50 pointer-events-none">
+                  {/* Corner Number Badge on Thumbnail in Admin */}
+                  <div className="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 bg-black/75 backdrop-blur-md rounded-md border border-white/20 text-white font-black text-[11px] tracking-wider shadow">
+                    #{String(index + 1).padStart(2, "0")}
                   </div>
-                ) : (
-                  <>
-                    <div className="h-40 w-full mb-3 bg-gray-800/80 rounded-xl overflow-hidden flex items-center justify-center relative mt-1 border border-gray-700/50">
-                      {/* Corner Number Badge on Thumbnail */}
-                      <div className="absolute top-2.5 left-2.5 z-10 px-2 py-0.5 bg-black/75 backdrop-blur-md rounded-md border border-white/20 text-white font-black text-[11px] tracking-wider shadow">
-                        #{String(index + 1).padStart(2, "0")}
-                      </div>
 
-                      {cat.image ? (
-                        <img src={cat.image} alt={cat.name} className="max-w-full max-h-full object-contain" />
-                      ) : (
-                        <ImageIcon className="w-8 h-8 text-gray-500" />
-                      )}
-                    </div>
+                  {cat.image ? (
+                    <img src={cat.image} alt={cat.name} className="max-w-full max-h-full object-contain" />
+                  ) : (
+                    <ImageIcon className="w-8 h-8 text-gray-500" />
+                  )}
+                </div>
 
-                    <div className="flex items-center justify-between mt-2">
-                      <h3 className="text-white font-bold text-base line-clamp-1">
-                        {cat.name}
-                      </h3>
-                      <span className="text-[11px] text-gray-400 font-mono bg-gray-800 px-2 py-0.5 rounded border border-gray-700/60 shrink-0">
-                        Pos #{index + 1}
-                      </span>
-                    </div>
+                {/* Card Title & Position in Admin */}
+                <div className="flex items-center justify-between mt-2">
+                  <h3 className="text-white font-bold text-base line-clamp-1">
+                    {cat.name}
+                  </h3>
+                  <span className="text-[11px] text-gray-400 font-mono bg-gray-800 px-2 py-0.5 rounded border border-gray-700/60 shrink-0">
+                    Pos #{index + 1}
+                  </span>
+                </div>
 
-                    {/* Drag Helper Tip on Card Footer */}
-                    <div className="mt-3 pt-2 border-t border-gray-800/80 flex items-center justify-between text-[11px] text-gray-400">
-                      <span className="flex items-center gap-1 group-hover:text-indigo-300 transition-colors">
-                        <GripVertical className="w-3.5 h-3.5" /> Hold & drag to replace
-                      </span>
-                      <span className="text-gray-400 font-semibold">
-                        Order: {cat.order ?? index + 1}
-                      </span>
-                    </div>
-                  </>
-                )}
+                {/* Drag Helper Tip on Card Footer */}
+                <div className="mt-3 pt-2 border-t border-gray-800/80 flex items-center justify-between text-[11px] text-gray-400">
+                  <span className="flex items-center gap-1 group-hover:text-indigo-300 transition-colors">
+                    <GripVertical className="w-3.5 h-3.5" /> Hold & drag to replace
+                  </span>
+                  <span className="text-gray-400 font-semibold font-mono">
+                    Order: {cat.order ?? index + 1}
+                  </span>
+                </div>
               </div>
             );
           })}

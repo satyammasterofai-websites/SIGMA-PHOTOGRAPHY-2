@@ -151,7 +151,7 @@ export default function TemplateCategories() {
           </div>
         </div>
 
-        {/* 1. All Video Categories Appear First */}
+        {/* 1. All Video Categories Appear First in order set by Admin */}
         <div className="grid grid-cols-1 divide-y divide-gray-200 mb-28">
           {videoCategories.map((cat, index) => (
             <motion.div
@@ -163,12 +163,6 @@ export default function TemplateCategories() {
               className="py-12 flex flex-col md:flex-row items-center gap-12 group"
             >
               <div className="w-full md:w-1/3 rounded-2xl overflow-hidden border border-brand-purple/10 shadow-lg group-hover:shadow-brand-purple/20 transition-all duration-500 relative bg-transparent">
-                {/* Numbering Badge on Category Thumbnail */}
-                <div className="absolute top-4 left-4 z-10 px-3 py-1 bg-black/75 backdrop-blur-md rounded-full border border-white/20 text-white font-black text-xs tracking-wider flex items-center gap-1.5 shadow-lg pointer-events-none">
-                  <span className="w-2 h-2 rounded-full bg-brand-rose animate-pulse" />
-                  <span>#{String(index + 1).padStart(2, "0")}</span>
-                </div>
-
                 <div className="relative w-full h-auto bg-transparent flex items-center justify-center overflow-hidden">
                   <img
                     src={
@@ -183,21 +177,8 @@ export default function TemplateCategories() {
               </div>
 
               <div className="w-full md:w-2/3 flex flex-col items-center md:items-start text-center md:text-left relative py-4">
-                {/* Position and Numbering Label */}
-                <div className="flex flex-wrap items-center gap-2.5 mb-3">
-                  <span className="text-xs font-black tracking-widest text-brand-rose uppercase bg-brand-rose/10 px-3.5 py-1 rounded-full border border-brand-rose/20 shadow-sm">
-                    Position #{index + 1}
-                  </span>
-                  <span className="text-xs font-bold text-brand-slate uppercase tracking-wider">
-                    Category {String(index + 1).padStart(2, "0")} of {videoCategories.length}
-                  </span>
-                </div>
-
-                <h3 className="text-3xl md:text-4xl font-display font-black uppercase tracking-wider text-brand-navy mb-4 flex items-center gap-3">
-                  <span className="text-brand-purple/40 font-serif font-black text-2xl md:text-3xl">
-                    {String(index + 1).padStart(2, "0")}.
-                  </span>
-                  <span>{cat.name}</span>
+                <h3 className="text-3xl md:text-4xl font-display font-black uppercase tracking-wider text-brand-navy mb-4">
+                  {cat.name}
                 </h3>
                 <p className="text-brand-slate text-base md:text-lg mb-8 max-w-xl">
                   {cat.description ||

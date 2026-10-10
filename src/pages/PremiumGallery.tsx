@@ -731,15 +731,6 @@ export default function PremiumGallery() {
                   >
                     {isWebsite && <Globe className="w-4 h-4" />}
                     {cat}
-                    {cat !== 'All' && (
-                      <span className={`text-[10px] font-black px-1.5 py-0.5 rounded-md ${
-                        isActive 
-                          ? 'bg-white/20 text-white' 
-                          : 'bg-gray-100 text-gray-500 group-hover:bg-gray-200'
-                      }`}>
-                        #{categories.indexOf(cat)}
-                      </span>
-                    )}
                     {isWebsite && isWebsiteInvitationHidden && (
                       <span className="text-[10px] bg-rose-500/20 text-rose-300 px-1.5 py-0.5 rounded-md font-bold flex items-center gap-0.5">
                         <EyeOff className="w-3 h-3" /> Hidden
