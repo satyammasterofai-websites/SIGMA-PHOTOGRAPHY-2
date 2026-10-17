@@ -7,7 +7,7 @@ import { getDocs, collection, doc, onSnapshot, setDoc } from 'firebase/firestore
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell, CartesianGrid } from 'recharts';
 import { LayoutDashboard, Users, ShoppingBag, Images, FileEdit, 
   MessageSquare, HelpCircle, Bell, Settings, LogOut, Menu, X, ShieldAlert, ArrowLeft,
-  Eye, EyeOff, Smartphone
+  Eye, EyeOff, Smartphone, Palette
 } from 'lucide-react';
 import toast from 'react-hot-toast';
 import TemplateManagement from './TemplateManagement';
@@ -20,6 +20,7 @@ import ManageFAQ from './ManageFAQ';
 import ManageNotifications from './ManageNotifications';
 import ManageUsers from './ManageUsers';
 import ManageSettings from './ManageSettings';
+import ManageDesigners from './ManageDesigners';
 
 import ManageForms from './ManageForms';
 import ManageCategories from './ManageCategories';
@@ -38,6 +39,7 @@ export default function AdminDashboardLayout() {
   const location = useLocation();
   const { unreadCount } = useChatStore();
   const [isSelfVideoLive, setIsSelfVideoLive] = useState(true);
+  const [pendingDesignerCount, setPendingDesignerCount] = useState(0);
 
   useEffect(() => {
     const unsub = onSnapshot(doc(db, "settings", "config"), (docSnap) => {
@@ -47,7 +49,16 @@ export default function AdminDashboardLayout() {
         setIsSelfVideoLive(enabled);
       }
     });
-    return () => unsub();
+
+    const unsubDesigners = onSnapshot(collection(db, "designers"), (snapshot) => {
+      const pending = snapshot.docs.filter(d => d.data().status === 'pending').length;
+      setPendingDesignerCount(pending);
+    });
+
+    return () => {
+      unsub();
+      unsubDesigners();
+    };
   }, []);
 
   const handleLogout = async () => {
@@ -63,6 +74,7 @@ export default function AdminDashboardLayout() {
   const navItems = [
     { name: 'Dashboard', path: '/admin', icon: LayoutDashboard },
     { name: 'Orders', path: '/admin/orders', icon: ShoppingBag },
+    { name: 'Designers', path: '/admin/designers', icon: Palette },
     { name: 'Categories', path: '/admin/categories', icon: Images },
     { name: 'Templates', path: '/admin/templates', icon: FileEdit },
     { name: 'E-Cards', path: '/admin/ecards', icon: Smartphone },
@@ -121,6 +133,11 @@ export default function AdminDashboardLayout() {
                 >
                   <item.icon className={`w-5 h-5 ${active ? 'text-brand-purple' : 'text-brand-slate'}`} />
                   {item.name}
+                  {item.name === 'Designers' && pendingDesignerCount > 0 && (
+                    <span className="ml-auto bg-amber-500 text-white font-bold text-[10px] px-2 py-0.5 rounded-full">
+                      {pendingDesignerCount}
+                    </span>
+                  )}
                   {item.name === 'Customers' && unreadCount > 0 && (
                     <span className="ml-auto bg-brand-rose text-white text-[10px] w-5 h-5 flex items-center justify-center rounded-full">
                       {unreadCount}
@@ -185,6 +202,7 @@ export default function AdminDashboardLayout() {
            <Routes>
               <Route path="/" element={<AdminHome />} />
               <Route path="/orders" element={<ManageOrders />} />
+              <Route path="/designers" element={<ManageDesigners />} />
               <Route path="/categories" element={<ManageCategories />} />
               <Route path="/templates" element={<TemplateManagement />} />
               <Route path="/ecards" element={<ManageECards />} />

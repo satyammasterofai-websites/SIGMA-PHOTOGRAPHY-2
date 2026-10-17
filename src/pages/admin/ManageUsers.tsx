@@ -1,7 +1,7 @@
 import React, { useState, useEffect } from 'react';
-import { collection, onSnapshot, doc, updateDoc, deleteDoc, query, where } from 'firebase/firestore';
+import { collection, onSnapshot, doc, updateDoc, setDoc, deleteDoc, query, where } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
-import { Trash2, Edit, MessageSquare, Mail, Search } from 'lucide-react';
+import { Trash2, Edit, MessageSquare, Mail, Search, Palette, ShieldCheck, UserCheck } from 'lucide-react';
 import toast from 'react-hot-toast';
 import CustomerDetail from './CustomerDetail';
 
@@ -42,13 +42,60 @@ export default function ManageUsers() {
     return () => unsub();
   }, []);
 
-  const changeRole = async (id: string, currentRole: string) => {
+  const changeUserRole = async (user: any, targetRole: 'user' | 'designer' | 'admin') => {
     try {
-      const newRole = currentRole === 'admin' ? 'user' : 'admin';
-      await updateDoc(doc(db, 'users', id), { role: newRole });
-      toast.success(`Role updated to ${newRole}`);
-    } catch (e) {
-      toast.error('Failed to update role');
+      const now = new Date().toISOString();
+      const userRef = doc(db, 'users', user.id);
+
+      if (targetRole === 'designer') {
+        const designerPayload = {
+          role: 'designer',
+          status: 'approved',
+          active: true,
+          updatedAt: now,
+          approvedAt: now
+        };
+        await updateDoc(userRef, designerPayload);
+
+        const cleanPhone = (user.whatsapp || user.phone || '').replace(/\D/g, '');
+        const fullDesignerData = {
+          id: user.id,
+          uid: user.id,
+          name: user.displayName || user.name || 'Designer',
+          displayName: user.displayName || user.name || 'Designer',
+          email: user.email || '',
+          whatsapp: cleanPhone,
+          skills: user.skills || ['Video Editing', 'Wedding Invitations'],
+          portfolioUrl: user.portfolioUrl || '',
+          experience: user.experience || 'Professional Designer',
+          role: 'designer',
+          status: 'approved',
+          active: true,
+          assignedTemplates: user.assignedTemplates || [],
+          approvedAt: now,
+          updatedAt: now
+        };
+
+        // Mirror to designers and content/designers/items collections
+        await setDoc(doc(db, 'designers', user.id), fullDesignerData, { merge: true }).catch(console.warn);
+        await setDoc(doc(db, 'content', 'designers', 'items', user.id), fullDesignerData, { merge: true }).catch(console.warn);
+
+        toast.success(`${user.name || user.email} is now an Approved Designer! 🎨`);
+      } else {
+        await updateDoc(userRef, { role: targetRole, updatedAt: now });
+
+        if (user.role === 'designer') {
+          // Deactivate designer record
+          const deact = { active: false, status: 'inactive', updatedAt: now };
+          await updateDoc(doc(db, 'designers', user.id), deact).catch(() => {});
+          await updateDoc(doc(db, 'content', 'designers', 'items', user.id), deact).catch(() => {});
+        }
+
+        toast.success(`Role updated to ${targetRole}`);
+      }
+    } catch (e: any) {
+      console.error(e);
+      toast.error('Failed to change role: ' + (e.message || ''));
     }
   };
 
@@ -134,9 +181,19 @@ export default function ManageUsers() {
                   <td className="py-4 text-sm">{u.email}</td>
                   <td className="py-4 text-sm">{u.name || 'N/A'}</td>
                   <td className="py-4 text-sm">
-                    <span className={`px-2 py-1 rounded text-xs font-medium ${u.role === 'admin' ? 'bg-indigo-500/20 text-indigo-400' : 'bg-gray-800 text-gray-400'}`}>
-                      {u.role || 'user'}
-                    </span>
+                    {u.role === 'admin' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">
+                        <ShieldCheck className="w-3.5 h-3.5" /> Admin
+                      </span>
+                    ) : u.role === 'designer' ? (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-bold bg-pink-500/20 text-pink-300 border border-pink-500/30">
+                        <Palette className="w-3.5 h-3.5 text-amber-300" /> Designer
+                      </span>
+                    ) : (
+                      <span className="inline-flex items-center gap-1 px-2.5 py-1 rounded-md text-xs font-medium bg-gray-800 text-gray-300 border border-gray-700">
+                        User
+                      </span>
+                    )}
                   </td>
                   <td className="py-4 text-sm">
                     {isOnline ? (
@@ -148,11 +205,42 @@ export default function ManageUsers() {
                     )}
                   </td>
                   <td className="py-4 text-right">
-                    <div className="flex justify-end gap-2">
-                       <a href={`mailto:${u.email}`} className="p-2 text-blue-400 hover:bg-blue-400/10 rounded-lg" title="Send Email">
+                    <div className="flex items-center justify-end gap-2">
+                       {/* Switch to Designer Quick Action */}
+                       {u.role !== 'designer' ? (
+                         <button
+                           onClick={() => changeUserRole(u, 'designer')}
+                           className="px-2.5 py-1 bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 hover:opacity-90 text-white rounded-lg text-xs font-bold flex items-center gap-1 shadow-sm transition-all"
+                           title="Switch this registered user to an Approved Designer"
+                         >
+                           <Palette className="w-3.5 h-3.5" />
+                           <span>Make Designer</span>
+                         </button>
+                       ) : (
+                         <button
+                           onClick={() => changeUserRole(u, 'user')}
+                           className="px-2.5 py-1 bg-gray-800 hover:bg-gray-700 text-gray-300 rounded-lg text-xs font-medium flex items-center gap-1 transition-colors"
+                           title="Revert back to regular user"
+                         >
+                           <span>Revert to User</span>
+                         </button>
+                       )}
+
+                       {/* Role dropdown for Admin toggle */}
+                       <select
+                         value={u.role || 'user'}
+                         onChange={(e) => changeUserRole(u, e.target.value as any)}
+                         className="bg-gray-800 border border-gray-700 text-gray-200 text-xs rounded-lg px-2 py-1 outline-none focus:border-indigo-500"
+                       >
+                         <option value="user">User</option>
+                         <option value="designer">Designer</option>
+                         <option value="admin">Admin</option>
+                       </select>
+
+                       <a href={`mailto:${u.email}`} className="p-1.5 text-blue-400 hover:bg-blue-400/10 rounded-lg" title="Send Email">
                          <Mail className="w-4 h-4" />
                        </a>
-                       <button onClick={() => setSelectedUser(u)} className="relative p-2 text-indigo-400 hover:bg-indigo-400/10 rounded-lg" title="Chat / Orders">
+                       <button onClick={() => setSelectedUser(u)} className="relative p-1.5 text-indigo-400 hover:bg-indigo-400/10 rounded-lg" title="Chat / Orders">
                          <MessageSquare className="w-4 h-4" />
                          {unreadMap[u.id] > 0 && (
                            <span className="absolute -top-1 -right-1 bg-red-500 text-white text-[10px] w-4 h-4 flex items-center justify-center rounded-full">
@@ -160,10 +248,7 @@ export default function ManageUsers() {
                            </span>
                          )}
                        </button>
-                       <button onClick={() => changeRole(u.id, u.role)} className="px-3 py-1 bg-gray-800 hover:bg-gray-700 text-white rounded text-xs">
-                         Toggle Role
-                       </button>
-                       <button onClick={() => setDeleteUserId(u.id)} className="p-2 text-red-400 hover:bg-red-400/10 rounded-lg">
+                       <button onClick={() => setDeleteUserId(u.id)} className="p-1.5 text-red-400 hover:bg-red-400/10 rounded-lg" title="Delete User">
                          <Trash2 className="w-4 h-4" />
                        </button>
                     </div>

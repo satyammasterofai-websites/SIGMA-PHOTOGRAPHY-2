@@ -7,16 +7,23 @@ service cloud.firestore {
       return request.auth != null;
     }
     
+    function isEmailAdmin() {
+      return request.auth != null && 
+        request.auth.token.email != null && (
+          request.auth.token.email.lower() == 'satyammasterofai@gmail.com' ||
+          request.auth.token.email.lower() == 'jhahimanshukumar87@gmail.com' ||
+          request.auth.token.email.lower() == 'sigmaphotography0001@gmail.com'
+        );
+    }
+
+    function isRoleAdmin() {
+      return request.auth != null && 
+        exists(/databases/$(database)/documents/users/$(request.auth.uid)) && 
+        get(/databases/$(database)/documents/users/$(request.auth.uid)).data.get('role', '') == 'admin';
+    }
+
     function isAdmin() {
-      let uid = request.auth.uid;
-      let userDoc = /databases/$(database)/documents/users/$(uid);
-      let isDbAdmin = exists(userDoc) && get(userDoc).data.get('role', '') == 'admin';
-      return request.auth != null && (
-        (request.auth.token.email != null && request.auth.token.email.lower() == 'satyammasterofai@gmail.com') ||
-        (request.auth.token.email != null && request.auth.token.email.lower() == 'jhahimanshukumar87@gmail.com') ||
-        (request.auth.token.email != null && request.auth.token.email.lower() == 'sigmaphotography0001@gmail.com') ||
-        isDbAdmin
-      );
+      return isEmailAdmin() || isRoleAdmin();
     }
     
     function isOwner(uid) {
@@ -25,18 +32,25 @@ service cloud.firestore {
 
     // Users Collection
     match /users/{userId} {
-      // Users can read/write their own profile
-      // Admins can read/write any profile
-      // Anyone can create their profile when they first log in (or at least users can write to their own uid)
-      allow read: if isAuthenticated() && (isOwner(userId) || isAdmin() || resource.data.get('role', '') == 'admin');
-      allow create: if isOwner(userId);
-      allow update: if isOwner(userId) || isAdmin();
+      allow read: if isAuthenticated() && (
+        request.auth.uid == userId || 
+        isAdmin() || 
+        (resource != null && resource.data.get('role', '') == 'admin')
+      );
+      allow create: if isAuthenticated() && request.auth.uid == userId;
+      allow update: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
       allow delete: if isAdmin();
     }
     
+    // Designers Collection - public read for approved/directory/orders assignment, self or admin write
+    match /designers/{designerId} {
+      allow read: if true;
+      allow create: if isAuthenticated();
+      allow update: if isAdmin() || (isAuthenticated() && request.auth.uid == designerId);
+      allow delete: if isAdmin();
+    }
+
     // Website Management Collections
-    // Public read for things that are shown on frontend
-    
     match /templates/{document=**} {
       allow read: if true;
       allow write: if isAdmin();
@@ -49,7 +63,7 @@ service cloud.firestore {
     
     match /content/{document=**} {
       allow read: if true;
-      allow write: if isAdmin();
+      allow write: if isAdmin() || isAuthenticated();
     }
 
     match /banners/{document=**} {
@@ -62,8 +76,16 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
     
-    match /template_categories/{document=**} { allow read: if true; allow write: if isAdmin(); }
-    match /categories/{document=**} { allow read, write: if true; } match /categories_bak/{document=**} {
+    match /template_categories/{document=**} { 
+      allow read: if true; 
+      allow write: if isAdmin(); 
+    }
+    
+    match /categories/{document=**} { 
+      allow read, write: if true; 
+    } 
+    
+    match /categories_bak/{document=**} {
       allow read: if true;
       allow write: if isAdmin();
     }
@@ -80,14 +102,20 @@ service cloud.firestore {
 
     match /orders/{orderId} {
       allow create: if true;
-      // Users can read/update their own orders, admins can read/update all
-      allow read, update: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      // Users can read/update their own orders, assigned designers can read/update assigned orders, admins can read/update all
+      allow read, update: if isAdmin() || (isAuthenticated() && (
+        (resource != null && resource.data.get('userId', '') == request.auth.uid) || 
+        (resource != null && resource.data.get('assignedDesignerId', '') == request.auth.uid)
+      ));
       allow delete: if isAdmin();
     }
 
     match /order_files/{document=**} {
       allow create: if true;
-      allow read, update, delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow read, update, delete: if isAdmin() || (isAuthenticated() && (
+        (resource != null && resource.data.get('userId', '') == request.auth.uid) || 
+        (resource != null && resource.data.get('assignedDesignerId', '') == request.auth.uid)
+      ));
     }
     
     match /settings/{document=**} {
@@ -108,12 +136,13 @@ service cloud.firestore {
     match /template_reviews/{document=**} {
       allow read: if true;
       allow create: if true;
-      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow update, delete: if isAdmin() || (isAuthenticated() && resource.data.get('userId', '') == request.auth.uid);
     }
 
     match /notifications/{document=**} {
-      allow read: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
-      allow write: if isAdmin();
+      allow create: if true;
+      allow read: if isAdmin() || (isAuthenticated() && resource.data.get('userId', '') == request.auth.uid);
+      allow update, delete: if isAdmin();
     }
     
     match /service_enquiries/{document=**} {
@@ -122,8 +151,8 @@ service cloud.firestore {
     }
     
     match /chats/{document=**} {
-      allow create: if isAuthenticated() && request.resource.data.userId == request.auth.uid || isAdmin();
-      allow read, update, delete: if isAdmin() || (isAuthenticated() && resource.data.userId == request.auth.uid);
+      allow create: if (isAuthenticated() && request.resource.data.get('userId', '') == request.auth.uid) || isAdmin();
+      allow read, update, delete: if isAdmin() || (isAuthenticated() && resource.data.get('userId', '') == request.auth.uid);
     }
     
     match /chat_typing/{document=**} {

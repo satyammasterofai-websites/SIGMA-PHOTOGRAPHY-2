@@ -13,7 +13,7 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
     const unsubscribe = onAuthStateChanged(auth, async (currentUser) => {
       if (currentUser) { setLoading(true); }
       if (currentUser) {
-        let currentRole: 'user' | 'admin' = 'user';
+        let currentRole: 'user' | 'admin' | 'designer' = 'user';
         const isAdminEmail = currentUser.email && ADMIN_EMAILS.includes(currentUser.email.toLowerCase());
         
         if (isAdminEmail) {
@@ -26,12 +26,13 @@ export default function AuthProvider({ children }: { children: React.ReactNode }
           const userDocSnap = await getDoc(userDocRef);
 
           if (userDocSnap.exists()) {
+            const data = userDocSnap.data();
             // Overwrite with DB role if available, unless they're hardcoded admin
-            if (!isAdminEmail && userDocSnap.data().role === 'admin') {
-               currentRole = 'admin';
+            if (!isAdminEmail && (data.role === 'admin' || data.role === 'designer')) {
+               currentRole = data.role;
             }
             // If they are admin by email but DB says user, let's update DB
-            if (isAdminEmail && userDocSnap.data().role !== 'admin') {
+            if (isAdminEmail && data.role !== 'admin') {
                try {
                  await setDoc(userDocRef, { role: 'admin' }, { merge: true });
                } catch (e) {

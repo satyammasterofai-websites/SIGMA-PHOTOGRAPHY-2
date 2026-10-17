@@ -1,8 +1,25 @@
-import { Camera, Instagram, Mail, Phone, MapPin, Sparkles } from 'lucide-react';
+import { useState } from 'react';
+import { useNavigate } from 'react-router-dom';
+import { Camera, Instagram, Mail, Phone, MapPin, Sparkles, Palette, Lock } from 'lucide-react';
 import { useSiteContent } from '../hooks/useSiteContent';
+import DesignerPasscodeModal, { isDesignerGateUnlocked } from './DesignerPasscodeModal';
 
 export default function Footer() {
   const { contact, logoBase64 } = useSiteContent();
+  const [isPasscodeModalOpen, setIsPasscodeModalOpen] = useState(false);
+  const navigate = useNavigate();
+
+  const handleDesignerPortalClick = () => {
+    if (isDesignerGateUnlocked()) {
+      navigate('/designer');
+    } else {
+      setIsPasscodeModalOpen(true);
+    }
+  };
+
+  const handlePasscodeSuccess = () => {
+    navigate('/designer');
+  };
 
   return (
     <footer className="bg-brand-navy text-gray-300 py-20 border-t-4 border-brand-purple relative overflow-hidden">
@@ -50,6 +67,15 @@ export default function Footer() {
             <ul className="space-y-4 text-sm font-medium">
               <li><a href="#home" className="hover:text-brand-cyan transition-colors flex items-center gap-2 group"><span className="w-1.5 h-1.5 rounded-full bg-brand-cyan/0 group-hover:bg-brand-cyan transition-colors" /> Home</a></li>
               <li><a href="#templates" className="hover:text-brand-cyan transition-colors flex items-center gap-2 group"><span className="w-1.5 h-1.5 rounded-full bg-brand-cyan/0 group-hover:bg-brand-cyan transition-colors" /> Gallery</a></li>
+              <li>
+                <button
+                  onClick={handleDesignerPortalClick}
+                  className="hover:text-amber-400 transition-colors flex items-center gap-2 group text-left"
+                >
+                  <span className="w-1.5 h-1.5 rounded-full bg-amber-400/50 group-hover:bg-amber-400 transition-colors" />
+                  Designer Portal
+                </button>
+              </li>
             </ul>
           </div>
 
@@ -90,14 +116,59 @@ export default function Footer() {
           </div>
         </div>
 
+        {/* Dedicated Designer Portal Callout Banner */}
+        <div className="mb-12 p-6 md:p-8 rounded-3xl bg-gradient-to-r from-rose-950/60 via-purple-950/60 to-amber-950/40 border border-rose-500/30 backdrop-blur-md flex flex-col sm:flex-row items-center justify-between gap-6 shadow-2xl">
+          <div className="flex items-center gap-4 text-center sm:text-left">
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-rose-500 to-amber-500 text-white flex items-center justify-center shrink-0 shadow-lg shadow-rose-600/30 ring-2 ring-amber-400/30">
+              <Palette className="w-7 h-7" />
+            </div>
+            <div>
+              <div className="flex items-center justify-center sm:justify-start gap-2 mb-1">
+                <h4 className="text-lg font-bold text-white tracking-tight">Sigma Photography Designer Network</h4>
+                <span className="hidden sm:inline-flex px-2 py-0.5 text-[10px] font-bold rounded-full bg-amber-400/20 text-amber-300 border border-amber-400/30">
+                  Staff Only
+                </span>
+              </div>
+              <p className="text-xs text-gray-300 max-w-lg">
+                Are you a verified video editor or template designer? Access your assigned customer orders, submission queue, and live design dashboard.
+              </p>
+            </div>
+          </div>
+
+          <button
+            onClick={handleDesignerPortalClick}
+            className="group relative inline-flex items-center justify-center gap-2.5 px-6 py-3.5 rounded-2xl font-bold text-sm text-white bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 shadow-xl shadow-rose-600/30 border border-amber-300/40 transition-all transform hover:scale-[1.03] active:scale-95 shrink-0"
+          >
+            <Lock className="w-4 h-4 text-amber-200 group-hover:rotate-12 transition-transform" />
+            <span>Designer Portal</span>
+            <span className="text-[10px] bg-black/40 text-amber-200 px-2 py-0.5 rounded-full border border-amber-300/30">
+              Restricted
+            </span>
+          </button>
+        </div>
+
         <div className="pt-8 border-t border-brand-purple/20 flex flex-col md:flex-row items-center justify-between gap-4">
           <p className="text-sm font-medium text-brand-lavender/60">© {new Date().getFullYear()} SIGMAPHOTOGRAPHY. All rights reserved.</p>
-          <div className="flex gap-6 text-sm font-bold text-gray-400">
+          <div className="flex flex-wrap items-center gap-6 text-sm font-bold text-gray-400">
+            <button
+              onClick={handleDesignerPortalClick}
+              className="text-amber-400/90 hover:text-amber-300 transition-colors flex items-center gap-1.5"
+            >
+              <Palette className="w-3.5 h-3.5" />
+              <span>Designer Portal</span>
+            </button>
             <a href="#" className="hover:text-brand-rose transition-colors">Privacy Policy</a>
             <a href="#" className="hover:text-brand-rose transition-colors">Terms of Service</a>
           </div>
         </div>
       </div>
+
+      {/* Passcode Modal Gate */}
+      <DesignerPasscodeModal
+        isOpen={isPasscodeModalOpen}
+        onClose={() => setIsPasscodeModalOpen(false)}
+        onSuccess={handlePasscodeSuccess}
+      />
     </footer>
   );
 }

@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { collection, getDocs, addDoc, deleteDoc, updateDoc, setDoc, doc, getDoc } from 'firebase/firestore';
 import { db } from '../../lib/firebase';
 import { fileToBase64, formatTemplateDate, formatTemplateTime, formatTemplateDateTime, isNewlyCreated } from '../../lib/utils';
-import { Plus, Edit, Trash2, ImagePlus, Eye, Star, TrendingUp, Play, ShoppingBag, X, Search, Globe, Calendar, Clock, ExternalLink, Sparkles, Layers, Check, FileText, ArrowRightLeft, Smartphone } from 'lucide-react';
+import { Plus, Edit, Trash2, ImagePlus, Eye, Star, TrendingUp, Play, ShoppingBag, X, Search, Globe, Calendar, Clock, ExternalLink, Sparkles, Layers, Check, FileText, ArrowRightLeft, Smartphone, Palette } from 'lucide-react';
 import toast from 'react-hot-toast';
 import { isFileNameDuplicate, registerFileName } from '../../lib/fileRegistry';
 import { isVideoUrl, isValidWebsiteUrl } from '../../lib/templateUtils';
@@ -44,6 +44,8 @@ export default function TemplateManagement() {
   const [categories, setCategories] = useState<any[]>([]);
   const [formId, setFormId] = useState('');
   const [availableForms, setAvailableForms] = useState<any[]>([]);
+  const [availableDesigners, setAvailableDesigners] = useState<any[]>([]);
+  const [assignedDesignerId, setAssignedDesignerId] = useState<string>('');
   const [showSuccessPopup, setShowSuccessPopup] = useState(false);
 
   const fetchTemplates = async () => {
@@ -149,6 +151,33 @@ export default function TemplateManagement() {
           fList.push({ id: d.id, ...d.data() });
         });
         setAvailableForms(fList);
+
+        const dMap = new Map<string, any>();
+        try {
+          const designersSnap = await getDocs(collection(db, 'designers'));
+          designersSnap.forEach((d) => {
+            const dData = d.data();
+            if ((dData.status === 'approved' || dData.role === 'designer') && dData.active !== false) {
+              dMap.set(d.id, { id: d.id, ...dData });
+            }
+          });
+        } catch (e) {
+          console.warn("Designers collection read note:", e);
+        }
+
+        try {
+          const contentDesignersSnap = await getDocs(collection(db, 'content', 'designers', 'items'));
+          contentDesignersSnap.forEach((d) => {
+            const dData = d.data();
+            if ((dData.status === 'approved' || dData.role === 'designer') && dData.active !== false) {
+              dMap.set(d.id, { ...(dMap.get(d.id) || {}), id: d.id, ...dData });
+            }
+          });
+        } catch (e) {
+          console.warn("content/designers/items read note:", e);
+        }
+
+        setAvailableDesigners(Array.from(dMap.values()));
       } catch (err) {
         console.error("Error fetching categories or forms:", err);
       }
@@ -226,6 +255,7 @@ export default function TemplateManagement() {
     setLanguage('None');
     setCustomFields([]);
     setFormId('');
+    setAssignedDesignerId('');
     setNewFieldName('');
     setIsModalOpen(true);
   };
@@ -252,6 +282,7 @@ export default function TemplateManagement() {
     setLanguage('Hindi');
     setCustomFields([]);
     setFormId('');
+    setAssignedDesignerId('');
     setNewFieldName('');
     setIsModalOpen(true);
   };
@@ -283,6 +314,7 @@ export default function TemplateManagement() {
       setLanguage(template.language || 'None');
       setCustomFields(template.customFields || []);
       setFormId(template.formId || '');
+      setAssignedDesignerId(template.assignedDesignerId || '');
       setSubCategory(template.subCategory || (isWebsite ? 'Website Templates' : ''));
     } else {
       openVideoForm();
@@ -345,6 +377,8 @@ export default function TemplateManagement() {
       const existing = editingId ? templates.find(t => t.id === editingId) : null;
       const createdAt = existing?.createdAt || now;
       
+      const selectedDesigner = availableDesigners.find(d => d.id === assignedDesignerId);
+      
       const data = { 
         title, 
         category: finalCategory, 
@@ -365,6 +399,9 @@ export default function TemplateManagement() {
         language: isWebsite ? 'None' : language, 
         customFields, 
         formId,
+        assignedDesignerId: selectedDesigner ? selectedDesigner.id : null,
+        assignedDesignerName: selectedDesigner ? selectedDesigner.name : null,
+        assignedDesignerPhone: selectedDesigner ? selectedDesigner.whatsapp : null,
         createdAt,
         updatedAt: now
       };
@@ -1118,6 +1155,29 @@ export default function TemplateManagement() {
                        </div>
                      </>
                    )}
+                </div>
+
+                {/* Responsible Designer Assignment */}
+                <div className="border border-gray-800 rounded-xl p-4 bg-gray-800/20">
+                   <h3 className="text-base font-bold text-white mb-1 flex items-center gap-2">
+                     <Palette className="w-5 h-5 text-purple-400" />
+                     Responsible / Default Designer
+                   </h3>
+                   <p className="text-xs text-gray-400 mb-3">
+                     Assign an approved designer to this template. Incoming orders for this template will automatically link to this specialist.
+                   </p>
+                   <select
+                     value={assignedDesignerId}
+                     onChange={(e) => setAssignedDesignerId(e.target.value)}
+                     className="w-full bg-gray-800 border border-gray-700 text-white rounded-xl px-4 py-2.5 text-xs focus:outline-none focus:border-purple-400"
+                   >
+                     <option value="">-- No Default Designer (Admin assigns manually) --</option>
+                     {availableDesigners.map(d => (
+                       <option key={d.id} value={d.id}>
+                         {d.name} ({d.whatsapp}) {d.skills ? `— ${Array.isArray(d.skills) ? d.skills.slice(0, 2).join(', ') : d.skills}` : ''}
+                       </option>
+                     ))}
+                   </select>
                 </div>
 
                 <div>

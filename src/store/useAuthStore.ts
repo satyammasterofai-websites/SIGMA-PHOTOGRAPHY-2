@@ -3,9 +3,9 @@ import { User } from 'firebase/auth';
 
 interface AuthState {
   user: User | null;
-  role: 'admin' | 'user' | null;
+  role: 'admin' | 'user' | 'designer' | null;
   loading: boolean;
-  setUser: (user: User | null, role: 'admin' | 'user' | null) => void;
+  setUser: (user: User | null, role: 'admin' | 'user' | 'designer' | null) => void;
   setLoading: (loading: boolean) => void;
 }
 

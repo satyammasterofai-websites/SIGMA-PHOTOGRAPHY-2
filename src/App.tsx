@@ -14,6 +14,7 @@ const AdminDashboard = React.lazy(() => import('./pages/admin/AdminDashboard'));
 const PremiumGallery = React.lazy(() => import('./pages/PremiumGallery'));
 const Checkout = React.lazy(() => import('./pages/Checkout'));
 const TemplateDetails = React.lazy(() => import('./pages/TemplateDetails'));
+const DesignerPortal = React.lazy(() => import('./pages/designer/DesignerPortal'));
 import AuthProvider from './components/AuthProvider';
 import { useAuthStore } from './store/useAuthStore';
 
@@ -62,6 +63,7 @@ function AppContent() {
         <Route path="/checkout/:id" element={<Checkout />} />
         <Route path="/login" element={<Login />} />
         <Route path="/signup" element={<Signup />} />
+        <Route path="/designer/*" element={<DesignerPortal />} />
         <Route path="/dashboard/*" element={
           <ProtectedRoute>
             <Dashboard />

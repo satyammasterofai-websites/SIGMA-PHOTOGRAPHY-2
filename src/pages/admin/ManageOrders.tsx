@@ -3,6 +3,7 @@ import { collection, getDocs, onSnapshot, addDoc,
   doc,
   updateDoc,
   deleteDoc,
+  setDoc,
   orderBy,
   query,
 } from "firebase/firestore";
@@ -15,6 +16,11 @@ import {
   Package,
   Link as LinkIcon,
   Download, Search,
+  Palette,
+  MessageSquare,
+  Sparkles,
+  ExternalLink,
+  FileText,
 } from "lucide-react";
 import { FormatOrderData } from "../../components/FormatOrderData";
 import toast from "react-hot-toast";
@@ -31,12 +37,150 @@ export default function ManageOrders() {
   const [previewVideoUrl, setPreviewVideoUrl] = useState<string | null>(null);
   const [searchQuery, setSearchQuery] = useState("");
   const [templateMap, setTemplateMap] = useState<Record<string, string>>({});
+  const [templatesList, setTemplatesList] = useState<any[]>([]);
+  const [designers, setDesigners] = useState<any[]>([]);
   const [selectedOrders, setSelectedOrders] = useState<string[]>([]);
 
   const toggleSelectOrder = (id: string) => {
     setSelectedOrders(prev => 
       prev.includes(id) ? prev.filter(orderId => orderId !== id) : [...prev, id]
     );
+  };
+
+  const assignDesignerToOrder = async (orderId: string, designerId: string) => {
+    try {
+      const selected = designers.find(d => d.id === designerId);
+      const updateData: any = {
+        assignedDesignerId: selected ? selected.id : null,
+        assignedDesignerName: selected ? selected.name : null,
+        assignedDesignerPhone: selected ? selected.whatsapp : null,
+        assignedAt: selected ? new Date().toISOString() : null,
+      };
+
+      const existingOrder = orders.find(o => o.id === orderId);
+      if (selected && (!existingOrder?.designerStatus || existingOrder?.designerStatus === 'Unassigned')) {
+        updateData.designerStatus = 'Assigned';
+      }
+
+      await updateDoc(doc(db, "orders", orderId), updateData);
+
+      // Mirror to content/assigned_orders/items without any customer price or amount
+      if (selected && existingOrder) {
+        const designerCopy: any = {
+          ...existingOrder,
+          ...updateData,
+          id: orderId,
+        };
+        // Explicitly strip customer sensitive financial data
+        delete designerCopy.price;
+        delete designerCopy.amount;
+        delete designerCopy.finalPrice;
+        delete designerCopy.advancePayment;
+        delete designerCopy.paymentStatus;
+        delete designerCopy.advancePaymentStatus;
+        await setDoc(doc(db, "content", "assigned_orders", "items", orderId), designerCopy, { merge: true }).catch(console.warn);
+      } else if (!selected) {
+        await deleteDoc(doc(db, "content", "assigned_orders", "items", orderId)).catch(() => {});
+      }
+
+      toast.success(selected ? `Order assigned to ${selected.name}` : 'Order unassigned');
+
+      if (selected && existingOrder) {
+        // Create user notification for designer
+        createNotification(
+          selected.id,
+          "New Order Assigned",
+          `Order #${existingOrder.displayId || existingOrder.id.slice(-8)} has been assigned to you.`,
+          orderId
+        );
+      }
+    } catch (e) {
+      console.error(e);
+      toast.error("Failed to assign designer");
+    }
+  };
+
+  const sendOrderToDesignerWhatsApp = (order: any) => {
+    const designer = designers.find(d => d.id === order.assignedDesignerId);
+    const phone = designer?.whatsapp || order.assignedDesignerPhone;
+
+    if (!phone) {
+      toast.error("Please assign a registered designer first before sending to WhatsApp.");
+      return;
+    }
+
+    const cleanPhone = phone.replace(/\D/g, "");
+    if (!cleanPhone || cleanPhone.length < 10) {
+      toast.error("Designer WhatsApp number is invalid.");
+      return;
+    }
+
+    // Format Custom Data into human readable summary
+    let customSummary = "";
+    if (order.customData && typeof order.customData === "object") {
+      const cd = order.customData;
+      const parts: string[] = [];
+
+      if (cd.groom) {
+        const g = cd.groom;
+        parts.push(`*Groom:* ${g.name || ''} ${g.parents ? `(S/o ${g.parents})` : ''}`.trim());
+      }
+      if (cd.bride) {
+        const b = cd.bride;
+        parts.push(`*Bride:* ${b.name || ''} ${b.parents ? `(D/o ${b.parents})` : ''}`.trim());
+      }
+      if (cd.events && Array.isArray(cd.events)) {
+        parts.push(`*Itinerary & Functions:*`);
+        cd.events.forEach((ev: any, i: number) => {
+          parts.push(`  ${i + 1}. *${ev.name || 'Event'}*: ${ev.date || ''} ${ev.time || ''} @ ${ev.venue || ''}`.trim());
+        });
+      }
+
+      // Add remaining custom keys
+      Object.entries(cd).forEach(([key, val]) => {
+        if (key !== "groom" && key !== "bride" && key !== "events" && val) {
+          const prettyKey = key.replace(/_/g, " ").replace(/\b\w/g, c => c.toUpperCase());
+          const prettyVal = typeof val === "object" ? JSON.stringify(val) : String(val);
+          parts.push(`*${prettyKey}:* ${prettyVal}`);
+        }
+      });
+
+      customSummary = parts.join("\n");
+    }
+
+    const messageLines = [
+      `🎨 *SIGMA PHOTOGRAPHY - ORDER ASSIGNMENT* 🎨`,
+      ``,
+      `Hello ${order.assignedDesignerName || designer?.name || 'Designer'}, you have been assigned an invitation order:`,
+      ``,
+      `📋 *Order ID:* #${order.displayId || order.id.slice(-8)}`,
+      `✨ *Template:* ${order.templateName || 'Custom Video'} ${order.templateDisplayId ? `(#${order.templateDisplayId})` : ''}`,
+      `👤 *Customer Name:* ${order.customerName || 'N/A'}`,
+      `📞 *Customer Phone:* ${order.customerPhone || 'N/A'}`,
+      order.designerPayout ? `💰 *Designer Fee / Payout:* ₹${order.designerPayout}` : '',
+      order.hasUploadedInvitationCard ? `💌 *Wedding Card / Hard Copy:* Attached in Designer Portal` : '',
+      order.filesCount ? `📁 *Reference Files:* ${order.filesCount} attached file(s)` : '',
+      order.videoUrl ? `🎥 *Template Reference Demo:*\n${order.videoUrl}` : '',
+      ``,
+      `📝 *CLIENT REQUIREMENTS & DETAILS:*`,
+      customSummary || 'Please check order requirements in your Designer Portal.',
+      ``,
+      `⚡ *Work Status:* ${order.designerStatus || 'Assigned'}`,
+      `🔗 *Open Designer Portal:*\n${window.location.origin}/designer`,
+      ``,
+      `Please review the requirements in your dashboard, download customer assets, and submit the finished video/design link once completed! 🙏`
+    ].filter(Boolean);
+
+    const fullMessage = messageLines.join("\n");
+    const waUrl = `https://wa.me/${cleanPhone}?text=${encodeURIComponent(fullMessage)}`;
+    window.open(waUrl, "_blank");
+
+    // Stamp designerNotifiedAt
+    updateDoc(doc(db, "orders", order.id), {
+      designerNotifiedAt: new Date().toISOString()
+    }).catch(console.error);
+
+    toast.success(`WhatsApp opened for ${order.assignedDesignerName || designer?.name || 'designer'}!`);
   };
 
   const bulkUpdateStatus = async (status: string) => {
@@ -50,11 +194,9 @@ export default function ManageOrders() {
         }
       });
       await Promise.all(promises);
-      // toast.success(`Bulk update to ${status} successful`);
       setSelectedOrders([]);
     } catch (e) {
       console.error(e);
-      // toast.error("Bulk update failed");
     }
   };
 
@@ -64,31 +206,61 @@ export default function ManageOrders() {
     try {
       const promises = selectedOrders.map(id => deleteDoc(doc(db, "orders", id)));
       await Promise.all(promises);
-      // toast.success(`Bulk delete successful`);
       setSelectedOrders([]);
     } catch (e) {
       console.error(e);
-      // toast.error("Bulk delete failed");
     }
   };
 
   useEffect(() => {
+    // 1. Fetch templates
     const fetchTemplates = async () => {
       try {
         const snap = await getDocs(collection(db, "templates"));
         const map: Record<string, string> = {};
+        const list: any[] = [];
         snap.docs.forEach(d => {
           const data = d.data();
+          list.push({ id: d.id, ...data });
           map[d.id] = data.displayId || d.id.slice(-8);
         });
+        setTemplatesList(list);
         setTemplateMap(map);
       } catch (e) {
         console.error("Failed to fetch templates for map", e);
       }
     };
     fetchTemplates();
+
+    // 2. Fetch approved designers with resilient fallback
+    const unsubDesigners = onSnapshot(collection(db, "designers"), (snap) => {
+      const dList = snap.docs
+        .map(d => ({ id: d.id, ...d.data() as any }))
+        .filter(d => (d.status === 'approved' || d.role === 'designer') && d.active !== false);
+      if (dList.length > 0) {
+        setDesigners(dList);
+      }
+    }, (err) => {
+      console.warn("Designers collection listener note:", err?.message);
+    });
+
+    const unsubContentDesigners = onSnapshot(collection(db, "content", "designers", "items"), (snap) => {
+      const dList = snap.docs
+        .map(d => ({ id: d.id, ...d.data() as any }))
+        .filter(d => (d.status === 'approved' || d.role === 'designer') && d.active !== false);
+      if (dList.length > 0) {
+        setDesigners(prev => {
+          const map = new Map<string, any>();
+          prev.forEach(d => map.set(d.id, d));
+          dList.forEach(d => map.set(d.id, { ...map.get(d.id), ...d }));
+          return Array.from(map.values());
+        });
+      }
+    }, (err) => {
+      console.warn("content/designers/items listener note:", err?.message);
+    });
     
-    // We should show newest first
+    // 3. Listen to orders (newest first)
     const q = query(collection(db, "orders"), orderBy("createdAt", "desc"));
     const unsub = onSnapshot(
       q,
@@ -119,7 +291,11 @@ export default function ManageOrders() {
         return () => fallbackUnsub();
       },
     );
-    return () => unsub();
+    return () => {
+      unsub();
+      unsubDesigners();
+      unsubContentDesigners();
+    };
   }, []);
 
   const deleteOrder = async () => {
@@ -395,6 +571,198 @@ export default function ManageOrders() {
                       )}
                     </div>
                   </div>
+
+                  {/* Designer Assignment & WhatsApp Integration */}
+                  {(() => {
+                    const template = templatesList.find(t => t.id === order.templateId);
+                    return (
+                      <div className="bg-gray-900/80 rounded-xl p-3 border border-purple-500/20 space-y-2.5">
+                        <div className="flex flex-wrap items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <Palette className="w-4 h-4 text-purple-400" />
+                            <span className="text-xs font-bold text-gray-300">Designer:</span>
+                            {order.assignedDesignerName ? (
+                              <span className="text-xs font-semibold text-emerald-400 bg-emerald-500/10 px-2.5 py-0.5 rounded-md border border-emerald-500/20">
+                                {order.assignedDesignerName} ({order.assignedDesignerPhone || 'N/A'})
+                              </span>
+                            ) : (
+                              <span className="text-xs text-amber-400 italic font-medium">Unassigned</span>
+                            )}
+                          </div>
+
+                          {order.designerStatus && (
+                            <span className={`text-[10px] font-bold px-2 py-0.5 rounded-full ${
+                              order.designerStatus === 'Completed'
+                                ? 'bg-emerald-500/20 text-emerald-300 border border-emerald-500/30'
+                                : 'bg-amber-500/20 text-amber-300 border border-amber-500/30'
+                            }`}>
+                              Work: {order.designerStatus}
+                            </span>
+                          )}
+                        </div>
+
+                        {/* Dropdown & Actions */}
+                        <div className="flex flex-wrap items-center gap-2">
+                          <select
+                            value={order.assignedDesignerId || ""}
+                            onChange={(e) => assignDesignerToOrder(order.id, e.target.value)}
+                            className="flex-1 min-w-[150px] bg-gray-800 border border-gray-700 rounded-lg px-2.5 py-1.5 text-xs text-white focus:outline-none focus:border-purple-400"
+                          >
+                            <option value="">-- Assign Designer --</option>
+                            {designers.map(d => (
+                              <option key={d.id} value={d.id}>
+                                {d.name} ({d.whatsapp}) {template?.assignedDesignerId === d.id ? '★ (Template Lead)' : ''}
+                              </option>
+                            ))}
+                          </select>
+
+                          {/* Quick assign recommended template lead */}
+                          {template?.assignedDesignerId && order.assignedDesignerId !== template.assignedDesignerId && (
+                            <button
+                              type="button"
+                              onClick={() => assignDesignerToOrder(order.id, template.assignedDesignerId)}
+                              className="px-2.5 py-1.5 rounded-lg text-xs font-bold bg-purple-500/20 hover:bg-purple-500/30 text-purple-300 border border-purple-500/30 transition-colors shrink-0"
+                              title="Assign template lead designer"
+                            >
+                              ⚡ Assign {template.assignedDesignerName || 'Template Lead'}
+                            </button>
+                          )}
+
+                          {/* Send Order to Designer via WhatsApp */}
+                          <button
+                            type="button"
+                            onClick={() => sendOrderToDesignerWhatsApp(order)}
+                            className="px-3 py-1.5 rounded-lg text-xs font-bold bg-emerald-600 hover:bg-emerald-500 text-white shadow-md flex items-center gap-1.5 transition-all shrink-0 active:scale-95"
+                            title="Open WhatsApp with full customer order & requirements"
+                          >
+                            <MessageSquare className="w-3.5 h-3.5 text-white" />
+                            <span>Send Order to Designer</span>
+                          </button>
+                        </div>
+
+                        {/* Manual Designer Fee Input */}
+                        <div className="flex flex-wrap items-center justify-between gap-2 pt-1 border-t border-gray-800 text-xs">
+                          <div className="flex items-center gap-2">
+                            <span className="text-gray-400 font-medium">Designer Fee / Payout (₹):</span>
+                            <input
+                              type="number"
+                              placeholder="e.g. 500 (Optional)"
+                              defaultValue={order.designerPayout || ""}
+                              onBlur={(e) => {
+                                const val = e.target.value.trim();
+                                const num = val ? Number(val) : null;
+                                if (num !== order.designerPayout) {
+                                  updateDoc(doc(db, "orders", order.id), {
+                                    designerPayout: num
+                                  }).then(() => {
+                                    setDoc(doc(db, "content", "assigned_orders", "items", order.id), {
+                                      designerPayout: num
+                                    }, { merge: true }).catch(() => {});
+                                    toast.success("Designer payout fee updated");
+                                  }).catch(console.error);
+                                }
+                              }}
+                              className="w-32 bg-gray-800 border border-gray-700 focus:border-amber-400 rounded-lg px-2.5 py-1 text-xs text-amber-300 placeholder-gray-500 outline-none"
+                            />
+                            <span className="text-[10px] text-gray-500 italic">(Sent to designer on WhatsApp/Portal if set)</span>
+                          </div>
+                        </div>
+
+                        {/* Customer Uploaded Shadi Ka Card / Hard Copy Preview */}
+                        {(order.hasUploadedInvitationCard || order.invitationCardUrl || (order.invitationCardUrls && order.invitationCardUrls.length > 0)) && (
+                          <div className="p-3 bg-rose-950/40 rounded-xl border border-rose-500/30 space-y-2">
+                            <div className="flex items-center justify-between gap-3">
+                              <div className="flex items-center gap-2.5 min-w-0">
+                                <div className="w-8 h-8 rounded-lg bg-rose-500/20 text-rose-300 flex items-center justify-center shrink-0">
+                                  <FileText className="w-4 h-4" />
+                                </div>
+                                <div className="min-w-0">
+                                  <span className="text-xs font-bold text-rose-300 flex items-center gap-1.5">
+                                    <span>💌 Customer Uploaded Shadi Ka Card {order.invitationCardCount ? `(${order.invitationCardCount} Photos)` : ""}</span>
+                                  </span>
+                                  <span className="text-[11px] text-gray-400 block truncate">
+                                    {order.invitationCardName || "Wedding invitation card photo(s) attached"}
+                                  </span>
+                                </div>
+                              </div>
+                              {order.invitationCardUrl && (!order.invitationCardUrls || order.invitationCardUrls.length <= 1) && (
+                                <a
+                                  href={order.invitationCardUrl}
+                                  target="_blank"
+                                  rel="noreferrer"
+                                  className="px-3 py-1.5 rounded-lg text-xs font-bold bg-rose-600 hover:bg-rose-500 text-white shrink-0 flex items-center gap-1 shadow-sm transition-colors"
+                                >
+                                  <span>View Card</span>
+                                  <ExternalLink className="w-3 h-3" />
+                                </a>
+                              )}
+                            </div>
+                            {/* If multiple card photos, display thumbnails */}
+                            {order.invitationCardUrls && order.invitationCardUrls.length > 0 && (
+                              <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 pt-1">
+                                {order.invitationCardUrls.map((url: string, pIdx: number) => (
+                                  <a
+                                    key={pIdx}
+                                    href={url}
+                                    target="_blank"
+                                    rel="noreferrer"
+                                    className="group relative aspect-[3/4] rounded-lg overflow-hidden bg-rose-900/30 border border-rose-500/40 hover:border-rose-400 block transition"
+                                  >
+                                    <img
+                                      src={url}
+                                      alt={`Card Photo ${pIdx + 1}`}
+                                      className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                                    />
+                                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                                      <ExternalLink className="w-3.5 h-3.5 text-white" />
+                                    </div>
+                                    <span className="absolute bottom-1 left-1 px-1.5 py-0.2 rounded bg-black/70 text-white text-[9px] font-bold">
+                                      Photo #{pIdx + 1}
+                                    </span>
+                                  </a>
+                                ))}
+                              </div>
+                            )}
+                          </div>
+                        )}
+
+                        {/* Designer submitted link alert */}
+                        {order.designerDeliveryLink && (
+                          <div className="p-2.5 bg-emerald-950/40 rounded-lg border border-emerald-500/30 text-xs">
+                            <div className="flex items-center justify-between gap-2 mb-1">
+                              <span className="font-bold text-emerald-300 flex items-center gap-1">
+                                <CheckCircle className="w-3.5 h-3.5 text-emerald-400" />
+                                Designer Output Ready:
+                              </span>
+                              <button
+                                type="button"
+                                onClick={() => {
+                                  setDownloadUrl(order.designerDeliveryLink);
+                                  saveDownloadUrl(order.id, order.userId);
+                                }}
+                                className="text-[11px] font-bold text-amber-300 hover:text-amber-200 underline"
+                              >
+                                Accept as Final Customer Link →
+                              </button>
+                            </div>
+                            <a
+                              href={order.designerDeliveryLink}
+                              target="_blank"
+                              rel="noreferrer"
+                              className="text-blue-400 hover:underline break-all block"
+                            >
+                              {order.designerDeliveryLink}
+                            </a>
+                            {order.designerNotes && (
+                              <p className="text-gray-300 text-[11px] mt-1 italic">
+                                Note: "{order.designerNotes}"
+                              </p>
+                            )}
+                          </div>
+                        )}
+                      </div>
+                    );
+                  })()}
                   
                   <div className="flex items-center justify-between mt-2">
                     <select

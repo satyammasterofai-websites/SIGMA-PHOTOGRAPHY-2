@@ -36,6 +36,11 @@ import {
   Trash2,
   Languages,
   Star,
+  ExternalLink,
+  Camera,
+  Image as ImageIcon,
+  Sparkles,
+  Eye,
 } from "lucide-react";
 import { FormatOrderData } from "../components/FormatOrderData";
 import { assignNextWhatsAppNumber } from "../lib/whatsappRouting";
@@ -187,6 +192,18 @@ export default function Checkout() {
   const [customerName, setCustomerName] = useState(user?.displayName || "");
   const [customerPhone, setCustomerPhone] = useState("");
 
+  // Shadi Ka Card / Invitation Card Photos (Supports 1, 2 or more photos, click with camera or select from gallery)
+  const [cardPhotos, setCardPhotos] = useState<
+    Array<{
+      id: string;
+      name: string;
+      base64: string;
+      size?: string;
+    }>
+  >([]);
+  const [uploadingCard, setUploadingCard] = useState(false);
+  const [previewCardPhoto, setPreviewCardPhoto] = useState<string | null>(null);
+
   // Payment Options Popups
   const [paymentSuccessPopup, setPaymentSuccessPopup] = useState<{
     show: boolean;
@@ -195,6 +212,97 @@ export default function Checkout() {
   const [showQRPopup, setShowQRPopup] = useState(false);
 
   const [currentStep, setCurrentStep] = useState(1);
+
+  const cameraInputRef = React.useRef<HTMLInputElement>(null);
+  const galleryInputRef = React.useRef<HTMLInputElement>(null);
+
+  // Helper to compress camera/gallery images client-side for fast loading & Firestore compatibility
+  const compressCardImage = (file: File): Promise<{ base64: string; size: string }> => {
+    return new Promise((resolve) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        const img = new Image();
+        img.onload = () => {
+          const maxDim = 1400;
+          let width = img.width;
+          let height = img.height;
+          if (width > maxDim || height > maxDim) {
+            if (width > height) {
+              height = Math.round((height * maxDim) / width);
+              width = maxDim;
+            } else {
+              width = Math.round((width * maxDim) / height);
+              height = maxDim;
+            }
+          }
+          const canvas = document.createElement("canvas");
+          canvas.width = width;
+          canvas.height = height;
+          const ctx = canvas.getContext("2d");
+          if (ctx) {
+            ctx.drawImage(img, 0, 0, width, height);
+            const compressed = canvas.toDataURL("image/jpeg", 0.78);
+            const approxKb = Math.round((compressed.length * 0.75) / 1024);
+            resolve({ base64: compressed, size: `${approxKb} KB` });
+          } else {
+            const raw = e.target?.result as string;
+            resolve({ base64: raw, size: `${(file.size / 1024).toFixed(0)} KB` });
+          }
+        };
+        img.onerror = () => {
+          const raw = e.target?.result as string;
+          resolve({ base64: raw, size: `${(file.size / 1024).toFixed(0)} KB` });
+        };
+        img.src = e.target?.result as string;
+      };
+      reader.readAsDataURL(file);
+    });
+  };
+
+  const handleCardPhotosUpload = async (e: React.ChangeEvent<HTMLInputElement>) => {
+    if (!e.target.files || e.target.files.length === 0) return;
+    const fileList = Array.from(e.target.files);
+
+    // Validate only photos
+    const nonImages = fileList.filter((f) => !f.type.startsWith("image/"));
+    if (nonImages.length > 0) {
+      toast.error("Please upload only photo files (JPG, PNG, WEBP) of the card");
+      e.target.value = "";
+      return;
+    }
+
+    setUploadingCard(true);
+    const newPhotos: Array<{ id: string; name: string; base64: string; size?: string }> = [];
+
+    for (const file of fileList) {
+      try {
+        const compressed = await compressCardImage(file);
+        newPhotos.push({
+          id: Math.random().toString(36).substring(2, 9),
+          name: file.name,
+          base64: compressed.base64,
+          size: compressed.size,
+        });
+      } catch (err) {
+        console.error("Card photo processing error:", err);
+      }
+    }
+
+    setCardPhotos((prev) => [...prev, ...newPhotos]);
+    setUploadingCard(false);
+    toast.success(
+      newPhotos.length > 1
+        ? `${newPhotos.length} Card photos attached! 🎉`
+        : "Card photo attached! 📸",
+      { icon: "💌", duration: 4000 }
+    );
+    e.target.value = "";
+  };
+
+  const removeCardPhoto = (photoId: string) => {
+    setCardPhotos((prev) => prev.filter((p) => p.id !== photoId));
+    toast.success("Card photo removed");
+  };
 
   useEffect(() => {
     const fetchData = async () => {
@@ -360,27 +468,46 @@ export default function Checkout() {
           userId: user ? user.uid : null,
           customerName: customerName || "",
           customerPhone: customerPhone || "",
+          invitationCardUrl: cardPhotos[0]?.base64 || "",
+          invitationCardUrls: cardPhotos.map((p) => p.base64),
+          invitationCardName: cardPhotos.length > 0 ? `${cardPhotos.length} Card Photo(s)` : "",
+          invitationCardFiles: cardPhotos.map((p) => ({ name: p.name, base64: p.base64 })),
+          hasUploadedInvitationCard: cardPhotos.length > 0,
+          invitationCardCount: cardPhotos.length,
           price: finalPrice || 0,
           advancePayment: Number(template?.advancePayment) || 0,
           advancePaymentStatus: "Pending",
           paymentStatus: paymentStatus || "Pending",
           status: "Pending",
           customData: formConfig ? getLabeledFormData() : legacyFormData,
-          filesCount: files.length || 0,
+          filesCount: (files.length + cardPhotos.length) || 0,
           viaMethod: viaMethod || "Direct",
           couponApplied: appliedCoupon ? appliedCoupon.code : null,
           displayId,
           whatsappTargetNumber: routingResult.assignedNumber,
           whatsappRoutingSlot: routingResult.routingSlot,
           whatsappOrderIndex: routingResult.orderIndex,
+          assignedDesignerId: template?.assignedDesignerId || null,
+          assignedDesignerName: template?.assignedDesignerName || null,
+          assignedDesignerPhone: template?.assignedDesignerPhone || null,
+          assignedAt: template?.assignedDesignerId ? new Date().toISOString() : null,
+          designerStatus: template?.assignedDesignerId ? "Assigned" : null,
         }),
       );
       const orderRef = await addDoc(collection(db, "orders"), cleanData);
 
-      if (files.length > 0) {
+      const allOrderFiles = [...files];
+      cardPhotos.forEach((cp, idx) => {
+        allOrderFiles.push({
+          name: cp.name || `shadi_ka_card_${idx + 1}.jpg`,
+          base64: cp.base64,
+          type: "photo",
+        });
+      });
+
+      if (allOrderFiles.length > 0) {
         try {
-          // In case base64 string is large but also contains invalid nested arrays or object properties
-          const cleanFiles = JSON.parse(JSON.stringify(files));
+          const cleanFiles = JSON.parse(JSON.stringify(allOrderFiles));
           await addDoc(collection(db, "order_files"), {
             orderId: orderRef.id,
             userId: user ? user.uid : null,
@@ -535,11 +662,12 @@ export default function Checkout() {
       pricingText += `\n*COUPON APPLIED*: ${appliedCoupon.code} (-${appliedCoupon.percentage}%)`;
     }
     pricingText += `\n*FINAL PRICE*: ₹${finalPrice}`;
-    if (template?.advancePayment) {
-      pricingText += `\n*ADVANCE PAYMENT REQUIRED*: ₹${template.advancePayment}`;
+    let cardInfoText = "";
+    if (cardPhotos.length > 0) {
+      cardInfoText = `*SHADI KA CARD / INVITATION PHOTOS*: ${cardPhotos.length} Photo(s) Attached 📸\n(Customer uploaded physical card photos directly - designer please refer to attached card photos)\n\n`;
     }
 
-    const allDetails = customFieldsText + pricingText;
+    const allDetails = cardInfoText + customFieldsText + pricingText;
 
     let details = "";
     if (
@@ -642,6 +770,18 @@ export default function Checkout() {
   const dynamicSteps = React.useMemo(() => {
     const s = [];
 
+    // Step 1: Customer Contact Info
+    s.push({
+      id: "contact_and_details",
+      label: t.yourDetails[lang],
+    });
+
+    // Step 2: Upload Shadi Ka Card / Invitation Photos (2nd step of ordering)
+    s.push({
+      id: "card_upload",
+      label: lang === "hi" ? "शादी का कार्ड (Step 2)" : "Card Photos (Step 2)",
+    });
+
     if (!formConfig) {
       // Legacy Form Workflow
       s.push({
@@ -651,12 +791,6 @@ export default function Checkout() {
       s.push({ id: "uploads", label: t.uploads[lang] });
     } else {
       // Custom form workflow
-      // Always ask for Customer Contact Info as Step 1
-      s.push({
-        id: "contact_and_details",
-        label: t.yourDetails[lang],
-      });
-
       if (formConfig.familySettings?.brideEnabled) {
         s.push({ id: "bride", label: t.brideDetails[lang] });
       }
@@ -726,6 +860,9 @@ export default function Checkout() {
     }
 
     const validateFields = (fields: any[], dataSection: string) => {
+      // If customer uploaded card photos, text fields are optional
+      if (cardPhotos.length > 0) return true;
+
       for (const f of fields || []) {
         const val =
           (dataSection === "legacy"
@@ -780,18 +917,18 @@ export default function Checkout() {
     };
 
     if (currentStepId === "legacy_details") {
-      if (!validateFields(template?.customFields, "legacy")) return;
+      if (cardPhotos.length === 0 && !validateFields(template?.customFields, "legacy")) return;
     } else if (currentStepId === "bride") {
-      if (!validateFields(formConfig?.familySettings?.brideFields, "bride"))
+      if (cardPhotos.length === 0 && !validateFields(formConfig?.familySettings?.brideFields, "bride"))
         return;
     } else if (currentStepId === "groom") {
-      if (!validateFields(formConfig?.familySettings?.groomFields, "groom"))
+      if (cardPhotos.length === 0 && !validateFields(formConfig?.familySettings?.groomFields, "groom"))
         return;
     } else if (currentStepId === "additional") {
-      if (!validateFields(formConfig?.additionalFields, "additional")) return;
+      if (cardPhotos.length === 0 && !validateFields(formConfig?.additionalFields, "additional")) return;
     }
 
-    if (currentStepId === "events") {
+    if (currentStepId === "events" && cardPhotos.length === 0) {
       for (let i = 0; i < formData.events.length; i++) {
         const ev = formData.events[i];
         if (!ev.type || !ev.date || !ev.time || !ev.venue) {
@@ -930,13 +1067,305 @@ export default function Checkout() {
     );
   };
 
-  // Step: Contact Info
+  const skipToReview = () => {
+    if (!customerName || !customerPhone) {
+      toast.error("Please enter your Name & WhatsApp Number first");
+      const contactIdx = dynamicSteps.findIndex((s) => s.id === "contact_and_details" || s.id === "contact");
+      if (contactIdx !== -1) setCurrentStep(contactIdx + 1);
+      return;
+    }
+    if (!/^\d{10}$/.test((customerPhone || "").trim())) {
+      toast.error("WhatsApp number must be exactly 10 digits");
+      const contactIdx = dynamicSteps.findIndex((s) => s.id === "contact_and_details" || s.id === "contact");
+      if (contactIdx !== -1) setCurrentStep(contactIdx + 1);
+      return;
+    }
+    const reviewIdx = dynamicSteps.findIndex((s) => s.id === "review");
+    if (reviewIdx !== -1) {
+      setCurrentStep(reviewIdx + 1);
+      window.scrollTo({ top: 0, behavior: "smooth" });
+      toast.success("Proceeding to Direct Order Page! 🚀", { icon: "💌" });
+    }
+  };
+
+  // Step 2: Shadi Ka Card / Invitation Photo Upload Step (Dedicated Step 2 of ordering)
+  const renderStepCardUpload = () => (
+    <div className="space-y-8 animate-fade-in-up">
+      <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
+        {/* Step Header */}
+        <div className="flex flex-col items-center text-center mb-8">
+          <div className="w-16 h-16 bg-gradient-to-tr from-rose-500 via-pink-600 to-amber-500 text-white rounded-full flex items-center justify-center mb-4 shadow-xl shadow-rose-500/20">
+            <Camera className="w-8 h-8" />
+          </div>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-100 text-rose-700 text-xs font-bold mb-2">
+            <Sparkles className="w-3.5 h-3.5" />
+            <span>Step 2 of Ordering</span>
+          </div>
+          <h2 className="text-2xl sm:text-3xl font-display font-bold text-brand-navy">
+            {lang === "hi" ? "शादी का कार्ड / इनविटेशन की फ़ोटो" : "Upload Shadi Ka Card / Invitation Photos"}
+          </h2>
+          <p className="text-gray-600 mt-2 max-w-xl text-sm leading-relaxed">
+            {lang === "hi"
+              ? "शादी के कार्ड की साफ़ फ़ोटो सीधे कैमरे से खींचें या गैलरी से चुनें। आप 2 या उससे अधिक फ़ोटो (जैसे आगे का कवर, अंदर के पन्ने, कार्यक्रम आदि) अपलोड कर सकते हैं।"
+              : "Click photos directly with your camera or select from your gallery. You can upload 2 or more photos (e.g. Front Cover, Inside Details, Events)."}
+          </p>
+        </div>
+
+        {/* Benefits Highlight Box */}
+        <div className="bg-gradient-to-r from-emerald-50 via-teal-50 to-emerald-50 p-4 sm:p-5 rounded-2xl border border-emerald-200 mb-8 flex flex-col sm:flex-row items-center gap-4">
+          <div className="w-12 h-12 rounded-2xl bg-emerald-600 text-white flex items-center justify-center shrink-0 shadow-md">
+            <CheckCircle2 className="w-6 h-6" />
+          </div>
+          <div className="flex-1 text-center sm:text-left">
+            <h4 className="font-bold text-emerald-950 text-sm sm:text-base">
+              {lang === "hi" ? "फॉर्म भरने का समय बचाएं (सीधे ऑर्डर करें)" : "Skip Detailed Form Filling & Order Directly!"}
+            </h4>
+            <p className="text-xs sm:text-sm text-emerald-800 mt-1 leading-relaxed">
+              {lang === "hi"
+                ? "कार्ड की फ़ोटो अपलोड करने के बाद आपको वर, वधू या कार्यक्रमों का विवरण टाइप करने की ज़रूरत नहीं है। सीधे 'Direct Order Page' पर जाकर तुरंत ऑर्डर कर सकते हैं!"
+                : "After attaching your card photos, you don't need to type bride, groom, family or event details manually. Proceed directly to the order page!"}
+            </p>
+          </div>
+        </div>
+
+        {/* Hidden File Inputs */}
+        <input
+          ref={cameraInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/jpg"
+          capture="environment"
+          onChange={handleCardPhotosUpload}
+          className="hidden"
+        />
+        <input
+          ref={galleryInputRef}
+          type="file"
+          accept="image/jpeg,image/png,image/webp,image/jpg"
+          multiple
+          onChange={handleCardPhotosUpload}
+          className="hidden"
+        />
+
+        {/* Action Choice Buttons: Camera Direct vs Gallery Upload */}
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-8">
+          {/* Button 1: Live Camera Click */}
+          <button
+            type="button"
+            onClick={() => cameraInputRef.current?.click()}
+            disabled={uploadingCard}
+            className="flex flex-col items-center justify-center p-6 sm:p-7 rounded-2xl border-2 border-rose-400 bg-gradient-to-br from-rose-50 via-pink-50 to-amber-50 hover:from-rose-100 hover:to-amber-100 transition-all group shadow-sm text-center cursor-pointer active:scale-[0.98]"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-rose-600 to-pink-600 text-white flex items-center justify-center mb-3 shadow-md shadow-rose-500/25 group-hover:scale-110 transition-transform">
+              <Camera className="w-7 h-7" />
+            </div>
+            <span className="font-bold text-base sm:text-lg text-brand-navy group-hover:text-rose-600">
+              📸 Click Photo Directly (Camera)
+            </span>
+            <span className="text-xs text-rose-700 font-medium mt-1">
+              {lang === "hi" ? "सीधे कैमरे से शादी के कार्ड की फ़ोटो खींचें" : "Snap photo directly with phone camera"}
+            </span>
+            <span className="text-[11px] text-gray-500 mt-2 bg-white/80 px-3 py-1 rounded-full border border-rose-200">
+              Only Photos (JPG, PNG, WEBP)
+            </span>
+          </button>
+
+          {/* Button 2: Gallery / Multi-photo Upload */}
+          <button
+            type="button"
+            onClick={() => galleryInputRef.current?.click()}
+            disabled={uploadingCard}
+            className="flex flex-col items-center justify-center p-6 sm:p-7 rounded-2xl border-2 border-purple-300 bg-gradient-to-br from-purple-50 via-indigo-50 to-pink-50 hover:from-purple-100 hover:to-pink-100 transition-all group shadow-sm text-center cursor-pointer active:scale-[0.98]"
+          >
+            <div className="w-14 h-14 rounded-2xl bg-gradient-to-tr from-purple-600 to-indigo-600 text-white flex items-center justify-center mb-3 shadow-md shadow-purple-500/25 group-hover:scale-110 transition-transform">
+              <ImageIcon className="w-7 h-7" />
+            </div>
+            <span className="font-bold text-base sm:text-lg text-brand-navy group-hover:text-purple-600">
+              🖼️ Upload Photos from Gallery
+            </span>
+            <span className="text-xs text-purple-700 font-medium mt-1">
+              {lang === "hi" ? "गैलरी से 1, 2 या अधिक फ़ोटो चुनें" : "Select 1, 2 or more photos from files"}
+            </span>
+            <span className="text-[11px] text-gray-500 mt-2 bg-white/80 px-3 py-1 rounded-full border border-purple-200">
+              Can select 2 or more photos together
+            </span>
+          </button>
+        </div>
+
+        {uploadingCard && (
+          <div className="flex items-center justify-center gap-3 p-4 bg-purple-50 rounded-2xl border border-purple-200 text-purple-800 text-sm mb-6 animate-pulse">
+            <div className="w-5 h-5 border-2 border-purple-600 border-t-transparent rounded-full animate-spin"></div>
+            <span className="font-semibold">Processing and attaching your card photo(s)...</span>
+          </div>
+        )}
+
+        {/* Uploaded Card Photos Section (Supports 2 or more photos) */}
+        {cardPhotos.length > 0 && (
+          <div className="bg-gray-50/90 rounded-3xl p-5 sm:p-6 border border-gray-200 mb-8 space-y-4 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <div className="flex items-center gap-2.5">
+                <span className="w-8 h-8 rounded-full bg-emerald-500 text-white flex items-center justify-center font-bold text-sm shadow-sm">
+                  {cardPhotos.length}
+                </span>
+                <div>
+                  <h3 className="font-bold text-gray-900 text-sm sm:text-base">
+                    Attached Card Photos ({cardPhotos.length} {cardPhotos.length > 1 ? "Photos" : "Photo"})
+                  </h3>
+                  <p className="text-xs text-emerald-600 font-medium">
+                    ✓ Photo can be 2 or more — All attached photos will be sent to the designer!
+                  </p>
+                </div>
+              </div>
+
+              {/* Add more photo actions */}
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => cameraInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 flex items-center gap-1.5 shadow-xs transition"
+                >
+                  <Camera className="w-3.5 h-3.5 text-rose-500" />
+                  <span>Click Another Photo</span>
+                </button>
+                <button
+                  type="button"
+                  onClick={() => galleryInputRef.current?.click()}
+                  className="px-3 py-1.5 rounded-xl text-xs font-bold bg-white hover:bg-gray-100 text-gray-800 border border-gray-300 flex items-center gap-1.5 shadow-xs transition"
+                >
+                  <Plus className="w-3.5 h-3.5 text-purple-600" />
+                  <span>Add More</span>
+                </button>
+              </div>
+            </div>
+
+            {/* Photos Grid */}
+            <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-4 pt-2">
+              {cardPhotos.map((photo, idx) => (
+                <div
+                  key={photo.id}
+                  className="relative group bg-white rounded-2xl overflow-hidden border border-gray-200 shadow-sm hover:shadow-md transition-all flex flex-col"
+                >
+                  <div
+                    className="aspect-[3/4] relative bg-gray-100 overflow-hidden cursor-pointer"
+                    onClick={() => setPreviewCardPhoto(photo.base64)}
+                  >
+                    <img
+                      src={photo.base64}
+                      alt={photo.name || `Card Photo ${idx + 1}`}
+                      className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
+                    />
+                    <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center gap-2">
+                      <span className="p-2 rounded-full bg-white/90 text-gray-900 shadow">
+                        <Eye className="w-4 h-4" />
+                      </span>
+                    </div>
+                    <span className="absolute top-2 left-2 px-2 py-0.5 rounded-md bg-black/70 text-white text-[10px] font-bold">
+                      Photo #{idx + 1}
+                    </span>
+                  </div>
+                  <div className="p-2.5 flex items-center justify-between gap-1 border-t border-gray-100">
+                    <span className="text-[11px] font-medium text-gray-700 truncate" title={photo.name}>
+                      {photo.name || `Photo ${idx + 1}`}
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => removeCardPhoto(photo.id)}
+                      className="p-1 rounded-lg text-gray-400 hover:text-red-600 hover:bg-red-50 transition"
+                      title="Remove Photo"
+                    >
+                      <Trash2 className="w-3.5 h-3.5" />
+                    </button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
+        {/* THE NEXT DIRECT ORDER PAGE OPTION */}
+        <div className="p-6 sm:p-7 rounded-3xl bg-gradient-to-r from-purple-900 via-indigo-900 to-brand-navy text-white shadow-xl relative overflow-hidden">
+          <div className="absolute -right-10 -bottom-10 w-44 h-44 rounded-full bg-purple-500/20 blur-2xl pointer-events-none"></div>
+
+          <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+            <div className="text-center md:text-left">
+              <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-500/20 text-emerald-300 text-xs font-bold mb-2 border border-emerald-500/30">
+                <Sparkles className="w-3.5 h-3.5" />
+                <span>Fastest Way to Order</span>
+              </div>
+              <h3 className="text-xl sm:text-2xl font-bold font-display">
+                {lang === "hi" ? "सीधे आर्डर पेज पर जाएं" : "Next: Direct Order Page"}
+              </h3>
+              <p className="text-xs sm:text-sm text-purple-200 mt-1 max-w-md leading-relaxed">
+                {cardPhotos.length > 0
+                  ? (lang === "hi"
+                      ? "🎉 कार्ड की फ़ोटो जुड़ चुकी हैं! डिज़ाइनर सभी विवरण फ़ोटो से देखकर इनविटेशन तैयार करेंगे। सीधे आर्डर पेज पर जाएं।"
+                      : "🎉 Card photos attached! Our designer will extract all names, dates & details from your card photos. Proceed straight to order page.")
+                  : (lang === "hi"
+                      ? "फ़ोटो अपलोड करके या बिना फ़ॉर्म भरे सीधे आर्डर और रिव्यू पेज पर जाएं।"
+                      : "Proceed directly to the order review and completion page.")}
+              </p>
+            </div>
+
+            <div className="flex flex-col sm:flex-row items-center gap-3 w-full md:w-auto shrink-0">
+              <button
+                type="button"
+                onClick={skipToReview}
+                className="w-full sm:w-auto px-7 py-4 rounded-2xl font-bold text-sm sm:text-base bg-gradient-to-r from-emerald-500 to-teal-500 hover:from-emerald-400 hover:to-teal-400 text-white shadow-xl shadow-emerald-500/30 flex items-center justify-center gap-2.5 transition-all transform active:scale-95 cursor-pointer ring-2 ring-white/20"
+              >
+                <span>{lang === "hi" ? "Next: डायरेक्ट आर्डर पेज पर जाएं 🚀" : "Next: Direct Order Page 🚀"}</span>
+                <ChevronRight className="w-5 h-5" />
+              </button>
+            </div>
+          </div>
+        </div>
+
+        {/* Alternative: Continue to manual form */}
+        <div className="mt-6 text-center">
+          <button
+            type="button"
+            onClick={handleNext}
+            className="text-xs sm:text-sm font-semibold text-gray-600 hover:text-brand-purple transition inline-flex items-center gap-1.5 underline decoration-gray-300 underline-offset-4"
+          >
+            <span>{lang === "hi" ? "या विवरण हाथ से भरना चाहते हैं? फॉर्म भरें ✍️" : "Want to type bride, groom & event details manually? Continue to form ✍️"}</span>
+            <ChevronRight className="w-4 h-4" />
+          </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  const renderCardBanner = () => {
+    if (cardPhotos.length > 0) {
+      return (
+        <div className="mb-6 p-4 rounded-2xl bg-emerald-50 border border-emerald-200 flex flex-col sm:flex-row items-center justify-between gap-3 text-xs text-emerald-900 shadow-xs animate-fade-in-up">
+          <div className="flex items-center gap-2.5">
+            <CheckCircle2 className="w-5 h-5 text-emerald-600 shrink-0" />
+            <span>
+              <strong>Shadi Ka Card Attached ({cardPhotos.length} photo(s)):</strong> All fields on this step are optional. You can add extra instructions or skip directly to the Order Page.
+            </span>
+          </div>
+          <button
+            type="button"
+            onClick={skipToReview}
+            className="w-full sm:w-auto px-4 py-2 rounded-xl font-bold bg-emerald-600 hover:bg-emerald-700 text-white shadow-sm shrink-0 flex items-center justify-center gap-1 transition"
+          >
+            <span>Direct Order Page →</span>
+          </button>
+        </div>
+      );
+    }
+    return null;
+  };
+
+  // Step 1: Contact Info
   const renderContactBlock = () => (
     <div className="space-y-8 animate-fade-in-up">
       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
         <div className="flex flex-col items-center text-center mb-8">
           <div className="w-16 h-16 bg-gradient-premium text-white rounded-full flex items-center justify-center mb-4 shadow-xl">
             <User className="w-8 h-8" />
+          </div>
+          <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-purple-100 text-brand-purple text-xs font-bold mb-2">
+            <span>Step 1 of Ordering</span>
           </div>
           <h2 className="text-3xl font-display font-medium text-brand-navy">
             {t.yourDetails[lang]}
@@ -952,8 +1381,8 @@ export default function Checkout() {
               type="text"
               value={customerName}
               onChange={(e) => setCustomerName(e.target.value)}
-              className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3"
-              placeholder="John Doe"
+              className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple transition-all"
+              placeholder="Your Full Name"
             />
           </div>
           <div>
@@ -968,10 +1397,28 @@ export default function Checkout() {
                 const val = e.target.value.replace(/\D/g, "");
                 setCustomerPhone(val);
               }}
-              className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3"
-              placeholder="9876543210"
+              className="w-full bg-gray-50 border border-gray-200 text-gray-900 rounded-xl px-4 py-3 focus:ring-2 focus:ring-brand-purple/20 focus:border-brand-purple transition-all"
+              placeholder="9876543210 (10 Digits)"
             />
           </div>
+        </div>
+
+        {/* Step 2 Preview Alert */}
+        <div className="mt-8 p-4 rounded-2xl bg-gradient-to-r from-purple-50 via-pink-50 to-amber-50 border border-purple-200/60 flex items-center gap-3.5 text-xs text-purple-900">
+          <div className="w-10 h-10 rounded-xl bg-purple-600 text-white flex items-center justify-center shrink-0 shadow-sm">
+            <Camera className="w-5 h-5" />
+          </div>
+          <div className="flex-1">
+            <p className="font-bold text-sm text-purple-950">
+              {lang === "hi" ? "अगले स्टेप 2 में: शादी के कार्ड की फ़ोटो खींचें या अपलोड करें" : "Next in Step 2: Upload or Snap Card Photos directly"}
+            </p>
+            <p className="text-purple-700 mt-0.5">
+              {lang === "hi"
+                ? "स्टेप 2 में आप सीधे कैमरे से फ़ोटो खींच सकते हैं या 2 या अधिक फ़ोटो अपलोड करके सीधे आर्डर पेज पर जा सकते हैं।"
+                : "In Step 2, you can click photos directly or upload 2+ card photos to skip typing and proceed straight to the direct order page!"}
+            </p>
+          </div>
+          <ChevronRight className="w-5 h-5 text-purple-400 shrink-0 hidden sm:block" />
         </div>
       </div>
     </div>
@@ -979,6 +1426,7 @@ export default function Checkout() {
 
   const renderBrideDetails = () => (
     <div className="space-y-8 animate-fade-in-up">
+      {renderCardBanner()}
       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
         <h3 className="text-2xl font-display text-brand-navy mb-6">
           👰 {t.brideDetails[lang] || "Bride's Details"}
@@ -1027,6 +1475,7 @@ export default function Checkout() {
 
   const renderGroomDetails = () => (
     <div className="space-y-8 animate-fade-in-up">
+      {renderCardBanner()}
       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
         <div className="flex flex-col items-center text-center mb-8">
           <h2 className="text-3xl font-display font-medium text-brand-navy">
@@ -1101,6 +1550,7 @@ export default function Checkout() {
 
   const renderStepEvents = () => (
     <div className="space-y-6 animate-fade-in-up">
+      {renderCardBanner()}
       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
         <div className="flex justify-between items-center mb-6">
           <h2 className="text-2xl font-display font-semibold text-gray-900 flex items-center gap-2">
@@ -1214,6 +1664,7 @@ export default function Checkout() {
   // Step 3: Additional
   const renderStepAdditional = () => (
     <div className="space-y-6 animate-fade-in-up">
+      {renderCardBanner()}
       <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
         <h2 className="text-2xl font-display font-semibold text-gray-900 mb-6 flex items-center gap-2">
           📝 {t.additionalInfo[lang]}
@@ -1368,6 +1819,9 @@ export default function Checkout() {
         </div>
       </div>
 
+      {/* Card Attached Banner if photos exist */}
+      {renderCardBanner()}
+
       {/* Custom Fields Block */}
       {template?.customFields && template.customFields.length > 0 && (
         <div className="bg-white p-6 md:p-8 rounded-3xl shadow-lg border border-brand-purple/10">
@@ -1468,6 +1922,57 @@ export default function Checkout() {
             <strong>WhatsApp:</strong> {customerPhone}
           </p>
         </div>
+        {/* Uploaded Shadi Ka Card / Hard Copy Preview in Review */}
+        {cardPhotos.length > 0 && (
+          <div className="bg-gradient-to-r from-rose-50/80 via-pink-50/60 to-amber-50/80 p-6 rounded-2xl border border-rose-200 mb-10 shadow-xs">
+            <div className="flex flex-wrap items-center justify-between gap-2 mb-4">
+              <h3 className="font-bold text-gray-900 flex items-center gap-2">
+                <Camera className="w-5 h-5 text-rose-600" />
+                <span>Uploaded Shadi Ka Card ({cardPhotos.length} {cardPhotos.length > 1 ? "Photos" : "Photo"})</span>
+              </h3>
+              <div className="flex items-center gap-2">
+                <span className="text-xs font-bold text-emerald-700 bg-emerald-100 px-3 py-1 rounded-full border border-emerald-200 flex items-center gap-1">
+                  <CheckCircle2 className="w-3.5 h-3.5" /> Attached to Order
+                </span>
+                <button
+                  type="button"
+                  onClick={() => {
+                    const cardStepIdx = dynamicSteps.findIndex((s) => s.id === "card_upload");
+                    if (cardStepIdx !== -1) setCurrentStep(cardStepIdx + 1);
+                  }}
+                  className="text-xs font-bold text-brand-purple hover:underline"
+                >
+                  Edit / Add Photos
+                </button>
+              </div>
+            </div>
+            <p className="text-xs text-gray-600 mb-4 leading-relaxed">
+              Our professional designer will refer to your {cardPhotos.length} uploaded card photo(s) to prepare and customize your video invitation! Click any photo to preview in full size.
+            </p>
+            <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+              {cardPhotos.map((photo, idx) => (
+                <div
+                  key={photo.id}
+                  onClick={() => setPreviewCardPhoto(photo.base64)}
+                  className="group relative aspect-[3/4] rounded-xl overflow-hidden bg-gray-100 border border-rose-200 shadow-sm cursor-pointer hover:shadow-md transition"
+                >
+                  <img
+                    src={photo.base64}
+                    alt={photo.name || `Card Photo ${idx + 1}`}
+                    className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                  />
+                  <div className="absolute inset-0 bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity flex items-center justify-center">
+                    <Eye className="w-5 h-5 text-white" />
+                  </div>
+                  <span className="absolute bottom-1.5 left-1.5 px-2 py-0.5 rounded bg-black/70 text-white text-[10px] font-bold">
+                    Photo #{idx + 1}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         <div className="bg-gray-50 p-6 rounded-2xl border border-gray-100 mb-10">
           <h3 className="font-bold text-gray-900 mb-4 flex items-center gap-2">
             <FileText className="w-4 h-4 text-brand-purple" /> Form Details
@@ -1617,6 +2122,8 @@ export default function Checkout() {
           <div className="relative">
             {dynamicSteps[currentStep - 1]?.id === "contact_and_details" &&
               renderContactBlock()}
+            {dynamicSteps[currentStep - 1]?.id === "card_upload" &&
+              renderStepCardUpload()}
             {dynamicSteps[currentStep - 1]?.id === "bride" &&
               renderBrideDetails()}
             {dynamicSteps[currentStep - 1]?.id === "groom" &&
@@ -1656,11 +2163,11 @@ export default function Checkout() {
 
           {/* Navigation */}
           {currentStep < steps.length && (
-            <div className="mt-8 flex justify-between items-center border-t border-gray-200 pt-6">
+            <div className="mt-8 flex flex-col sm:flex-row justify-between items-center gap-4 border-t border-gray-200 pt-6">
               {currentStep > 1 ? (
                 <button
                   onClick={handlePrev}
-                  className="px-6 py-3 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 flex items-center gap-2 transition shadow-sm"
+                  className="w-full sm:w-auto px-6 py-3 bg-white border border-gray-200 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 flex items-center justify-center gap-2 transition shadow-sm"
                 >
                   <ChevronLeft className="w-5 h-5" /> {t.back[lang]}
                 </button>
@@ -1668,12 +2175,32 @@ export default function Checkout() {
                 <div></div>
               )}
 
-              <button
-                onClick={handleNext}
-                className="px-8 py-3 bg-brand-purple text-white font-bold rounded-xl hover:bg-purple-700 shadow-lg shadow-purple-500/30 flex items-center gap-2 transition ml-auto"
-              >
-                {t.nextStep[lang]} <ChevronRight className="w-5 h-5" />
-              </button>
+              {dynamicSteps[currentStep - 1]?.id === "card_upload" ? (
+                <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto ml-auto">
+                  <button
+                    type="button"
+                    onClick={handleNext}
+                    className="w-full sm:w-auto px-5 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition shadow-sm text-sm"
+                  >
+                    {lang === "hi" ? "फॉर्म विवरण भरें ✍️" : "Fill Form Details Manually ✍️"}
+                  </button>
+                  <button
+                    type="button"
+                    onClick={skipToReview}
+                    className="w-full sm:w-auto px-7 py-3 bg-gradient-to-r from-emerald-600 to-teal-600 hover:from-emerald-700 hover:to-teal-700 text-white font-bold rounded-xl shadow-lg shadow-emerald-500/25 flex items-center justify-center gap-2 transition text-sm sm:text-base cursor-pointer"
+                  >
+                    <span>{lang === "hi" ? "Next: डायरेक्ट आर्डर पेज 🚀" : "Next: Direct Order Page 🚀"}</span>
+                    <ChevronRight className="w-5 h-5" />
+                  </button>
+                </div>
+              ) : (
+                <button
+                  onClick={handleNext}
+                  className="w-full sm:w-auto px-8 py-3 bg-brand-purple text-white font-bold rounded-xl hover:bg-purple-700 shadow-lg shadow-purple-500/30 flex items-center justify-center gap-2 transition ml-auto"
+                >
+                  {t.nextStep[lang]} <ChevronRight className="w-5 h-5" />
+                </button>
+              )}
             </div>
           )}
         </div>
@@ -1749,6 +2276,31 @@ export default function Checkout() {
                 Please wait...
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Card Photo Full Size Lightbox */}
+      {previewCardPhoto && (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-sm animate-fade-in"
+          onClick={() => setPreviewCardPhoto(null)}
+        >
+          <div
+            className="relative max-w-4xl max-h-[90vh] bg-white rounded-3xl overflow-hidden shadow-2xl p-2 sm:p-3 flex flex-col items-center"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              onClick={() => setPreviewCardPhoto(null)}
+              className="absolute top-4 right-4 z-10 w-10 h-10 rounded-full bg-black/70 hover:bg-black text-white flex items-center justify-center transition shadow-lg cursor-pointer"
+            >
+              <X className="w-6 h-6" />
+            </button>
+            <img
+              src={previewCardPhoto}
+              alt="Card Preview"
+              className="max-h-[82vh] w-auto object-contain rounded-2xl"
+            />
           </div>
         </div>
       )}
