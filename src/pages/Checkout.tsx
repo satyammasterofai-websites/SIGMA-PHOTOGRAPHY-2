@@ -41,6 +41,7 @@ import {
   Image as ImageIcon,
   Sparkles,
   Eye,
+  Check,
 } from "lucide-react";
 import { FormatOrderData } from "../components/FormatOrderData";
 import { assignNextWhatsAppNumber } from "../lib/whatsappRouting";
@@ -203,6 +204,8 @@ export default function Checkout() {
   >([]);
   const [uploadingCard, setUploadingCard] = useState(false);
   const [previewCardPhoto, setPreviewCardPhoto] = useState<string | null>(null);
+  // 'Do you have invitation card' YES or NO state
+  const [hasInvitationCardOption, setHasInvitationCardOption] = useState<"yes" | "no" | null>(null);
 
   // Payment Options Popups
   const [paymentSuccessPopup, setPaymentSuccessPopup] = useState<{
@@ -776,12 +779,6 @@ export default function Checkout() {
       label: t.yourDetails[lang],
     });
 
-    // Step 2: Upload Shadi Ka Card / Invitation Photos (2nd step of ordering)
-    s.push({
-      id: "card_upload",
-      label: lang === "hi" ? "शादी का कार्ड (Step 2)" : "Card Photos (Step 2)",
-    });
-
     if (!formConfig) {
       // Legacy Form Workflow
       s.push({
@@ -859,9 +856,11 @@ export default function Checkout() {
       }
     }
 
+    const isCardExempt = hasInvitationCardOption === "yes" && cardPhotos.length > 0;
+
     const validateFields = (fields: any[], dataSection: string) => {
-      // If customer uploaded card photos, text fields are optional
-      if (cardPhotos.length > 0) return true;
+      // If customer chose YES and attached card photos, text fields are optional
+      if (isCardExempt) return true;
 
       for (const f of fields || []) {
         const val =
@@ -917,18 +916,18 @@ export default function Checkout() {
     };
 
     if (currentStepId === "legacy_details") {
-      if (cardPhotos.length === 0 && !validateFields(template?.customFields, "legacy")) return;
+      if (!isCardExempt && !validateFields(template?.customFields, "legacy")) return;
     } else if (currentStepId === "bride") {
-      if (cardPhotos.length === 0 && !validateFields(formConfig?.familySettings?.brideFields, "bride"))
+      if (!isCardExempt && !validateFields(formConfig?.familySettings?.brideFields, "bride"))
         return;
     } else if (currentStepId === "groom") {
-      if (cardPhotos.length === 0 && !validateFields(formConfig?.familySettings?.groomFields, "groom"))
+      if (!isCardExempt && !validateFields(formConfig?.familySettings?.groomFields, "groom"))
         return;
     } else if (currentStepId === "additional") {
-      if (cardPhotos.length === 0 && !validateFields(formConfig?.additionalFields, "additional")) return;
+      if (!isCardExempt && !validateFields(formConfig?.additionalFields, "additional")) return;
     }
 
-    if (currentStepId === "events" && cardPhotos.length === 0) {
+    if (currentStepId === "events" && !isCardExempt) {
       for (let i = 0; i < formData.events.length; i++) {
         const ev = formData.events[i];
         if (!ev.type || !ev.date || !ev.time || !ev.venue) {
@@ -1318,16 +1317,120 @@ export default function Checkout() {
           </div>
         </div>
 
+        {/* Do you have invitation card option switcher */}
+        <div className="bg-rose-50/70 p-4 rounded-2xl border border-rose-200 mb-6 flex flex-col sm:flex-row items-center justify-between gap-4">
+          <div>
+            <span className="text-xs font-bold text-rose-800 uppercase tracking-wide">
+              Do you have invitation card? (क्या आपके पास शादी का कार्ड है?)
+            </span>
+            <p className="text-xs text-gray-600 mt-0.5">
+              Upload photos of your card below, or click NO to fill the form manually.
+            </p>
+          </div>
+          <div className="flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => setHasInvitationCardOption("yes")}
+              className={`px-4 py-2 rounded-xl text-xs font-bold transition flex items-center gap-1.5 shadow-sm ${
+                hasInvitationCardOption === "yes"
+                  ? "bg-rose-600 text-white"
+                  : "bg-white text-gray-700 hover:bg-gray-100 border border-gray-200"
+              }`}
+            >
+              <Check className="w-4 h-4" />
+              <span>YES (हाँ)</span>
+            </button>
+            <button
+              type="button"
+              onClick={() => {
+                setHasInvitationCardOption("no");
+                toast("Switched to default form system ✍️", { icon: "📝" });
+              }}
+              className="px-4 py-2 rounded-xl text-xs font-bold bg-white text-gray-700 hover:bg-gray-100 border border-gray-300 transition shadow-sm"
+            >
+              <span>NO (नहीं, फॉर्म भरूंगा)</span>
+            </button>
+          </div>
+        </div>
+
         {/* Alternative: Continue to manual form */}
         <div className="mt-6 text-center">
           <button
             type="button"
-            onClick={handleNext}
+            onClick={() => setHasInvitationCardOption("no")}
             className="text-xs sm:text-sm font-semibold text-gray-600 hover:text-brand-purple transition inline-flex items-center gap-1.5 underline decoration-gray-300 underline-offset-4"
           >
             <span>{lang === "hi" ? "या विवरण हाथ से भरना चाहते हैं? फॉर्म भरें ✍️" : "Want to type bride, groom & event details manually? Continue to form ✍️"}</span>
             <ChevronRight className="w-4 h-4" />
           </button>
+        </div>
+      </div>
+    </div>
+  );
+
+  // OR Option just below step 2 page: "Do you have invitation card? YES or NO"
+  const renderOrInvitationCardPrompt = () => (
+    <div className="mt-8 pt-6 border-t-2 border-dashed border-rose-200 animate-fade-in-up">
+      <div className="flex items-center justify-center gap-3 mb-6">
+        <div className="h-px bg-rose-200 flex-1"></div>
+        <span className="px-5 py-1.5 rounded-full bg-gradient-to-r from-rose-500 to-pink-500 text-white font-extrabold text-xs uppercase tracking-widest shadow-md">
+          OR (या)
+        </span>
+        <div className="h-px bg-rose-200 flex-1"></div>
+      </div>
+
+      <div className="bg-gradient-to-r from-rose-50 via-pink-50 to-amber-50 rounded-3xl p-6 sm:p-7 border-2 border-rose-300 shadow-lg">
+        <div className="flex flex-col md:flex-row items-center justify-between gap-6">
+          <div className="text-center md:text-left">
+            <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-rose-200/80 text-rose-900 text-xs font-bold mb-2">
+              <Camera className="w-4 h-4 text-rose-600" />
+              <span>{lang === "hi" ? "शादी का कार्ड अपलोड विकल्प" : "Card Photo Upload Option"}</span>
+            </div>
+            <h3 className="text-xl sm:text-2xl font-bold font-display text-brand-navy">
+              Do you have invitation card?
+            </h3>
+            <p className="text-sm text-gray-800 font-semibold mt-1">
+              क्या आपके पास शादी का कार्ड / इनविटेशन कार्ड है?
+            </p>
+            <p className="text-xs text-gray-600 mt-1.5 max-w-lg leading-relaxed">
+              {lang === "hi"
+                ? "यदि YES चुनते हैं, तो कार्ड की साफ़ फ़ोटो (2 या अधिक) खींचकर या चुनकर सीधे आर्डर पेज पर जाएं, बिना कोई विवरण टाइप किए!"
+                : "If you click YES, upload or snap 2 or more photos of your card and proceed directly to order page without typing form details!"}
+            </p>
+          </div>
+
+          <div className="flex items-center gap-3 shrink-0">
+            <button
+              type="button"
+              onClick={() => {
+                setHasInvitationCardOption("yes");
+                toast.success("Card Upload System opened! 📸 Snap or upload card photos", { icon: "💌" });
+              }}
+              className={`px-6 py-3.5 rounded-2xl font-bold text-sm sm:text-base transition-all transform active:scale-95 flex items-center gap-2 cursor-pointer ${
+                hasInvitationCardOption === "yes"
+                  ? "bg-emerald-600 text-white shadow-lg ring-4 ring-emerald-300"
+                  : "bg-gradient-to-r from-rose-600 to-pink-600 hover:from-rose-500 hover:to-pink-500 text-white shadow-md hover:shadow-lg"
+              }`}
+            >
+              <span>YES (हाँ)</span>
+              <Check className="w-5 h-5" />
+            </button>
+
+            <button
+              type="button"
+              onClick={() => {
+                setHasInvitationCardOption("no");
+                toast("Continuing with default form ✍️", { icon: "📝" });
+              }}
+              className={`px-6 py-3.5 rounded-2xl font-bold text-sm sm:text-base transition-all transform active:scale-95 cursor-pointer ${
+                hasInvitationCardOption === "no"
+                  ? "bg-gray-800 text-white shadow-md ring-4 ring-gray-300"
+                  : "bg-white hover:bg-gray-100 text-gray-700 border-2 border-gray-300 shadow-xs"
+              }`}
+            >
+              <span>NO (नहीं)</span>
+            </button>
+          </div>
         </div>
       </div>
     </div>
@@ -2120,24 +2223,48 @@ export default function Checkout() {
 
           {/* Content */}
           <div className="relative">
-            {dynamicSteps[currentStep - 1]?.id === "contact_and_details" &&
-              renderContactBlock()}
-            {dynamicSteps[currentStep - 1]?.id === "card_upload" &&
-              renderStepCardUpload()}
-            {dynamicSteps[currentStep - 1]?.id === "bride" &&
-              renderBrideDetails()}
-            {dynamicSteps[currentStep - 1]?.id === "groom" &&
-              renderGroomDetails()}
-            {dynamicSteps[currentStep - 1]?.id === "events" &&
-              renderStepEvents()}
-            {dynamicSteps[currentStep - 1]?.id === "additional" &&
-              renderStepAdditional()}
-            {dynamicSteps[currentStep - 1]?.id === "legacy_details" &&
-              renderLegacyDetails()}
-            {dynamicSteps[currentStep - 1]?.id === "uploads" &&
-              renderStepUploads()}
-            {dynamicSteps[currentStep - 1]?.id === "review" &&
-              renderStepReview()}
+            {currentStep === 1 && renderContactBlock()}
+
+            {/* Step 2: By default default order form occurs. If YES clicked, only show upload card system */}
+            {currentStep === 2 ? (
+              hasInvitationCardOption === "yes" ? (
+                renderStepCardUpload()
+              ) : (
+                <>
+                  {dynamicSteps[1]?.id === "bride" && renderBrideDetails()}
+                  {dynamicSteps[1]?.id === "groom" && renderGroomDetails()}
+                  {dynamicSteps[1]?.id === "events" && renderStepEvents()}
+                  {dynamicSteps[1]?.id === "additional" && renderStepAdditional()}
+                  {dynamicSteps[1]?.id === "legacy_details" && renderLegacyDetails()}
+                  {dynamicSteps[1]?.id === "uploads" && renderStepUploads()}
+                  {dynamicSteps[1]?.id === "review" && renderStepReview()}
+                  
+                  {/* OR Option just below step 2 page: "Do you have invitation card YES or NO" */}
+                  {renderOrInvitationCardPrompt()}
+                </>
+              )
+            ) : null}
+
+            {/* Steps beyond step 2 */}
+            {currentStep > 2 && (
+              <>
+                {dynamicSteps[currentStep - 1]?.id === "bride" &&
+                  renderBrideDetails()}
+                {dynamicSteps[currentStep - 1]?.id === "groom" &&
+                  renderGroomDetails()}
+                {dynamicSteps[currentStep - 1]?.id === "events" &&
+                  renderStepEvents()}
+                {dynamicSteps[currentStep - 1]?.id === "additional" &&
+                  renderStepAdditional()}
+                {dynamicSteps[currentStep - 1]?.id === "legacy_details" &&
+                  renderLegacyDetails()}
+                {dynamicSteps[currentStep - 1]?.id === "uploads" &&
+                  renderStepUploads()}
+                {dynamicSteps[currentStep - 1]?.id === "review" &&
+                  renderStepReview()}
+              </>
+            )}
+
             {dynamicSteps[currentStep - 1]?.id === "payment" && (
               <div className="bg-white p-8 rounded-3xl shadow-xl border border-gray-100 mt-12 text-center">
                 <h3 className="text-2xl font-bold mb-8">Complete Your Order</h3>
@@ -2175,11 +2302,11 @@ export default function Checkout() {
                 <div></div>
               )}
 
-              {dynamicSteps[currentStep - 1]?.id === "card_upload" ? (
+              {currentStep === 2 && hasInvitationCardOption === "yes" ? (
                 <div className="flex flex-col sm:flex-row items-center gap-3 w-full sm:w-auto ml-auto">
                   <button
                     type="button"
-                    onClick={handleNext}
+                    onClick={() => setHasInvitationCardOption("no")}
                     className="w-full sm:w-auto px-5 py-3 bg-white border border-gray-300 text-gray-700 font-semibold rounded-xl hover:bg-gray-50 transition shadow-sm text-sm"
                   >
                     {lang === "hi" ? "फॉर्म विवरण भरें ✍️" : "Fill Form Details Manually ✍️"}

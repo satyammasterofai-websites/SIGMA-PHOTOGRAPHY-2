@@ -28,7 +28,7 @@ import {
 } from 'firebase/firestore';
 import { useAuthStore } from '../../store/useAuthStore';
 import toast from 'react-hot-toast';
-import DesignerPasscodeModal, { isDesignerGateUnlocked } from '../../components/DesignerPasscodeModal';
+import DesignerPasscodeModal, { isDesignerGateUnlocked, setDesignerGateUnlocked } from '../../components/DesignerPasscodeModal';
 import { FormatOrderData } from '../../components/FormatOrderData';
 import VideoModal from '../../components/VideoModal';
 
@@ -49,9 +49,11 @@ export default function DesignerPortal() {
   const navigate = useNavigate();
   const { user, setUser } = useAuthStore();
   
-  // Gate Unlock State
+  // Gate Unlock State - user firstly interfaces password unlock page
   const [isGateUnlocked, setIsGateUnlocked] = useState(isDesignerGateUnlocked());
-  const [showPasscodeModal, setShowPasscodeModal] = useState(!isDesignerGateUnlocked());
+  const [gatePin, setGatePin] = useState(['', '', '', '']);
+  const [gateShake, setGateShake] = useState(false);
+  const gateInputsRef = React.useRef<(HTMLInputElement | null)[]>([]);
 
   // Portal State
   const [activeTab, setActiveTab] = useState<'login' | 'register'>('login');
@@ -59,7 +61,7 @@ export default function DesignerPortal() {
   const [designerDoc, setDesignerDoc] = useState<any>(null);
   const [fetchingDoc, setFetchingDoc] = useState(true);
 
-  // Auth Form State
+  // Auth & Approval Form State
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
@@ -86,11 +88,96 @@ export default function DesignerPortal() {
   const [designerNotes, setDesignerNotes] = useState<Record<string, string>>({});
   const [savingOrderId, setSavingOrderId] = useState<string | null>(null);
 
+  // Gate PIN Verification logic
+  const handleGatePinChange = (index: number, val: string) => {
+    const cleaned = val.replace(/\D/g, '').slice(-1);
+    const newPin = [...gatePin];
+    newPin[index] = cleaned;
+    setGatePin(newPin);
+
+    if (cleaned && index < 3) {
+      gateInputsRef.current[index + 1]?.focus();
+    }
+    if (cleaned && index === 3 && newPin.every(d => d !== '')) {
+      verifyGatePin(newPin.join(''));
+    }
+  };
+
+  const handleGateKeyDown = (index: number, e: React.KeyboardEvent<HTMLInputElement>) => {
+    if (e.key === 'Backspace' && !gatePin[index] && index > 0) {
+      gateInputsRef.current[index - 1]?.focus();
+    } else if (e.key === 'Enter') {
+      verifyGatePin(gatePin.join(''));
+    }
+  };
+
+  const handleGatePaste = (e: React.ClipboardEvent) => {
+    e.preventDefault();
+    const pasteData = e.clipboardData.getData('text').replace(/\D/g, '').slice(0, 4);
+    if (!pasteData) return;
+    const newPin = ['', '', '', ''];
+    for (let i = 0; i < pasteData.length; i++) {
+      newPin[i] = pasteData[i];
+    }
+    setGatePin(newPin);
+    if (pasteData.length === 4) {
+      verifyGatePin(pasteData);
+    } else {
+      gateInputsRef.current[pasteData.length]?.focus();
+    }
+  };
+
+  const handleKeypadPress = (key: string) => {
+    if (key === 'C') {
+      setGatePin(['', '', '', '']);
+      gateInputsRef.current[0]?.focus();
+      return;
+    }
+    if (key === '⌫') {
+      const lastFilledIndex = [...gatePin].reverse().findIndex(d => d !== '');
+      if (lastFilledIndex !== -1) {
+        const actualIndex = 3 - lastFilledIndex;
+        const newPin = [...gatePin];
+        newPin[actualIndex] = '';
+        setGatePin(newPin);
+        gateInputsRef.current[actualIndex]?.focus();
+      }
+      return;
+    }
+    const nextEmptyIndex = gatePin.findIndex(d => d === '');
+    if (nextEmptyIndex !== -1) {
+      const newPin = [...gatePin];
+      newPin[nextEmptyIndex] = key;
+      setGatePin(newPin);
+      if (nextEmptyIndex === 3) {
+        verifyGatePin(newPin.join(''));
+      } else {
+        gateInputsRef.current[nextEmptyIndex + 1]?.focus();
+      }
+    }
+  };
+
+  const verifyGatePin = (entered: string) => {
+    if (entered === '2580') {
+      setDesignerGateUnlocked();
+      setIsGateUnlocked(true);
+      toast.success('Passcode verified! Welcome to Designer Portal 🎨', {
+        icon: '🔐'
+      });
+    } else {
+      setGateShake(true);
+      toast.error('Incorrect security code. Please try again.');
+      setTimeout(() => {
+        setGateShake(false);
+        setGatePin(['', '', '', '']);
+        gateInputsRef.current[0]?.focus();
+      }, 600);
+    }
+  };
+
   // Keep Gate in sync
   useEffect(() => {
-    if (!isDesignerGateUnlocked()) {
-      setShowPasscodeModal(true);
-    } else {
+    if (isDesignerGateUnlocked()) {
       setIsGateUnlocked(true);
     }
   }, []);
@@ -108,6 +195,15 @@ export default function DesignerPortal() {
     const unsub = onSnapshot(doc(db, 'users', user.uid), (docSnap) => {
       if (docSnap.exists()) {
         const data = docSnap.data();
+        let determinedStatus = 'not_requested';
+        if (data.role === 'admin') {
+          determinedStatus = 'approved';
+        } else if (data.status) {
+          determinedStatus = data.status;
+        } else if (data.approvalRequested) {
+          determinedStatus = 'pending';
+        }
+
         setDesignerDoc({
           id: docSnap.id,
           name: data.displayName || data.name || user.displayName || 'Designer',
@@ -116,26 +212,47 @@ export default function DesignerPortal() {
           skills: data.skills || [],
           portfolioUrl: data.portfolioUrl || '',
           experience: data.experience || '',
-          status: data.role === 'admin' ? 'approved' : (data.status || 'pending'),
+          status: determinedStatus,
+          approvalRequested: !!data.approvalRequested,
           active: data.active !== false,
           role: data.role
         });
+
+        if (data.name || data.displayName) setName(data.name || data.displayName);
+        if (data.whatsapp) setWhatsapp(data.whatsapp);
+        if (data.skills && Array.isArray(data.skills) && data.skills.length > 0) setSelectedSkills(data.skills);
+        if (data.portfolioUrl) setPortfolioUrl(data.portfolioUrl);
+        if (data.experience) setExperience(data.experience);
       } else {
-        // Fallback: check designers and content/designers/items
-        getDoc(doc(db, 'designers', user.uid)).then(dSnap => {
-          if (dSnap.exists()) {
-            setDesignerDoc({ id: dSnap.id, ...dSnap.data() });
+        // Fallback: check content/designers/items and designers
+        getDoc(doc(db, 'content', 'designers', 'items', user.uid)).then(cSnap => {
+          if (cSnap.exists()) {
+            const cData = cSnap.data();
+            setDesignerDoc({
+              id: cSnap.id,
+              status: cData.status || (cData.approvalRequested ? 'pending' : 'not_requested'),
+              ...cData
+            });
+            if (cData.name) setName(cData.name);
+            if (cData.whatsapp) setWhatsapp(cData.whatsapp);
           } else {
-            getDoc(doc(db, 'content', 'designers', 'items', user.uid)).then(cSnap => {
-              if (cSnap.exists()) {
-                setDesignerDoc({ id: cSnap.id, ...cSnap.data() });
+            getDoc(doc(db, 'designers', user.uid)).then(dSnap => {
+              if (dSnap.exists()) {
+                const dData = dSnap.data();
+                setDesignerDoc({
+                  id: dSnap.id,
+                  status: dData.status || (dData.approvalRequested ? 'pending' : 'not_requested'),
+                  ...dData
+                });
+                if (dData.name) setName(dData.name);
+                if (dData.whatsapp) setWhatsapp(dData.whatsapp);
               } else {
                 setDesignerDoc({
                   id: user.uid,
                   name: user.displayName || 'Designer',
                   email: user.email,
                   whatsapp: '',
-                  status: 'pending',
+                  status: 'not_requested',
                   role: 'designer'
                 });
               }
@@ -145,48 +262,34 @@ export default function DesignerPortal() {
                 name: user.displayName || 'Designer',
                 email: user.email,
                 whatsapp: '',
-                status: 'pending',
+                status: 'not_requested',
                 role: 'designer'
               });
             });
           }
-        }).catch(() => {});
+        }).catch(() => {
+          setDesignerDoc({
+            id: user.uid,
+            name: user.displayName || 'Designer',
+            email: user.email,
+            whatsapp: '',
+            status: 'not_requested',
+            role: 'designer'
+          });
+        });
       }
       setFetchingDoc(false);
     }, (err) => {
       console.warn('Users doc notice:', err?.message);
-      // Fallback: check designers and content/designers/items
-      getDoc(doc(db, 'designers', user.uid)).then(dSnap => {
-        if (dSnap.exists()) {
-          setDesignerDoc({ id: dSnap.id, ...dSnap.data() });
-        } else {
-          getDoc(doc(db, 'content', 'designers', 'items', user.uid)).then(cSnap => {
-            if (cSnap.exists()) {
-              setDesignerDoc({ id: cSnap.id, ...cSnap.data() });
-            } else {
-              setDesignerDoc({
-                id: user.uid,
-                name: user.displayName || 'Designer',
-                email: user.email,
-                whatsapp: '',
-                status: 'pending',
-                role: 'designer'
-              });
-            }
-          }).catch(() => {
-            setDesignerDoc({
-              id: user.uid,
-              name: user.displayName || 'Designer',
-              email: user.email,
-              whatsapp: '',
-              status: 'pending',
-              role: 'designer'
-            });
-          });
-        }
-      }).catch(() => {}).finally(() => {
-        setFetchingDoc(false);
+      setDesignerDoc({
+        id: user.uid,
+        name: user.displayName || 'Designer',
+        email: user.email,
+        whatsapp: '',
+        status: 'not_requested',
+        role: 'designer'
       });
+      setFetchingDoc(false);
     });
 
     return () => unsub();
@@ -381,6 +484,79 @@ export default function DesignerPortal() {
     }
   };
 
+  // Send Approval Request to Admin (for already registered user)
+  const handleSendApprovalRequest = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!user) return;
+    const reqName = (name || user.displayName || '').trim();
+    if (!reqName) return toast.error('Please enter your full name');
+    const cleanPhone = (whatsapp || '').replace(/\D/g, '');
+    if (cleanPhone.length < 10) {
+      return toast.error('Please enter a valid 10-digit WhatsApp phone number');
+    }
+
+    setLoading(true);
+    try {
+      const now = new Date().toISOString();
+      const requestPayload = {
+        uid: user.uid,
+        id: user.uid,
+        name: reqName,
+        displayName: reqName,
+        email: (user.email || '').trim().toLowerCase(),
+        whatsapp: cleanPhone,
+        skills: selectedSkills,
+        portfolioUrl: portfolioUrl.trim(),
+        experience: experience.trim(),
+        role: 'designer',
+        status: 'pending',
+        approvalRequested: true,
+        approvalRequestedAt: now,
+        active: false,
+        createdAt: now,
+        updatedAt: now
+      };
+
+      // 1. Update in users collection
+      await setDoc(doc(db, 'users', user.uid), requestPayload, { merge: true });
+
+      // 2. Also write to content/designers/items and designers
+      await setDoc(doc(db, 'content', 'designers', 'items', user.uid), requestPayload, { merge: true }).catch(console.warn);
+      await setDoc(doc(db, 'designers', user.uid), requestPayload, { merge: true }).catch(console.warn);
+
+      // 3. Notify Admin in notifications collection
+      try {
+        await addDoc(collection(db, 'notifications'), {
+          type: 'designer_registration',
+          title: 'New Designer Approval Request',
+          message: `${reqName} (${cleanPhone}) has sent an approval request to join as a Designer.`,
+          designerId: user.uid,
+          createdAt: now,
+          read: false
+        });
+      } catch (notifErr) {
+        console.warn('Could not write admin notification doc:', notifErr);
+      }
+
+      toast.success('Approval request sent to Admin! 🚀', {
+        icon: '⏳',
+        duration: 5000
+      });
+
+      // Update local state immediately
+      setDesignerDoc((prev: any) => ({
+        ...prev,
+        ...requestPayload,
+        status: 'pending'
+      }));
+    } catch (err: any) {
+      console.error(err);
+      toast.error(err.message || 'Failed to submit approval request');
+    } finally {
+      setLoading(false);
+    }
+  };
+
   // Logout handler
   const handleLogout = async () => {
     try {
@@ -467,48 +643,87 @@ export default function DesignerPortal() {
     window.open(waUrl, '_blank');
   };
 
-  // If gate is not unlocked, show gate modal only
+  // If gate is not unlocked, user firstly interfaces the dedicated password unlock page
   if (!isGateUnlocked) {
     return (
-      <div className="min-h-screen bg-gradient-to-b from-[#180F1E] via-[#120B17] to-[#0A050D] flex items-center justify-center p-6 text-white font-sans">
-        <div className="text-center max-w-md mx-auto">
-          <div className="w-20 h-20 rounded-3xl bg-gradient-to-tr from-rose-600 via-pink-600 to-amber-500 flex items-center justify-center mx-auto mb-6 shadow-2xl shadow-rose-600/40 ring-4 ring-rose-500/20">
-            <Lock className="w-10 h-10 text-white" />
+      <div className="min-h-screen bg-gradient-to-b from-[#160B1E] via-[#110717] to-[#0A040E] flex flex-col items-center justify-center p-6 text-white font-sans relative overflow-hidden">
+        {/* Ambient lighting glows */}
+        <div className="absolute top-1/4 left-1/4 w-96 h-96 bg-rose-600/15 rounded-full blur-3xl pointer-events-none" />
+        <div className="absolute bottom-1/4 right-1/4 w-96 h-96 bg-amber-500/15 rounded-full blur-3xl pointer-events-none" />
+
+        <div className={`relative z-10 w-full max-w-md bg-[#1B1224]/90 backdrop-blur-2xl rounded-3xl p-8 border border-rose-500/20 shadow-2xl shadow-rose-950/60 text-center animate-fadeIn ${gateShake ? 'animate-shake' : ''}`}>
+          {/* Lock Icon */}
+          <div className="relative inline-flex items-center justify-center w-20 h-20 rounded-3xl bg-gradient-to-tr from-rose-600 via-pink-600 to-amber-500 text-white shadow-xl shadow-rose-600/30 mb-5 ring-4 ring-rose-500/20">
+            <Lock className="w-10 h-10" />
+            <Sparkles className="w-5 h-5 text-amber-200 absolute -top-1 -right-1 animate-pulse" />
           </div>
-          <h1 className="font-display text-3xl font-bold tracking-tight mb-3">
-            Designer Portal Locked
-          </h1>
-          <p className="text-gray-300 mb-8 leading-relaxed">
-            This workspace is reserved for authorized Sigma Photography invitation video editors and template creators.
+
+          <div className="inline-block px-3.5 py-1 mb-3 text-xs font-bold tracking-wider uppercase rounded-full bg-amber-500/10 text-amber-400 border border-amber-500/20">
+            Authorized Personnel Only
+          </div>
+
+          <h2 className="font-display text-2xl sm:text-3xl font-bold tracking-tight text-white mb-2">
+            Designer Portal Gate
+          </h2>
+          <p className="text-xs sm:text-sm text-gray-300 max-w-xs mx-auto mb-6 leading-relaxed">
+            Please enter the 4-digit security code to unlock the Sigma Photography designer workspace.
           </p>
+
+          {/* 4 Digit PIN Inputs */}
+          <div className="flex justify-center gap-3 mb-6">
+            {gatePin.map((digit, idx) => (
+              <input
+                key={idx}
+                ref={el => { gateInputsRef.current[idx] = el; }}
+                type="password"
+                inputMode="numeric"
+                maxLength={1}
+                value={digit}
+                onChange={e => handleGatePinChange(idx, e.target.value)}
+                onKeyDown={e => handleGateKeyDown(idx, e)}
+                onPaste={handleGatePaste}
+                className="w-13 h-14 sm:w-14 sm:h-16 text-center text-2xl sm:text-3xl font-mono font-bold bg-white/5 border-2 border-rose-500/30 rounded-2xl focus:border-amber-400 focus:bg-white/10 focus:ring-4 focus:ring-amber-400/20 outline-none text-white transition-all shadow-inner"
+              />
+            ))}
+          </div>
+
+          {/* On-screen numeric keypad */}
+          <div className="grid grid-cols-3 gap-2 max-w-xs mx-auto mb-6">
+            {['1', '2', '3', '4', '5', '6', '7', '8', '9', 'C', '0', '⌫'].map(key => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => handleKeypadPress(key)}
+                className="h-11 rounded-xl bg-white/5 hover:bg-white/15 active:scale-95 text-white font-mono font-bold text-lg border border-white/5 transition flex items-center justify-center cursor-pointer"
+              >
+                {key}
+              </button>
+            ))}
+          </div>
+
+          {/* Unlock Action Button */}
           <button
-            onClick={() => setShowPasscodeModal(true)}
-            className="w-full py-4 rounded-2xl font-bold text-base bg-gradient-to-r from-rose-500 via-pink-600 to-amber-500 hover:opacity-95 text-white shadow-xl shadow-rose-600/30 flex items-center justify-center gap-2 transition-all transform hover:scale-[1.02] active:scale-95"
+            type="button"
+            onClick={() => verifyGatePin(gatePin.join(''))}
+            className="w-full py-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-rose-600 via-pink-600 to-amber-500 hover:from-rose-500 hover:to-amber-400 text-white shadow-xl shadow-rose-600/30 transition-all transform active:scale-98 flex items-center justify-center gap-2 cursor-pointer mb-4"
           >
             <ShieldCheck className="w-5 h-5" />
-            Enter Authorized Passcode
+            <span>Unlock Designer Portal</span>
           </button>
-          <div className="mt-6">
-            <Link to="/" className="text-sm text-gray-400 hover:text-amber-400 transition-colors">
-              ← Return to Main Website
+
+          <div className="text-[11px] text-gray-400">
+            Security code: <span className="font-mono text-amber-300 font-bold">2580</span>
+          </div>
+
+          <div className="mt-6 pt-5 border-t border-white/10">
+            <Link
+              to="/"
+              className="text-xs text-gray-400 hover:text-white transition inline-flex items-center gap-1.5"
+            >
+              <span>← Return to Sigma Photography Main Site</span>
             </Link>
           </div>
         </div>
-
-        <DesignerPasscodeModal
-          isOpen={showPasscodeModal}
-          onClose={() => {
-            if (!isDesignerGateUnlocked()) {
-              navigate('/');
-            } else {
-              setShowPasscodeModal(false);
-            }
-          }}
-          onSuccess={() => {
-            setIsGateUnlocked(true);
-            setShowPasscodeModal(false);
-          }}
-        />
       </div>
     );
   }
@@ -919,6 +1134,163 @@ export default function DesignerPortal() {
           <div className="flex flex-col items-center justify-center py-24 text-gray-400 space-y-4">
             <RefreshCw className="w-8 h-8 animate-spin text-rose-500" />
             <p className="text-sm">Verifying designer credentials...</p>
+          </div>
+        )}
+
+        {/* Authenticated: Account Not Yet Requested (Already registered user on website) */}
+        {user && !fetchingDoc && designerDoc?.status === 'not_requested' && (
+          <div className="max-w-2xl mx-auto py-8 animate-fadeIn">
+            <div className="bg-[#1C1224]/90 backdrop-blur-xl border border-rose-500/30 rounded-3xl p-8 sm:p-10 shadow-2xl relative overflow-hidden">
+              <div className="absolute top-0 right-0 w-72 h-72 bg-gradient-to-bl from-rose-500/15 via-amber-500/10 to-transparent rounded-full blur-2xl pointer-events-none" />
+
+              <div className="relative z-10 text-center mb-8">
+                <div className="w-18 h-18 rounded-3xl bg-gradient-to-tr from-rose-600 via-pink-600 to-amber-500 text-white flex items-center justify-center mx-auto mb-4 shadow-xl shadow-rose-600/30 ring-4 ring-rose-500/20">
+                  <Palette className="w-9 h-9" />
+                </div>
+                
+                <div className="inline-flex items-center gap-2 px-3.5 py-1 mb-2 text-xs font-bold rounded-full bg-amber-500/10 text-amber-300 border border-amber-500/30">
+                  <Sparkles className="w-3.5 h-3.5" />
+                  <span>Logged in: {user.displayName || user.email}</span>
+                </div>
+
+                <h2 className="text-2xl sm:text-3xl font-bold font-display text-white mb-2">
+                  Apply for Designer Portal Access
+                </h2>
+                <p className="text-xs sm:text-sm text-gray-300 max-w-lg mx-auto leading-relaxed">
+                  You are registered on Sigma Photography! To unlock assigned video invitation orders, client uploaded card photos, and fulfill customer deliverables, send an approval request to the Admin.
+                </p>
+              </div>
+
+              <form onSubmit={handleSendApprovalRequest} className="space-y-5 relative z-10">
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+                    Full Name *
+                  </label>
+                  <div className="relative">
+                    <User className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="text"
+                      required
+                      value={name}
+                      onChange={(e) => setName(e.target.value)}
+                      placeholder="Your Full Name"
+                      className="w-full bg-white/5 border border-white/10 focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 text-white rounded-2xl pl-12 pr-4 py-3.5 text-sm transition-all outline-none"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+                    WhatsApp Phone Number (10 Digits) *
+                  </label>
+                  <div className="relative">
+                    <Phone className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="tel"
+                      required
+                      value={whatsapp}
+                      onChange={(e) => setWhatsapp(e.target.value.replace(/\D/g, '').slice(0, 10))}
+                      placeholder="e.g. 9162478070"
+                      className="w-full bg-white/5 border border-white/10 focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 text-white rounded-2xl pl-12 pr-4 py-3.5 text-sm transition-all outline-none"
+                    />
+                  </div>
+                  <p className="text-[11px] text-gray-400 mt-1.5">
+                    Orders will be dispatched to this WhatsApp number.
+                  </p>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+                    Registered Email (Account)
+                  </label>
+                  <div className="relative">
+                    <Mail className="w-5 h-5 text-gray-400 absolute left-4 top-1/2 -translate-y-1/2" />
+                    <input
+                      type="email"
+                      disabled
+                      value={user.email || ''}
+                      className="w-full bg-white/5 border border-white/5 text-gray-400 rounded-2xl pl-12 pr-4 py-3.5 text-sm outline-none cursor-not-allowed"
+                    />
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+                    Editing Skills & Specializations
+                  </label>
+                  <div className="flex flex-wrap gap-2 mb-3">
+                    {DEFAULT_SKILLS.map((skill) => {
+                      const isSelected = selectedSkills.includes(skill);
+                      return (
+                        <button
+                          key={skill}
+                          type="button"
+                          onClick={() => toggleSkill(skill)}
+                          className={`px-3 py-1.5 rounded-xl text-xs font-medium transition-all cursor-pointer ${
+                            isSelected
+                              ? 'bg-rose-500 text-white shadow-md shadow-rose-500/30'
+                              : 'bg-white/5 text-gray-300 hover:bg-white/10'
+                          }`}
+                        >
+                          {isSelected ? '✓ ' : '+ '} {skill}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+                    Portfolio / Drive / Sample Videos Link (Optional)
+                  </label>
+                  <input
+                    type="url"
+                    value={portfolioUrl}
+                    onChange={(e) => setPortfolioUrl(e.target.value)}
+                    placeholder="https://drive.google.com/... or YouTube/Behance"
+                    className="w-full bg-white/5 border border-white/10 focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 text-white rounded-2xl px-4 py-3.5 text-sm transition-all outline-none"
+                  />
+                </div>
+
+                <div>
+                  <label className="block text-xs font-semibold uppercase tracking-wider text-gray-300 mb-2">
+                    Experience / About Your Editing (Optional)
+                  </label>
+                  <textarea
+                    rows={2}
+                    value={experience}
+                    onChange={(e) => setExperience(e.target.value)}
+                    placeholder="Briefly describe your video editing / design experience..."
+                    className="w-full bg-white/5 border border-white/10 focus:border-rose-400 focus:ring-2 focus:ring-rose-500/20 text-white rounded-2xl px-4 py-3 text-sm transition-all outline-none resize-none"
+                  />
+                </div>
+
+                <button
+                  type="submit"
+                  disabled={loading}
+                  className="w-full py-4 rounded-2xl font-bold text-sm bg-gradient-to-r from-rose-500 via-pink-600 to-amber-500 hover:from-rose-600 hover:to-amber-600 text-white shadow-xl shadow-rose-600/30 transition-all transform active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                >
+                  {loading ? (
+                    <RefreshCw className="w-5 h-5 animate-spin" />
+                  ) : (
+                    <>
+                      <Send className="w-5 h-5" />
+                      <span>SEND APPROVAL REQUEST TO ADMIN</span>
+                    </>
+                  )}
+                </button>
+
+                <div className="pt-2 text-center">
+                  <button
+                    type="button"
+                    onClick={handleLogout}
+                    className="text-xs text-gray-400 hover:text-white transition cursor-pointer"
+                  >
+                    Not you? Sign out of this account
+                  </button>
+                </div>
+              </form>
+            </div>
           </div>
         )}
 

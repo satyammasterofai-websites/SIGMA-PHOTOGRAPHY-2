@@ -60,7 +60,7 @@ export default function ManageDesigners() {
   useEffect(() => {
     setLoading(true);
 
-    const mergeAndSetDesigners = (usersList: any[], contentList: any[]) => {
+    const mergeAndSetDesigners = (usersList: any[], contentList: any[], directDesignersList: any[] = []) => {
       const map = new Map();
       usersList.forEach(u => map.set(u.id, u));
       contentList.forEach(c => {
@@ -70,21 +70,36 @@ export default function ManageDesigners() {
           map.set(c.id, c);
         }
       });
+      directDesignersList.forEach(d => {
+        if (map.has(d.id)) {
+          map.set(d.id, { ...map.get(d.id), ...d });
+        } else {
+          map.set(d.id, d);
+        }
+      });
       const combined = Array.from(map.values());
-      combined.sort((a: any, b: any) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+      combined.sort((a: any, b: any) => new Date(b.createdAt || b.approvalRequestedAt || 0).getTime() - new Date(a.createdAt || a.approvalRequestedAt || 0).getTime());
       setDesigners(combined);
       setLoading(false);
     };
 
     let latestUsers: any[] = [];
     let latestContent: any[] = [];
+    let latestDirect: any[] = [];
 
     // 1. Listen to users collection
     const unsubUsers = onSnapshot(collection(db, 'users'), (snapshot) => {
       const allDocs = snapshot.docs.map(d => ({ id: d.id, ...d.data() as any }));
       setAllUsers(allDocs);
-      latestUsers = allDocs.filter(u => u.role === 'designer' || u.status === 'pending' || u.status === 'approved' || u.skills || u.isDesigner);
-      mergeAndSetDesigners(latestUsers, latestContent);
+      latestUsers = allDocs.filter(u => 
+        u.role === 'designer' || 
+        u.status === 'pending' || 
+        u.status === 'approved' || 
+        u.approvalRequested === true || 
+        u.skills || 
+        u.isDesigner
+      );
+      mergeAndSetDesigners(latestUsers, latestContent, latestDirect);
     }, (err) => {
       console.warn('Users collection query note:', err?.message);
       setLoading(false);
@@ -93,9 +108,17 @@ export default function ManageDesigners() {
     // 2. Listen to content/designers/items (public read, zero permission errors)
     const unsubContent = onSnapshot(collection(db, 'content', 'designers', 'items'), (snapshot) => {
       latestContent = snapshot.docs.map(d => ({ id: d.id, ...d.data() as any }));
-      mergeAndSetDesigners(latestUsers, latestContent);
+      mergeAndSetDesigners(latestUsers, latestContent, latestDirect);
     }, (err) => {
       console.warn('content/designers/items query note:', err?.message);
+    });
+
+    // 3. Listen to designers collection directly
+    const unsubDesigners = onSnapshot(collection(db, 'designers'), (snapshot) => {
+      latestDirect = snapshot.docs.map(d => ({ id: d.id, ...d.data() as any }));
+      mergeAndSetDesigners(latestUsers, latestContent, latestDirect);
+    }, (err) => {
+      console.warn('designers collection query note:', err?.message);
     });
 
     // Fetch templates for assignment
@@ -119,6 +142,7 @@ export default function ManageDesigners() {
     return () => {
       unsubUsers();
       unsubContent();
+      unsubDesigners();
       unsubTemplates();
       unsubOrders();
     };
